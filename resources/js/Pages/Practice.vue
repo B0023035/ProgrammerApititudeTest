@@ -366,21 +366,6 @@
                                     }"
                                     @click="handleAnswer(choice.label)"
                                 >
-                                    <!-- 選択肢ラベル -->
-                                    <div
-                                        class="text-3xl font-bold mb-2"
-                                        :class="{
-                                            'text-blue-600':
-                                                answerStatus[currentIndex]
-                                                    ?.selected === choice.label,
-                                            'text-gray-600 group-hover:text-blue-500':
-                                                answerStatus[currentIndex]
-                                                    ?.selected !== choice.label,
-                                        }"
-                                    >
-                                        {{ choice.label }}
-                                    </div>
-
                                     <!-- 第一部：選択肢テキスト -->
                                     <div
                                         v-if="currentPart === 1 && choice.text"

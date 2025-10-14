@@ -138,6 +138,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
             return redirect()->route('admin.login');
         })->name('logout');
     });
+
+    // 成績管理システム（管理者のみアクセス可能）
+    Route::middleware(['auth'])->prefix('results')->name('results.')->group(function () {
+        // メイン一覧
+        Route::get('/', [App\Http\Controllers\ResultsController::class, 'index'])->name('index');
+        
+        // ユーザー詳細
+        Route::get('/user/{userId}', [App\Http\Controllers\ResultsController::class, 'userDetail'])->name('user-detail');
+        
+        // セッション詳細
+        Route::get('/session/{sessionId}', [App\Http\Controllers\ResultsController::class, 'sessionDetail'])->name('session-detail');
+        
+        // 学年別一覧
+        Route::get('/grade', [App\Http\Controllers\ResultsController::class, 'gradeList'])->name('grade-list');
+        
+        // 統計・グラフ
+        Route::get('/statistics', [App\Http\Controllers\ResultsController::class, 'statistics'])->name('statistics');
+    });
+
+        // Comlink成績管理システム
+    Route::get('/results-comlink', function () {
+        return Inertia::render('Admin/ResultsComlink');
+    })->name('results.comlink');
+
 });
 
 require __DIR__.'/auth.php';
