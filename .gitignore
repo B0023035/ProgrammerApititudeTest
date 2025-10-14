@@ -1,25 +1,50 @@
+# Log files
 *.log
+storage/logs/*
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Environment files
 .env
 .env.backup
 .env.production
+
+# IDE / Editor configs
 .phpactor.json
-.phpunit.result.cache
 /.fleet
 /.idea
 /.nova
 /.phpunit.cache
 /.vscode
 /.zed
-/auth.json
+
+# PHPUnit
+.phpunit.result.cache
+
+# Composer & Laravel
+/vendor
+/storage/*.key
+/storage/pail
 /bootstrap/ssr
+
+# Node & Frontend
 /node_modules
 /public/build
 /public/hot
 /public/storage
-/storage/*.key
-/storage/pail
-/vendor
+
+# Homestead / Vagrant
 Homestead.json
 Homestead.yaml
-Thumbs.db
+
+# Docker (optional)
+docker-compose.override.yml
+/.docker
+
+# Vite / Mix cache
+/public/mix-manifest.json
