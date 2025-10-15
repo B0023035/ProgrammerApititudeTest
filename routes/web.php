@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Admin\AdminAuthController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
@@ -19,7 +20,9 @@ Route::get('/', function () {
     ]);
 });
 
-// ★ ゲスト専用ルート
+// ========================================
+// ゲスト専用ルート
+// ========================================
 Route::prefix('guest')->name('guest.')->group(function () {
     // ゲスト用テスト開始画面
     Route::get('/test-start', function () {
@@ -55,27 +58,35 @@ Route::prefix('guest')->name('guest.')->group(function () {
         Route::get('/disqualified', [ExamController::class, 'guestDisqualified'])->name('disqualified');
     });
     
-    // ★ 修正: ゲスト用結果表示ルート
+    // ゲスト用結果表示
     Route::get('/result', [ExamController::class, 'guestShowResult'])->name('result');
-
-    // ★ 追加: ゲスト用クリーンアップルート
+    
+    // ゲスト用クリーンアップ
     Route::post('/cleanup', [ExamController::class, 'guestCleanup'])->name('cleanup');
 });
 
-// テスト開始画面(共通)
+// ========================================
+// 共通ルート（ゲスト・認証ユーザー）
+// ========================================
+
+// テスト開始画面
 Route::get('/test-start', function () {
     $isGuest = !Auth::check();
     return Inertia::render($isGuest ? 'GuestInfo' : 'TestStart');
 })->name('test.start');
 
-// 練習問題説明画面(認証ユーザー用)
+// ========================================
+// 認証ユーザー専用ルート
+// ========================================
+
+// 練習問題説明画面
 Route::get('/practice/instructions', function () {
     return Inertia::render('ExamInstructions', [
         'isGuest' => false
     ]);
 })->name('practice.instructions')->middleware('auth');
 
-// 練習問題(認証ユーザー用)
+// 練習問題
 Route::prefix('practice')->name('practice.')->middleware('auth')->group(function () {
     Route::get('/', [PracticeController::class, 'index'])->name('index');
     Route::get('/{section}', [PracticeController::class, 'show'])
@@ -84,7 +95,7 @@ Route::prefix('practice')->name('practice.')->middleware('auth')->group(function
     Route::post('/complete', [PracticeController::class, 'complete'])->name('complete');
 });
 
-// 本番試験(認証ユーザー専用)
+// 本番試験
 Route::prefix('exam')->name('exam.')->middleware('auth')->group(function () {
     Route::post('/start', [ExamController::class, 'start'])->name('start');
     Route::get('/part/{part}', [ExamController::class, 'part'])
@@ -97,71 +108,121 @@ Route::prefix('exam')->name('exam.')->middleware('auth')->group(function () {
     Route::get('/result/{sessionUuid}', [ExamController::class, 'showResult'])->name('result');
 });
 
-// 認証ユーザー専用
+// プロフィール管理
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// 管理者ログイン
+// ========================================
+// 管理者ルート
+// ========================================
 Route::prefix('admin')->name('admin.')->group(function () {
-    Route::get('/login', function () {
-        return Inertia::render('Auth/AdministratorLogin');
-    })->name('login');
+    
+    // ゲストのみアクセス可能（未ログイン管理者）
+    Route::middleware('guest:admin')->group(function () {
+        Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
+        Route::post('/login', [AdminAuthController::class, 'login'])->name('login.post');
+    });
 
-    Route::post('/login', function (Request $request) {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ]);
-
-        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
-            return redirect()->intended(route('admin.home'));
-        }
-
-        return back()->withErrors([
-            'email' => 'メールアドレスまたはパスワードが違います。',
-        ])->withInput($request->only('email', 'remember'));
-    })->name('login.post');
-
+    // 認証済み管理者のみアクセス可能
     Route::middleware('auth:admin')->group(function () {
-        Route::get('/home', function () {
-            return Inertia::render('AdministratorHome');
-        })->name('home');
-
-        Route::post('/logout', function (Request $request) {
-            Auth::guard('admin')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-            return redirect()->route('admin.login');
-        })->name('logout');
-    });
-
-    // 成績管理システム（管理者のみアクセス可能）
-    Route::middleware(['auth'])->prefix('results')->name('results.')->group(function () {
-        // メイン一覧
-        Route::get('/', [App\Http\Controllers\ResultsController::class, 'index'])->name('index');
         
-        // ユーザー詳細
-        Route::get('/user/{userId}', [App\Http\Controllers\ResultsController::class, 'userDetail'])->name('user-detail');
+        // ダッシュボード
+        Route::get('/dashboard', [AdminAuthController::class, 'dashboard'])->name('dashboard');
+        Route::get('/home', [AdminAuthController::class, 'dashboard'])->name('home'); // 互換性のため
         
-        // セッション詳細
-        Route::get('/session/{sessionId}', [App\Http\Controllers\ResultsController::class, 'sessionDetail'])->name('session-detail');
+        // ログアウト
+        Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
         
-        // 学年別一覧
-        Route::get('/grade', [App\Http\Controllers\ResultsController::class, 'gradeList'])->name('grade-list');
-        
-        // 統計・グラフ
-        Route::get('/statistics', [App\Http\Controllers\ResultsController::class, 'statistics'])->name('statistics');
-    });
-
         // Comlink成績管理システム
-    Route::get('/results-comlink', function () {
-        return Inertia::render('Admin/ResultsComlink');
-    })->name('results.comlink');
-
+        Route::get('/results-comlink', function () {
+            return Inertia::render('Admin/ResultsComlink', [
+                'sessions' => [], // 実際のデータは後で実装
+                'users' => [],
+            ]);
+        })->name('results.comlink');
+        
+        // 成績管理システム（通常版）
+        Route::prefix('results')->name('results.')->group(function () {
+            // メイン一覧
+            Route::get('/', function () {
+                $sessions = \App\Models\ExamSession::with('user')
+                    ->whereNotNull('finished_at')
+                    ->latest('finished_at')
+                    ->paginate(50);
+                
+                return Inertia::render('Admin/Results/Index', [
+                    'sessions' => $sessions
+                ]);
+            })->name('index');
+            
+            // ユーザー詳細
+            Route::get('/user/{userId}', function ($userId) {
+                $user = \App\Models\User::findOrFail($userId);
+                $sessions = \App\Models\ExamSession::where('user_id', $userId)
+                    ->whereNotNull('finished_at')
+                    ->latest('finished_at')
+                    ->get();
+                
+                return Inertia::render('Admin/Results/UserDetail', [
+                    'user' => $user,
+                    'sessions' => $sessions
+                ]);
+            })->name('user-detail');
+            
+            // セッション詳細
+            Route::get('/session/{sessionId}', function ($sessionId) {
+                $session = \App\Models\ExamSession::with(['user', 'answers.question'])
+                    ->findOrFail($sessionId);
+                
+                return Inertia::render('Admin/Results/SessionDetail', [
+                    'session' => $session
+                ]);
+            })->name('session-detail');
+            
+            // 学年別一覧
+            Route::get('/grade', function () {
+                $users = \App\Models\User::with(['examSessions' => function ($query) {
+                    $query->whereNotNull('finished_at')->latest('finished_at');
+                }])->get()->groupBy('grade');
+                
+                return Inertia::render('Admin/Results/GradeList', [
+                    'usersByGrade' => $users
+                ]);
+            })->name('grade-list');
+            
+            // 統計・グラフ
+            Route::get('/statistics', function () {
+                $totalSessions = \App\Models\ExamSession::whereNotNull('finished_at')->count();
+                $totalUsers = \App\Models\User::count();
+                $averageScore = \App\Models\ExamSession::whereNotNull('finished_at')->avg('total_score');
+                
+                return Inertia::render('Admin/Results/Statistics', [
+                    'stats' => [
+                        'total_sessions' => $totalSessions,
+                        'total_users' => $totalUsers,
+                        'average_score' => round($averageScore, 2),
+                    ]
+                ]);
+            })->name('statistics');
+        });
+        
+        // ユーザー管理
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/', function () {
+                $users = \App\Models\User::withCount('examSessions')
+                    ->latest()
+                    ->paginate(20);
+                
+                return Inertia::render('Admin/Users/Index', [
+                    'users' => $users
+                ]);
+            })->name('index');
+        });
+    });
 });
 
+// 認証ルート
 require __DIR__.'/auth.php';
