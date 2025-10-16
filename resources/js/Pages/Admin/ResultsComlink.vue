@@ -28,6 +28,7 @@ interface Session {
     user_id: number;
     session_uuid: string;
     total_score: number;
+    total_questions: number; // ← 追加
     rank: string;
     finished_at: string;
     user: {
@@ -133,7 +134,7 @@ const calculateGrade = (score: number): string => {
     return "F";
 };
 
-// 統計を計算（Comlinkを使わずに直接計算）
+// 統計を計算(Comlinkを使わずに直接計算)
 const calculateStats = () => {
     if (filteredGrades.value.length === 0) {
         stats.value = {

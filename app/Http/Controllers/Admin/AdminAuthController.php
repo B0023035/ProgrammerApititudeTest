@@ -6,14 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use App\Models\User;
-use App\Models\ExamSession;
-use App\Models\ExamViolation;
 
 class AdminAuthController extends Controller
 {
     /**
-     * ログイン画面表示
+     * 管理者ログイン画面を表示
      */
     public function showLogin()
     {
@@ -21,20 +18,29 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * ログイン処理
+     * 管理者ログイン処理
      */
     public function login(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string',
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required'],
         ]);
 
-        $credentials = $request->only('email', 'password');
-
-        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
+        // 通常のwebガードでログイン試行
+        if (Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
+            // ログイン成功後、管理者権限をチェック
+            $user = Auth::user();
             
+            if (!$user->is_admin) {
+                // 管理者でない場合はログアウト
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => '管理者権限がありません。',
+                ])->onlyInput('email');
+            }
+            
+            $request->session()->regenerate();
             return redirect()->intended(route('admin.dashboard'));
         }
 
@@ -44,47 +50,22 @@ class AdminAuthController extends Controller
     }
 
     /**
+     * ダッシュボード表示
+     */
+    public function dashboard()
+    {
+        return Inertia::render('Admin/Dashboard');
+    }
+
+    /**
      * ログアウト処理
      */
     public function logout(Request $request)
     {
         Auth::guard('admin')->logout();
-        
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
         return redirect()->route('admin.login');
-    }
-
-    /**
-     * ダッシュボード
-     */
-    public function dashboard()
-    {
-        $admin = Auth::guard('admin')->user();
-        
-        // 統計情報を取得
-        $stats = [
-            'total_users' => User::count(),
-            'total_sessions' => ExamSession::whereNotNull('finished_at')->count(),
-            'active_sessions' => ExamSession::whereNull('finished_at')->whereNull('disqualified_at')->count(),
-            'recent_violations' => ExamViolation::with(['user', 'examSession'])
-                ->latest('detected_at')
-                ->limit(10)
-                ->get(),
-        ];
-
-        // 最近の受験セッション
-        $recent_sessions = ExamSession::with('user')
-            ->whereNotNull('finished_at')
-            ->latest('finished_at')
-            ->limit(10)
-            ->get();
-
-        return Inertia::render('Admin/Dashboard', [
-            'admin' => $admin,
-            'stats' => $stats,
-            'recent_sessions' => $recent_sessions,
-        ]);
     }
 }

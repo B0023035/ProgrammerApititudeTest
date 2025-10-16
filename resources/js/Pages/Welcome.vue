@@ -5,9 +5,14 @@ import { onMounted } from "vue";
 // Inertia のページ情報
 const page = usePage();
 
-// マウント時にログインしてたら TestStart にリダイレクト
+// マウント時の処理
 onMounted(() => {
-    if (page.props.auth?.user) {
+    // 一般ユーザーとしてログインしている場合のみ TestStart にリダイレクト
+    // 管理者用ログインページへのアクセスは妨げない
+    const currentPath = window.location.pathname;
+
+    // /admin/* 以外のパスで、一般ユーザーがログインしている場合
+    if (page.props.auth?.user && !currentPath.startsWith("/admin")) {
         router.visit("/test-start");
     }
 });
