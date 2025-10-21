@@ -2,16 +2,36 @@
 import { ref } from "vue";
 import { Head, useForm } from "@inertiajs/vue3";
 
+defineProps<{
+    canResetPassword?: boolean;
+    status?: string;
+}>();
+
 const form = useForm({
     email: "",
     password: "",
     remember: false,
 });
 
+const serverError = ref("");
+
 const submit = () => {
+    serverError.value = "";
+
     form.post(route("admin.login"), {
+        preserveScroll: true,
         onFinish: () => {
             form.reset("password");
+        },
+        onError: (errors) => {
+            console.error("Admin login errors:", errors);
+            if (errors.email) {
+                serverError.value = errors.email;
+            } else if (errors.password) {
+                serverError.value = errors.password;
+            } else {
+                serverError.value = "ログインに失敗しました。";
+            }
         },
     });
 };
@@ -47,6 +67,22 @@ const submit = () => {
             <div
                 class="bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-8"
             >
+                <!-- ステータスメッセージ -->
+                <div
+                    v-if="status"
+                    class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg"
+                >
+                    <p class="text-sm text-green-600">{{ status }}</p>
+                </div>
+
+                <!-- サーバーエラー表示 -->
+                <div
+                    v-if="serverError"
+                    class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg"
+                >
+                    <p class="text-sm text-red-600">{{ serverError }}</p>
+                </div>
+
                 <form @submit.prevent="submit" class="space-y-6">
                     <!-- メールアドレス -->
                     <div>
@@ -208,7 +244,6 @@ const submit = () => {
 </template>
 
 <style scoped>
-/* カスタムアニメーション */
 @keyframes fadeIn {
     from {
         opacity: 0;

@@ -1,28 +1,40 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Auth;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Models\Admin;
-use App\Models\User;
-use App\Models\ExamSession;
+use Inertia\Response;
 
 class AdminAuthController extends Controller
 {
-    /**
-     * 管理者ログイン処理
+        /**
+     * ログイン画面を表示
      */
-    public function login(Request $request)
+    public function create(): Response
     {
+        return Inertia::render('Admin/Auth/Login', [
+            'canResetPassword' => Route::has('admin.password.request'),
+            'status' => session('status'),
+        ]);
+    }
+
+    /**
+     * ログイン処理
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        // バリデーション
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
 
+        // adminガードで認証を試みる（重要！）
         if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 

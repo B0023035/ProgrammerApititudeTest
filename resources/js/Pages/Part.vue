@@ -1270,10 +1270,12 @@ async function handleAnswer(label: string) {
 }
 
 // 現在の解答をサーバーに保存する関数
-const saveCurrentAnswer = async (choice: string) => {
+const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
+    const MAX_RETRIES = 2; // 最大リトライ回数を2回に制限
+
     if (showPracticeStartPopup.value) return;
 
-    // ★ ゲストモードの場合はサーバー保存をスキップ（メモリのみ）
+    // ゲストモードの場合はサーバー保存をスキップ(メモリのみ)
     if (isGuest.value) {
         console.log("ゲストモード: メモリにのみ保存", {
             question: currentQuestion.value.id,
@@ -1286,66 +1288,84 @@ const saveCurrentAnswer = async (choice: string) => {
     const currentQuestionId = currentQuestion.value.id;
 
     try {
-        let csrfToken = document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute("content");
+        // CSRFトークンを取得(cookieから直接取得)
+        const getCsrfToken = () => {
+            // まずmetaタグから試行
+            const metaToken = document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute("content");
 
-        // metaタグから取得できない場合はcookieから取得を試みる
-        if (!csrfToken) {
+            if (metaToken) return metaToken;
+
+            // cookieから取得
             const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
             if (cookieMatch) {
-                csrfToken = decodeURIComponent(cookieMatch[1]);
+                return decodeURIComponent(cookieMatch[1]);
             }
-        }
 
-        // ★ トークンがない場合はエラーログを出力
+            return null;
+        };
+
+        let csrfToken = getCsrfToken();
+
         if (!csrfToken) {
             console.error("CSRFトークンが見つかりません");
-            console.log(
-                "Available meta tags:",
-                Array.from(document.querySelectorAll("meta")).map((m) => ({
-                    name: m.getAttribute("name"),
-                    content:
-                        m.getAttribute("content")?.substring(0, 20) + "...",
-                }))
-            );
             return;
         }
 
-        console.log("CSRF Token取得成功");
+        // デバッグ情報
+        console.log("=== リクエスト送信 ===", {
+            url: route("exam.save-answer"),
+            csrfToken: csrfToken?.substring(0, 10) + "...",
+            cookies: document.cookie,
+            examSessionId: form.examSessionId,
+            questionId: currentQuestionId,
+            retryCount,
+        });
 
-        const response = await fetch(
-            isGuest.value
-                ? route("guest.exam.save-answer")
-                : route("exam.save-answer"),
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": csrfToken,
-                    Accept: "application/json",
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-                body: JSON.stringify({
-                    examSessionId: form.examSessionId,
-                    questionId: currentQuestionId,
-                    choice: choice,
-                    part: currentPart.value,
-                    remainingTime: remainingTime.value,
-                }),
-            }
-        );
+        const response = await fetch(route("exam.save-answer"), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": csrfToken,
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            credentials: "same-origin", // cookieを含める
+            body: JSON.stringify({
+                examSessionId: form.examSessionId,
+                questionId: currentQuestionId,
+                choice: choice,
+                part: currentPart.value,
+                remainingTime: remainingTime.value,
+            }),
+        });
 
-        // ★ 419エラーの詳細ハンドリング
+        console.log("=== レスポンス受信 ===", {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+        });
+
+        // 419エラーの処理(リトライ回数制限付き)
         if (response.status === 419) {
-            console.error("419 CSRF Token Mismatch Error", {
-                status: response.status,
-                statusText: response.statusText,
-                url: response.url,
-            });
+            console.error(
+                `419 CSRF Token Mismatch (試行 ${retryCount + 1}/${
+                    MAX_RETRIES + 1
+                })`
+            );
+
+            if (retryCount >= MAX_RETRIES) {
+                console.error(
+                    "最大リトライ回数に達しました。解答は一時保存されています。"
+                );
+                alert(
+                    "セッションが期限切れです。ページを再読み込みしてください。"
+                );
+                return;
+            }
 
             // CSRFトークンをリフレッシュ
-            console.log("CSRFトークンのリフレッシュを試みます...");
             try {
                 const refreshResponse = await fetch("/sanctum/csrf-cookie", {
                     method: "GET",
@@ -1353,20 +1373,15 @@ const saveCurrentAnswer = async (choice: string) => {
                 });
 
                 if (refreshResponse.ok) {
-                    console.log(
-                        "CSRFトークンをリフレッシュしました。リトライします。"
-                    );
+                    console.log("CSRFトークンをリフレッシュしました");
 
-                    // 少し待ってからリトライ
-                    await new Promise((resolve) => setTimeout(resolve, 500));
+                    // metaタグを更新
+                    await new Promise((resolve) => setTimeout(resolve, 300));
 
-                    // リトライ（再帰呼び出し）
-                    return saveCurrentAnswer(choice);
+                    // 新しいトークンで再試行
+                    return saveCurrentAnswer(choice, retryCount + 1);
                 } else {
-                    console.error(
-                        "CSRFトークンのリフレッシュに失敗:",
-                        refreshResponse.status
-                    );
+                    console.error("CSRFトークンのリフレッシュに失敗");
                 }
             } catch (refreshError) {
                 console.error(
@@ -1379,7 +1394,11 @@ const saveCurrentAnswer = async (choice: string) => {
         }
 
         if (!response.ok) {
-            console.warn("解答保存に失敗:", response.status);
+            console.warn(
+                "解答保存に失敗:",
+                response.status,
+                response.statusText
+            );
             return;
         }
 
@@ -1397,7 +1416,6 @@ const saveCurrentAnswer = async (choice: string) => {
     } catch (error) {
         console.error("解答保存エラー:", error);
 
-        // ★ ネットワークエラーの可能性も考慮
         if (error instanceof TypeError && error.message.includes("fetch")) {
             console.error("ネットワークエラーまたはCORS問題の可能性があります");
         }

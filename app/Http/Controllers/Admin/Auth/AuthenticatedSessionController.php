@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\Http\Controllers\Admin\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
@@ -18,7 +18,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Auth/Login', [
+        return Inertia::render('Admin/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
         ]);
@@ -29,13 +29,25 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        // webガード（一般ユーザー）で認証
-        $request->authenticate();
+        try {
+            Log::info('Login attempt', ['email' => $request->email]);
+                
+            // webガード（一般ユーザー）で認証
+            $request->authenticate();
 
-        $request->session()->regenerate();
-
-        // test-startページへリダイレクト
-        return redirect()->intended(route('test.start'));
+            Log::info('Authentication successful');
+            
+            $request->session()->regenerate();
+            
+            Log::info('Session regenerated, redirecting to test.start');
+                
+            // test-startページへリダイレクト
+            return redirect()->intended(route('test.start'));
+        } catch (\Exception $e) {
+                Log::error('Login error: ' . $e->getMessage());
+                Log::error('Stack trace: ' . $e->getTraceAsString());
+                throw $e;
+        }
     }
 
     /**

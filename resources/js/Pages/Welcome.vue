@@ -2,17 +2,18 @@
 import { Head, Link, usePage, router } from "@inertiajs/vue3";
 import { onMounted } from "vue";
 
-// Inertia のページ情報
 const page = usePage();
 
-// マウント時の処理
 onMounted(() => {
-    // 一般ユーザーとしてログインしている場合のみ TestStart にリダイレクト
-    // 管理者用ログインページへのアクセスは妨げない
     const currentPath = window.location.pathname;
 
-    // /admin/* 以外のパスで、一般ユーザーがログインしている場合
-    if (page.props.auth?.user && !currentPath.startsWith("/admin")) {
+    // 管理者ページへのアクセスは何もしない
+    if (currentPath.startsWith("/admin")) {
+        return;
+    }
+
+    // 一般ユーザーがログインしている場合、test-startへリダイレクト
+    if (page.props.auth?.user) {
         router.visit("/test-start");
     }
 });
@@ -38,23 +39,28 @@ onMounted(() => {
             <Link
                 href="/login"
                 class="underline text-sm text-gray-600 hover:text-gray-900"
-                >Log in</Link
             >
+                Log in
+            </Link>
             <Link
                 href="/register"
                 class="underline text-sm text-gray-600 hover:text-gray-900"
-                >Register</Link
             >
+                Register
+            </Link>
             <Link
                 href="/guest/info"
                 class="underline text-sm text-gray-600 hover:text-gray-900"
-                >Guest</Link
             >
-            <Link
+                Guest
+            </Link>
+            <!-- 管理者ログインは通常のaタグを使用 -->
+            <a
                 href="/admin/login"
                 class="underline text-sm text-gray-600 hover:text-gray-900"
-                >Administrator Log in</Link
             >
+                Administrator Log in
+            </a>
         </div>
     </div>
 
