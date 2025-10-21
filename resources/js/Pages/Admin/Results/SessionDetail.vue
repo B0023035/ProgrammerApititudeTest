@@ -2,43 +2,64 @@
 import { Head, Link } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 
-interface Answer {
-    id: number;
-    question_id: number;
-    selected_answer: string | null;
+interface Choice {
+    label: string;
+    text: string | null;
+    image: string | null;
     is_correct: boolean;
-    question: {
-        id: number;
-        part: number;
-        question_text: string;
-        correct_answer: string;
-    };
+}
+
+interface QuestionDetail {
+    question_id: number;
+    question_number: number;
+    question_text: string | null;
+    question_image: string | null;
+    user_choice: string | null;
+    correct_choice: string;
+    is_correct: boolean;
+    choices: Choice[];
+}
+
+interface PartScore {
+    correct: number;
+    total: number;
+    percentage: number;
+}
+
+interface PartAnswers {
+    score: PartScore;
+    questions: QuestionDetail[];
 }
 
 interface Session {
     id: number;
     session_uuid: string;
-    user_id: number;
-    total_score: number;
-    rank: string;
-    started_at: string;
-    finished_at: string;
-    part1_score: number;
-    part2_score: number;
-    part3_score: number;
     user: {
         id: number;
         name: string;
         email: string;
     };
-    answers: Answer[];
+    started_at: string;
+    finished_at: string;
+    total_score: number;
+    total_questions: number;
+    percentage: number;
+    rank: string;
 }
 
 interface Props {
     session: Session;
+    answersByPart: {
+        [key: string]: PartAnswers;
+    };
 }
 
 const props = defineProps<Props>();
+
+// デバッグ用
+console.log("Session data:", props.session);
+console.log("AnswersByPart data:", props.answersByPart);
+console.log("AnswersByPart keys:", Object.keys(props.answersByPart || {}));
 
 const getRankColor = (rank: string) => {
     const colors: { [key: string]: string } = {
@@ -50,15 +71,13 @@ const getRankColor = (rank: string) => {
     return colors[rank] || "text-gray-600 bg-gray-100";
 };
 
-const getPartAnswers = (part: number) => {
-    return props.session.answers.filter((a) => a.question.part === part);
-};
-
-const getPartAccuracy = (part: number) => {
-    const answers = getPartAnswers(part);
-    if (answers.length === 0) return 0;
-    const correct = answers.filter((a) => a.is_correct).length;
-    return Math.round((correct / answers.length) * 100);
+const getPartColor = (part: number) => {
+    const colors = [
+        "from-blue-500 to-blue-600",
+        "from-green-500 to-green-600",
+        "from-orange-500 to-orange-600",
+    ];
+    return colors[part - 1] || "from-gray-500 to-gray-600";
 };
 </script>
 
@@ -101,7 +120,7 @@ const getPartAccuracy = (part: number) => {
                             <Link
                                 :href="
                                     route('admin.results.user-detail', {
-                                        userId: session.user_id,
+                                        userId: session.user.id,
                                     })
                                 "
                                 class="text-blue-600 hover:text-blue-800 text-lg"
@@ -152,7 +171,7 @@ const getPartAccuracy = (part: number) => {
                         <div class="border rounded-lg p-4">
                             <p class="text-sm text-gray-600 mb-1">回答数</p>
                             <p class="text-sm font-medium">
-                                {{ session.answers.length }}問
+                                {{ session.total_questions }}問
                             </p>
                         </div>
                     </div>
@@ -167,49 +186,36 @@ const getPartAccuracy = (part: number) => {
                         <div class="text-4xl font-bold">
                             {{ session.total_score }}
                         </div>
-                        <div class="text-sm opacity-75 mt-2">点</div>
-                    </div>
-
-                    <div
-                        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white"
-                    >
-                        <div class="text-sm opacity-90 mb-2">Part 1</div>
-                        <div class="text-4xl font-bold">
-                            {{ session.part1_score }}
-                        </div>
                         <div class="text-sm opacity-75 mt-2">
-                            正答率: {{ getPartAccuracy(1) }}%
+                            {{ session.total_questions }}問中 ({{
+                                session.percentage
+                            }}%)
                         </div>
                     </div>
 
                     <div
-                        class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white"
+                        v-for="part in ['1', '2', '3']"
+                        :key="part"
+                        class="bg-gradient-to-br rounded-xl shadow-lg p-6 text-white"
+                        :class="getPartColor(parseInt(part))"
                     >
-                        <div class="text-sm opacity-90 mb-2">Part 2</div>
+                        <div class="text-sm opacity-90 mb-2">
+                            Part {{ part }}
+                        </div>
                         <div class="text-4xl font-bold">
-                            {{ session.part2_score }}
+                            {{ answersByPart[part]?.score?.correct || 0 }}
                         </div>
                         <div class="text-sm opacity-75 mt-2">
-                            正答率: {{ getPartAccuracy(2) }}%
-                        </div>
-                    </div>
-
-                    <div
-                        class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white"
-                    >
-                        <div class="text-sm opacity-90 mb-2">Part 3</div>
-                        <div class="text-4xl font-bold">
-                            {{ session.part3_score }}
-                        </div>
-                        <div class="text-sm opacity-75 mt-2">
-                            正答率: {{ getPartAccuracy(3) }}%
+                            {{ answersByPart[part]?.score?.total || 0 }}問中 ({{
+                                answersByPart[part]?.score?.percentage || 0
+                            }}%)
                         </div>
                     </div>
                 </div>
 
                 <!-- 回答詳細 -->
                 <div
-                    v-for="part in [1, 2, 3]"
+                    v-for="part in ['1', '2', '3']"
                     :key="part"
                     class="bg-white rounded-lg shadow-lg overflow-hidden mb-6"
                 >
@@ -218,37 +224,122 @@ const getPartAccuracy = (part: number) => {
                             Part {{ part }} - 回答詳細
                         </h2>
                         <p class="text-sm text-gray-600 mt-1">
-                            {{
-                                getPartAnswers(part).filter((a) => a.is_correct)
-                                    .length
-                            }}
-                            / {{ getPartAnswers(part).length }} 問正解
+                            {{ answersByPart[part]?.score?.correct || 0 }} /
+                            {{ answersByPart[part]?.score?.total || 0 }} 問正解
+                            ({{ answersByPart[part]?.score?.percentage || 0 }}%)
                         </p>
                     </div>
 
                     <div class="p-6">
                         <div class="space-y-4">
                             <div
-                                v-for="(answer, index) in getPartAnswers(part)"
-                                :key="answer.id"
+                                v-for="(question, index) in answersByPart[part]
+                                    ?.questions || []"
+                                :key="question.question_id"
                                 class="border rounded-lg p-4"
                                 :class="
-                                    answer.is_correct
+                                    question.is_correct
                                         ? 'bg-green-50 border-green-200'
                                         : 'bg-red-50 border-red-200'
                                 "
                             >
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1">
-                                        <p
-                                            class="font-medium text-gray-900 mb-2"
+                                        <div class="flex items-center mb-2">
+                                            <p
+                                                class="font-medium text-gray-900"
+                                            >
+                                                問題
+                                                {{ question.question_number }}
+                                            </p>
+                                            <span
+                                                v-if="question.is_correct"
+                                                class="ml-3 inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800"
+                                            >
+                                                ✓ 正解
+                                            </span>
+                                            <span
+                                                v-else
+                                                class="ml-3 inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800"
+                                            >
+                                                ✗ 不正解
+                                            </span>
+                                        </div>
+
+                                        <!-- 問題文 -->
+                                        <div class="mb-4">
+                                            <p
+                                                v-if="question.question_text"
+                                                class="text-sm text-gray-700 mb-2"
+                                            >
+                                                {{ question.question_text }}
+                                            </p>
+                                            <img
+                                                v-if="question.question_image"
+                                                :src="`/storage/questions/${question.question_image}`"
+                                                :alt="`問題 ${question.question_number}`"
+                                                class="max-w-md rounded border"
+                                            />
+                                        </div>
+
+                                        <!-- 選択肢 -->
+                                        <div class="space-y-2 mb-3">
+                                            <div
+                                                v-for="choice in question.choices"
+                                                :key="choice.label"
+                                                class="flex items-start p-2 rounded"
+                                                :class="{
+                                                    'bg-green-100 border border-green-300':
+                                                        choice.is_correct,
+                                                    'bg-red-100 border border-red-300':
+                                                        choice.label ===
+                                                            question.user_choice &&
+                                                        !choice.is_correct,
+                                                    'bg-gray-50':
+                                                        choice.label !==
+                                                            question.user_choice &&
+                                                        !choice.is_correct,
+                                                }"
+                                            >
+                                                <span
+                                                    class="font-medium text-sm mr-2"
+                                                >
+                                                    {{ choice.label }}.
+                                                </span>
+                                                <span
+                                                    v-if="choice.text"
+                                                    class="text-sm"
+                                                >
+                                                    {{ choice.text }}
+                                                </span>
+                                                <img
+                                                    v-if="choice.image"
+                                                    :src="`/storage/choices/${choice.image}`"
+                                                    :alt="`選択肢 ${choice.label}`"
+                                                    class="max-w-xs"
+                                                />
+                                                <span
+                                                    v-if="choice.is_correct"
+                                                    class="ml-2 text-xs text-green-700"
+                                                >
+                                                    (正解)
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        choice.label ===
+                                                        question.user_choice
+                                                    "
+                                                    class="ml-2 text-xs text-blue-700"
+                                                >
+                                                    (受験者の選択)
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- 回答情報 -->
+                                        <div
+                                            class="grid grid-cols-2 gap-4 pt-3 border-t"
                                         >
-                                            問題 {{ index + 1 }}
-                                        </p>
-                                        <p class="text-sm text-gray-700 mb-3">
-                                            {{ answer.question.question_text }}
-                                        </p>
-                                        <div class="grid grid-cols-2 gap-4">
                                             <div>
                                                 <p
                                                     class="text-xs text-gray-600 mb-1"
@@ -258,13 +349,13 @@ const getPartAccuracy = (part: number) => {
                                                 <p
                                                     class="text-sm font-medium"
                                                     :class="
-                                                        answer.is_correct
+                                                        question.is_correct
                                                             ? 'text-green-700'
                                                             : 'text-red-700'
                                                     "
                                                 >
                                                     {{
-                                                        answer.selected_answer ||
+                                                        question.user_choice ||
                                                         "未回答"
                                                     }}
                                                 </p>
@@ -279,29 +370,24 @@ const getPartAccuracy = (part: number) => {
                                                     class="text-sm font-medium text-green-700"
                                                 >
                                                     {{
-                                                        answer.question
-                                                            .correct_answer
+                                                        question.correct_choice
                                                     }}
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="ml-4">
-                                        <span
-                                            v-if="answer.is_correct"
-                                            class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800"
-                                        >
-                                            ✓ 正解
-                                        </span>
-                                        <span
-                                            v-else
-                                            class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800"
-                                        >
-                                            ✗ 不正解
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
+                        </div>
+
+                        <div
+                            v-if="
+                                !answersByPart[part]?.questions ||
+                                answersByPart[part].questions.length === 0
+                            "
+                            class="text-center text-gray-500 py-8"
+                        >
+                            このパートには回答がありません
                         </div>
                     </div>
                 </div>

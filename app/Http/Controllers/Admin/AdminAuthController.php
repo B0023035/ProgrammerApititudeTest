@@ -5,18 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use App\Models\Admin;
+use App\Models\User;
+use App\Models\ExamSession;
 
 class AdminAuthController extends Controller
 {
-    /**
-     * 管理者ログイン画面を表示
-     */
-    public function showLogin()
-    {
-        return Inertia::render('Admin/Login');
-    }
-
     /**
      * 管理者ログイン処理
      */
@@ -27,20 +23,9 @@ class AdminAuthController extends Controller
             'password' => ['required'],
         ]);
 
-        // 通常のwebガードでログイン試行
-        if (Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
-            // ログイン成功後、管理者権限をチェック
-            $user = Auth::user();
-            
-            if (!$user->is_admin) {
-                // 管理者でない場合はログアウト
-                Auth::logout();
-                return back()->withErrors([
-                    'email' => '管理者権限がありません。',
-                ])->onlyInput('email');
-            }
-            
+        if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+
             return redirect()->intended(route('admin.dashboard'));
         }
 
@@ -50,22 +35,89 @@ class AdminAuthController extends Controller
     }
 
     /**
-     * ダッシュボード表示
+     * 管理者ダッシュボード
      */
     public function dashboard()
     {
-        return Inertia::render('Admin/Dashboard');
+        // 統計データを取得
+        $totalUsers = User::count();
+        $totalSessions = ExamSession::whereNotNull('finished_at')->count();
+        
+        // 平均スコアを計算（answersテーブルから）
+        $averageScore = DB::table('exam_sessions')
+            ->join('answers', 'exam_sessions.id', '=', 'answers.exam_session_id')
+            ->whereNotNull('exam_sessions.finished_at')
+            ->select(
+                'exam_sessions.id',
+                DB::raw('SUM(CASE WHEN answers.is_correct = 1 THEN 1 ELSE 0 END) as correct_count')
+            )
+            ->groupBy('exam_sessions.id')
+            ->get()
+            ->avg('correct_count');
+        
+        // 最近のセッション
+        $recentSessions = ExamSession::with(['user', 'answers'])
+            ->whereNotNull('finished_at')
+            ->latest('finished_at')
+            ->take(10)
+            ->get()
+            ->map(function ($session) {
+                $correctCount = $session->answers->where('is_correct', 1)->count();
+                $session->score = $correctCount;
+                return $session;
+            });
+
+        // 管理者情報を取得
+        $admin = Auth::guard('admin')->user();
+
+        // Dashboard.vueをレンダリング（管理者用データを渡す）
+        return Inertia::render('Admin/Dashboard', [
+            'auth' => [
+                'user' => auth('admin')->user()
+            ],
+            'stats' => [
+                'total_users' => \App\Models\User::count(),
+                'total_sessions' => \App\Models\ExamSession::whereNotNull('finished_at')->count(),
+            ],
+            'recentSessions' => \App\Models\ExamSession::with('user')
+                ->whereNotNull('finished_at')
+                ->latest('finished_at')
+                ->take(10)
+                ->get(),
+            'recentUsers' => \App\Models\User::latest()
+                ->take(10)
+                ->get(),
+        ]);
+    }
+
+    // もしスコアを計算したい場合は、以下のようなメソッドを追加
+    private function calculateAverageScore()
+    {
+        $sessions = \App\Models\ExamSession::whereNotNull('finished_at')
+            ->with('answers')
+            ->get();
+        
+        if ($sessions->isEmpty()) {
+            return 0;
+        }
+        
+        $totalScore = $sessions->sum(function ($session) {
+            return $session->answers->where('is_correct', 1)->count();
+        });
+        
+        return round($totalScore / $sessions->count(), 2);
     }
 
     /**
-     * ログアウト処理
+     * 管理者ログアウト処理
      */
     public function logout(Request $request)
     {
         Auth::guard('admin')->logout();
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
         return redirect()->route('admin.login');
     }
 }

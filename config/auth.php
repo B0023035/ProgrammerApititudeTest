@@ -44,7 +44,7 @@ return [
         // ここに管理者用ガードを追加
         'admin' => [
             'driver' => 'session',
-            'provider' => 'users',
+            'provider' => 'admins',
         ],
     ],
 

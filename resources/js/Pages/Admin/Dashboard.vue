@@ -5,7 +5,19 @@ import { computed } from "vue";
 interface Stats {
     total_users: number;
     total_sessions: number;
-    active_sessions: number;
+    active_sessions?: number;
+}
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+
+interface Session {
+    id: number;
+    user?: User;
+    finished_at: string;
 }
 
 interface Admin {
@@ -14,10 +26,18 @@ interface Admin {
 }
 
 const props = defineProps<{
-    admin: Admin;
     stats: Stats;
-    recent_sessions?: any[];
+    recentSessions?: Session[];
+    recentUsers?: User[];
+    auth?: {
+        user: Admin | null;
+    };
 }>();
+
+// 安全にユーザー名を取得
+const userName = computed(() => {
+    return props.auth?.user?.name || "管理者";
+});
 
 const logout = () => {
     router.post(route("admin.logout"));
@@ -44,7 +64,7 @@ const logout = () => {
                     </div>
                     <div class="flex items-center space-x-4">
                         <span class="text-sm text-gray-600">
-                            {{ admin.name }} さん
+                            {{ userName }} さん
                         </span>
                         <button
                             @click="logout"
@@ -124,7 +144,7 @@ const logout = () => {
                                 アクティブセッション
                             </p>
                             <p class="text-4xl font-bold">
-                                {{ stats.active_sessions }}
+                                {{ stats.active_sessions || 0 }}
                             </p>
                         </div>
                         <svg
@@ -273,14 +293,15 @@ const logout = () => {
                         <span
                             class="px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm font-semibold"
                         >
-                            {{ stats.recent_violations.length }}
+                            0
                         </span>
                     </div>
                     <p class="text-gray-600 text-sm">最近の違反行為の記録</p>
                 </div>
 
                 <!-- ユーザー管理 -->
-                <div
+                <Link
+                    :href="route('admin.users.index')"
                     class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all cursor-pointer group"
                 >
                     <div class="flex items-center justify-between mb-4">
@@ -306,12 +327,12 @@ const logout = () => {
                     <p class="text-gray-600 text-sm">
                         ユーザーアカウントの管理
                     </p>
-                </div>
+                </Link>
             </div>
 
             <!-- 最近のセッション -->
             <div
-                v-if="recent_sessions && recent_sessions.length > 0"
+                v-if="recentSessions && recentSessions.length > 0"
                 class="mt-8 bg-white rounded-xl shadow-lg p-6"
             >
                 <h3 class="text-xl font-bold text-gray-900 mb-4">
@@ -340,7 +361,7 @@ const logout = () => {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <tr
-                                v-for="session in recent_sessions"
+                                v-for="session in recentSessions"
                                 :key="session.id"
                                 class="hover:bg-gray-50"
                             >
