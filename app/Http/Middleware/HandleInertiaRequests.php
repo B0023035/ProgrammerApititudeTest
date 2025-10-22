@@ -31,7 +31,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        // 管理者エリアかどうかを判定
+        // 管理者エリアかどうかを判定（修正）
         $isAdminArea = $request->is('admin') || $request->is('admin/*');
         
         // 適切なガードからユーザー情報を取得

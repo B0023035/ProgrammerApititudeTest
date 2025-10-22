@@ -10,14 +10,37 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
+    ->withMiddleware(function (Middleware $middleware) {
+        // Inertiaミドルウェアを追加
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        //
+        // ミドルウェアエイリアスを設定
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        ]);
+
+        // ゲストミドルウェアのリダイレクト先をカスタマイズ
+        $middleware->redirectGuestsTo(function ($request) {
+            // 管理者エリアの場合
+            if ($request->is('admin') || $request->is('admin/*')) {
+                return route('admin.login');
+            }
+            // 一般ユーザーの場合
+            return route('login');
+        });
+
+        // 認証済みユーザーのリダイレクト先をカスタマイズ
+        $middleware->redirectUsersTo(function ($request) {
+            // 管理者として認証されている場合
+            if (auth()->guard('admin')->check()) {
+                return route('admin.dashboard');
+            }
+            // 一般ユーザーとして認証されている場合
+            return '/test-start';
+        });
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
+    ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();

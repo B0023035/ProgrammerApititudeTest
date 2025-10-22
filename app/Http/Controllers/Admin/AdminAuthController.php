@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin\Auth;
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +26,7 @@ class AdminAuthController extends Controller
     /**
      * ログイン処理
      */
-    public function store(Request $request): RedirectResponse
+    public function login(Request $request): RedirectResponse  // ← store から login に変更
     {
         // バリデーション
         $credentials = $request->validate([
@@ -34,7 +34,7 @@ class AdminAuthController extends Controller
             'password' => ['required'],
         ]);
 
-        // adminガードで認証を試みる（重要！）
+        // adminガードで認証を試みる
         if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
@@ -123,7 +123,7 @@ class AdminAuthController extends Controller
     /**
      * 管理者ログアウト処理
      */
-    public function logout(Request $request)
+    public function logout(Request $request): RedirectResponse
     {
         Auth::guard('admin')->logout();
 

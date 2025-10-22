@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Admin\Auth\AdminLoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +19,7 @@ class AuthenticatedSessionController extends Controller
     public function create(): Response
     {
         return Inertia::render('Admin/Login', [
-            'canResetPassword' => Route::has('password.request'),
+            'canResetPassword' => Route::has('admin.password.request'),
             'status' => session('status'),
         ]);
     }
@@ -27,27 +27,13 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(AdminLoginRequest $request): RedirectResponse
     {
-        try {
-            Log::info('Login attempt', ['email' => $request->email]);
-                
-            // webガード（一般ユーザー）で認証
-            $request->authenticate();
+        $request->authenticate();
 
-            Log::info('Authentication successful');
-            
-            $request->session()->regenerate();
-            
-            Log::info('Session regenerated, redirecting to test.start');
-                
-            // test-startページへリダイレクト
-            return redirect()->intended(route('test.start'));
-        } catch (\Exception $e) {
-                Log::error('Login error: ' . $e->getMessage());
-                Log::error('Stack trace: ' . $e->getTraceAsString());
-                throw $e;
-        }
+        $request->session()->regenerate();
+
+        return redirect()->intended(route('admin.dashboard'));
     }
 
     /**
@@ -55,7 +41,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::guard('web')->logout();
+        Auth::guard('admin')->logout();
 
         $request->session()->invalidate();
 

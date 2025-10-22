@@ -7,13 +7,18 @@ const page = usePage();
 onMounted(() => {
     const currentPath = window.location.pathname;
 
-    // 管理者ページへのアクセスは何もしない
-    if (currentPath.startsWith("/admin")) {
+    console.log("Current path:", currentPath);
+    console.log("Auth user:", page.props.auth?.user);
+    console.log("Is admin:", page.props.auth?.isAdmin);
+
+    // Welcomeページ(/)以外ではリダイレクトしない
+    if (currentPath !== "/") {
         return;
     }
 
-    // 一般ユーザーがログインしている場合、test-startへリダイレクト
-    if (page.props.auth?.user) {
+    // 一般ユーザーがログインしている場合のみリダイレクト
+    // 管理者ユーザーはリダイレクトしない（isAdminがfalseの場合のみ）
+    if (page.props.auth?.user && !page.props.auth?.isAdmin) {
         router.visit("/test-start");
     }
 });
@@ -54,13 +59,12 @@ onMounted(() => {
             >
                 Guest
             </Link>
-            <!-- 管理者ログインは通常のaタグを使用 -->
-            <a
+            <Link
                 href="/admin/login"
                 class="underline text-sm text-gray-600 hover:text-gray-900"
             >
                 Administrator Log in
-            </a>
+            </Link>
         </div>
     </div>
 
