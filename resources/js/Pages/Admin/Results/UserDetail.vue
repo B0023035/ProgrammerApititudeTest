@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from "@inertiajs/vue3";
 import { computed } from "vue";
-import AdminLayout from "@/Layouts/AdminLayout.vue";
+// import AdminLayout from "@/Layouts/AdminLayout.vue";
 
 interface User {
     id: number;

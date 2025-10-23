@@ -2,6 +2,7 @@
 import { Head, Link } from "@inertiajs/vue3";
 import { ref } from "vue";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
+// import AdminResultsTabs from "@/Components/AdminResultsTabs.vue";
 
 interface User {
     id: number;
@@ -20,8 +21,9 @@ const props = defineProps<Props>();
 const selectedGrade = ref<string | null>(null);
 const grades = Object.keys(props.usersByGrade).sort();
 
-const selectGrade = (grade: string) => {
-    selectedGrade.value = selectedGrade.value === grade ? null : grade;
+const selectGrade = (grade: string | number) => {
+    const gradeStr = String(grade);
+    selectedGrade.value = selectedGrade.value === gradeStr ? null : gradeStr;
 };
 
 const getAverageScore = (user: User) => {
@@ -56,6 +58,9 @@ const getBestScore = (user: User) => {
                         学年ごとのユーザーと受験履歴を確認できます
                     </p>
                 </div>
+
+                <!-- タブナビゲーション -->
+                <AdminResultsTabs />
 
                 <!-- 学年カード -->
                 <div

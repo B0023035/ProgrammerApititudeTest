@@ -6,6 +6,16 @@ const page = usePage();
 
 const admin = computed(() => page.props.auth?.admin || page.props.admin);
 
+// 現在のルート名を取得
+const currentRoute = computed(() => {
+    return route().current() as string;
+});
+
+// 各タブのアクティブ状態を判定
+const isActive = (routeName: string) => {
+    return currentRoute.value === routeName;
+};
+
 const logout = () => {
     router.post(route("admin.logout"));
 };
@@ -52,8 +62,7 @@ const logout = () => {
                         :href="route('admin.dashboard')"
                         class="px-3 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
                         :class="
-                            $page.url === '/admin/dashboard' ||
-                            $page.url === '/admin/home'
+                            isActive('admin.dashboard')
                                 ? 'border-blue-500 text-blue-600'
                                 : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                         "
@@ -64,7 +73,7 @@ const logout = () => {
                         :href="route('admin.results.comlink')"
                         class="px-3 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
                         :class="
-                            $page.url.startsWith('/admin/results-comlink')
+                            isActive('admin.results.comlink')
                                 ? 'border-purple-500 text-purple-600'
                                 : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                         "
@@ -75,8 +84,7 @@ const logout = () => {
                         :href="route('admin.results.index')"
                         class="px-3 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
                         :class="
-                            $page.url.startsWith('/admin/results') &&
-                            !$page.url.startsWith('/admin/results-comlink')
+                            isActive('admin.results.index')
                                 ? 'border-blue-500 text-blue-600'
                                 : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                         "
@@ -87,7 +95,7 @@ const logout = () => {
                         :href="route('admin.results.statistics')"
                         class="px-3 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
                         :class="
-                            $page.url === '/admin/results/statistics'
+                            isActive('admin.results.statistics')
                                 ? 'border-green-500 text-green-600'
                                 : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                         "
@@ -98,7 +106,7 @@ const logout = () => {
                         :href="route('admin.results.grade-list')"
                         class="px-3 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
                         :class="
-                            $page.url === '/admin/results/grade'
+                            isActive('admin.results.grade-list')
                                 ? 'border-indigo-500 text-indigo-600'
                                 : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                         "
@@ -109,7 +117,7 @@ const logout = () => {
                         :href="route('admin.users.index')"
                         class="px-3 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
                         :class="
-                            $page.url.startsWith('/admin/users')
+                            isActive('admin.users.index')
                                 ? 'border-purple-500 text-purple-600'
                                 : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                         "

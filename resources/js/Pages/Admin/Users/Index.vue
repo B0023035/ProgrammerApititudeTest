@@ -64,11 +64,14 @@ const filteredUsers = computed(() => {
                     >
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm opacity-90 mb-1">総ユーザー数</p>
+                                <p class="text-sm opacity-90 mb-1">
+                                    総ユーザー数
+                                </p>
                                 <p class="text-4xl font-bold">
                                     {{ users.total }}
                                 </p>
                             </div>
+                        </div>
                     </div>
 
                     <div
@@ -78,7 +81,8 @@ const filteredUsers = computed(() => {
                             <div>
                                 <p class="text-sm opacity-90 mb-1">ページ</p>
                                 <p class="text-4xl font-bold">
-                                    {{ users.current_page }} / {{ users.last_page }}
+                                    {{ users.current_page }} /
+                                    {{ users.last_page }}
                                 </p>
                             </div>
                             <svg

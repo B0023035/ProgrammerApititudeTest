@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
+// import AdminResultsTabs from "@/Components/AdminResultsTabs.vue";
 
 interface Stats {
     total_sessions: number;
@@ -30,6 +31,9 @@ const props = defineProps<Props>();
                         全体の統計情報とグラフを確認できます
                     </p>
                 </div>
+
+                <!-- タブナビゲーション -->
+                <AdminResultsTabs />
 
                 <!-- 主要統計カード -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -121,7 +125,7 @@ const props = defineProps<Props>();
                     </div>
                 </div>
 
-                <!-- グラフエリア（プレースホルダー） -->
+                <!-- グラフエリア(プレースホルダー) -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- ランク分布 -->
                     <div class="bg-white rounded-lg shadow-lg p-6">
@@ -393,7 +397,7 @@ const props = defineProps<Props>();
                     <!-- 月別受験者数 -->
                     <div class="bg-white rounded-lg shadow-lg p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">
-                            月別受験者数（2025年）
+                            月別受験者数(2025年)
                         </h2>
                         <div class="space-y-3">
                             <div class="flex items-center">

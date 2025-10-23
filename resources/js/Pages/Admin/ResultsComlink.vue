@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { Head, router } from "@inertiajs/vue3";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { Head, Link, router } from "@inertiajs/vue3";
+import AdminLayout from "@/Layouts/AdminLayout.vue";
+// import AdminResultsTabs from "@/Components/AdminResultsTabs.vue";
 
 interface GradeData {
     id: number;
@@ -28,7 +29,7 @@ interface Session {
     user_id: number;
     session_uuid: string;
     total_score: number;
-    total_questions: number; // ← 追加
+    total_questions: number;
     rank: string;
     finished_at: string;
     user: {
@@ -65,7 +66,6 @@ const generateGradesFromSessions = () => {
     const generatedGrades: GradeData[] = [];
 
     props.sessions.forEach((session) => {
-        // 総合スコアが0の場合はスキップ
         if (!session.total_score || session.total_questions === 0) {
             return;
         }
@@ -74,12 +74,8 @@ const generateGradesFromSessions = () => {
             (session.total_score / session.total_questions) * 100;
 
         subjects.forEach((subject, index) => {
-            // 各科目の点数を総合点から算出
-            // Part1: 40問、Part2: 30問、Part3: 25問
-            const partWeights = [0.42, 0.32, 0.26]; // 40/95, 30/95, 25/95
+            const partWeights = [0.42, 0.32, 0.26];
             const baseScore = totalPercentage * partWeights[index];
-
-            // 少しバラツキを持たせる
             const variation = (Math.random() - 0.5) * 10;
             const score = Math.max(
                 0,
@@ -125,7 +121,6 @@ const subjects = computed(() => {
     return ["all", ...uniqueSubjects];
 });
 
-// 評価を計算
 const calculateGrade = (score: number): string => {
     if (score >= 90) return "A";
     if (score >= 80) return "B";
@@ -134,7 +129,6 @@ const calculateGrade = (score: number): string => {
     return "F";
 };
 
-// 統計を計算(Comlinkを使わずに直接計算)
 const calculateStats = () => {
     if (filteredGrades.value.length === 0) {
         stats.value = {
@@ -149,31 +143,20 @@ const calculateStats = () => {
     loading.value = true;
 
     try {
-        // 平均点
         const sum = filteredGrades.value.reduce((acc, g) => acc + g.score, 0);
         const average = parseFloat(
             (sum / filteredGrades.value.length).toFixed(2)
         );
-
-        // 最高点
         const highest = Math.max(...filteredGrades.value.map((g) => g.score));
-
-        // 最低点
         const lowest = Math.min(...filteredGrades.value.map((g) => g.score));
 
-        // 評価別カウント
         const counts = { A: 0, B: 0, C: 0, D: 0, F: 0 };
         filteredGrades.value.forEach((g) => {
             const grade = calculateGrade(g.score);
             counts[grade as keyof GradeCounts]++;
         });
 
-        stats.value = {
-            average,
-            highest,
-            lowest,
-            counts,
-        };
+        stats.value = { average, highest, lowest, counts };
     } catch (error) {
         console.error("統計計算エラー:", error);
     } finally {
@@ -181,7 +164,6 @@ const calculateStats = () => {
     }
 };
 
-// CSV エクスポート
 const exportToCSV = () => {
     loading.value = true;
 
@@ -218,15 +200,8 @@ const goToUserDetail = (sessionId: number) => {
     router.visit(route("admin.results.session-detail", { sessionId }));
 };
 
-const goToStatistics = () => {
-    router.visit(route("admin.results.statistics"));
-};
-
 onMounted(() => {
-    // セッションデータから成績を生成
     grades.value = generateGradesFromSessions();
-
-    // 統計を計算
     setTimeout(() => {
         calculateStats();
     }, 100);
@@ -234,88 +209,23 @@ onMounted(() => {
 </script>
 
 <template>
-    <AuthenticatedLayout>
-        <Head title="成績管理システム" />
+    <AdminLayout>
+        <Head title="成績管理 (Comlink)" />
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="py-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- ヘッダー -->
-                <div
-                    class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6"
-                >
-                    <div class="p-6 border-b border-gray-200">
-                        <div
-                            class="flex items-center justify-between flex-wrap gap-4"
-                        >
-                            <h2
-                                class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600"
-                            >
-                                📊 成績管理システム
-                            </h2>
-                            <div class="flex gap-2">
-                                <button
-                                    @click="goToStatistics"
-                                    class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"
-                                >
-                                    📈 統計ページ
-                                </button>
-                                <button
-                                    @click="exportToCSV"
-                                    class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                                >
-                                    💾 CSV出力
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                <div class="mb-6">
+                    <h1 class="text-3xl font-bold text-gray-900">
+                        📊 成績管理 (Comlink)
+                    </h1>
+                    <p class="mt-2 text-gray-600">
+                        Web Workerを活用した高速成績分析システム
+                    </p>
                 </div>
 
-                <!-- フィルター -->
-                <div
-                    class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6"
-                >
-                    <div class="p-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label
-                                    class="block text-sm font-medium text-gray-700 mb-2"
-                                >
-                                    科目で絞り込み
-                                </label>
-                                <select
-                                    v-model="selectedSubject"
-                                    @change="calculateStats"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                >
-                                    <option value="all">すべての科目</option>
-                                    <option
-                                        v-for="subject in subjects.filter(
-                                            (s) => s !== 'all'
-                                        )"
-                                        :key="subject"
-                                        :value="subject"
-                                    >
-                                        {{ subject }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div>
-                                <label
-                                    class="block text-sm font-medium text-gray-700 mb-2"
-                                >
-                                    検索
-                                </label>
-                                <input
-                                    v-model="searchQuery"
-                                    @input="calculateStats"
-                                    type="text"
-                                    placeholder="学生名または科目で検索..."
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- タブナビゲーション -->
+                <AdminResultsTabs />
 
                 <!-- 統計カード -->
                 <div
@@ -355,176 +265,216 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- 評価分布 -->
-                <div
-                    class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6"
-                >
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-4 text-gray-800">
-                            評価分布
+                <!-- フィルター -->
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900">
+                            フィルター
                         </h3>
-                        <div
-                            class="grid grid-cols-5 gap-4 text-center"
-                            v-if="!loading"
+                        <button
+                            @click="exportToCSV"
+                            class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                         >
-                            <div
-                                class="bg-green-100 rounded-lg p-4 border-2 border-green-500"
+                            💾 CSV出力
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 mb-2"
                             >
-                                <div class="text-3xl font-bold text-green-600">
-                                    A
-                                </div>
-                                <div class="text-2xl font-semibold mt-2">
-                                    {{ stats.counts.A }}
-                                </div>
-                            </div>
-                            <div
-                                class="bg-blue-100 rounded-lg p-4 border-2 border-blue-500"
+                                科目で絞り込み
+                            </label>
+                            <select
+                                v-model="selectedSubject"
+                                @change="calculateStats"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             >
-                                <div class="text-3xl font-bold text-blue-600">
-                                    B
-                                </div>
-                                <div class="text-2xl font-semibold mt-2">
-                                    {{ stats.counts.B }}
-                                </div>
-                            </div>
-                            <div
-                                class="bg-yellow-100 rounded-lg p-4 border-2 border-yellow-500"
-                            >
-                                <div class="text-3xl font-bold text-yellow-600">
-                                    C
-                                </div>
-                                <div class="text-2xl font-semibold mt-2">
-                                    {{ stats.counts.C }}
-                                </div>
-                            </div>
-                            <div
-                                class="bg-orange-100 rounded-lg p-4 border-2 border-orange-500"
-                            >
-                                <div class="text-3xl font-bold text-orange-600">
-                                    D
-                                </div>
-                                <div class="text-2xl font-semibold mt-2">
-                                    {{ stats.counts.D }}
-                                </div>
-                            </div>
-                            <div
-                                class="bg-red-100 rounded-lg p-4 border-2 border-red-500"
-                            >
-                                <div class="text-3xl font-bold text-red-600">
-                                    F
-                                </div>
-                                <div class="text-2xl font-semibold mt-2">
-                                    {{ stats.counts.F }}
-                                </div>
-                            </div>
+                                <option value="all">すべての科目</option>
+                                <option
+                                    v-for="subject in subjects.filter(
+                                        (s) => s !== 'all'
+                                    )"
+                                    :key="subject"
+                                    :value="subject"
+                                >
+                                    {{ subject }}
+                                </option>
+                            </select>
                         </div>
-                        <div v-else class="text-center py-8 text-gray-500">
-                            計算中...
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                            >
+                                検索
+                            </label>
+                            <input
+                                v-model="searchQuery"
+                                @input="calculateStats"
+                                type="text"
+                                placeholder="学生名または科目で検索..."
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
                         </div>
                     </div>
                 </div>
 
-                <!-- 成績一覧テーブル -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-4 text-gray-800">
-                            成績一覧
-                            <span class="text-sm font-normal text-gray-500"
-                                >({{ filteredGrades.length }}件)</span
-                            >
-                        </h3>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th
-                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                        >
-                                            学生名
-                                        </th>
-                                        <th
-                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                        >
-                                            科目
-                                        </th>
-                                        <th
-                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                        >
-                                            点数
-                                        </th>
-                                        <th
-                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                        >
-                                            評価
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody
-                                    class="bg-white divide-y divide-gray-200"
-                                >
-                                    <tr
-                                        v-for="grade in filteredGrades"
-                                        :key="grade.id"
-                                        class="hover:bg-gray-50 transition-colors cursor-pointer"
-                                        @click="
-                                            goToUserDetail(
-                                                grade.exam_session_id
-                                            )
-                                        "
-                                    >
-                                        <td
-                                            class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-                                        >
-                                            {{ grade.name }}
-                                        </td>
-                                        <td
-                                            class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
-                                        >
-                                            {{ grade.subject }}
-                                        </td>
-                                        <td
-                                            class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                                        >
-                                            {{ grade.score }}点
-                                        </td>
-                                        <td
-                                            class="px-6 py-4 whitespace-nowrap text-sm font-bold"
-                                        >
-                                            <span
-                                                :class="{
-                                                    'text-green-600':
-                                                        grade.score >= 90,
-                                                    'text-blue-600':
-                                                        grade.score >= 80 &&
-                                                        grade.score < 90,
-                                                    'text-yellow-600':
-                                                        grade.score >= 70 &&
-                                                        grade.score < 80,
-                                                    'text-orange-600':
-                                                        grade.score >= 60 &&
-                                                        grade.score < 70,
-                                                    'text-red-600':
-                                                        grade.score < 60,
-                                                }"
-                                            >
-                                                {{
-                                                    calculateGrade(grade.score)
-                                                }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div
-                                v-if="filteredGrades.length === 0"
-                                class="text-center py-12 text-gray-500"
-                            >
-                                データがありません
+                <!-- 評価分布 -->
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">
+                        評価分布
+                    </h3>
+                    <div
+                        class="grid grid-cols-5 gap-4 text-center"
+                        v-if="!loading"
+                    >
+                        <div
+                            class="bg-green-100 rounded-lg p-4 border-2 border-green-500"
+                        >
+                            <div class="text-3xl font-bold text-green-600">
+                                A
                             </div>
+                            <div class="text-2xl font-semibold mt-2">
+                                {{ stats.counts.A }}
+                            </div>
+                        </div>
+                        <div
+                            class="bg-blue-100 rounded-lg p-4 border-2 border-blue-500"
+                        >
+                            <div class="text-3xl font-bold text-blue-600">
+                                B
+                            </div>
+                            <div class="text-2xl font-semibold mt-2">
+                                {{ stats.counts.B }}
+                            </div>
+                        </div>
+                        <div
+                            class="bg-yellow-100 rounded-lg p-4 border-2 border-yellow-500"
+                        >
+                            <div class="text-3xl font-bold text-yellow-600">
+                                C
+                            </div>
+                            <div class="text-2xl font-semibold mt-2">
+                                {{ stats.counts.C }}
+                            </div>
+                        </div>
+                        <div
+                            class="bg-orange-100 rounded-lg p-4 border-2 border-orange-500"
+                        >
+                            <div class="text-3xl font-bold text-orange-600">
+                                D
+                            </div>
+                            <div class="text-2xl font-semibold mt-2">
+                                {{ stats.counts.D }}
+                            </div>
+                        </div>
+                        <div
+                            class="bg-red-100 rounded-lg p-4 border-2 border-red-500"
+                        >
+                            <div class="text-3xl font-bold text-red-600">F</div>
+                            <div class="text-2xl font-semibold mt-2">
+                                {{ stats.counts.F }}
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="text-center py-8 text-gray-500">
+                        計算中...
+                    </div>
+                </div>
+
+                <!-- 成績一覧テーブル -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">
+                        成績一覧
+                        <span class="text-sm font-normal text-gray-500"
+                            >({{ filteredGrades.length }}件)</span
+                        >
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
+                                        学生名
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
+                                        科目
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
+                                        点数
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
+                                        評価
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr
+                                    v-for="grade in filteredGrades"
+                                    :key="grade.id"
+                                    class="hover:bg-gray-50 transition-colors cursor-pointer"
+                                    @click="
+                                        goToUserDetail(grade.exam_session_id)
+                                    "
+                                >
+                                    <td
+                                        class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+                                    >
+                                        {{ grade.name }}
+                                    </td>
+                                    <td
+                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                                    >
+                                        {{ grade.subject }}
+                                    </td>
+                                    <td
+                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                                    >
+                                        {{ grade.score }}点
+                                    </td>
+                                    <td
+                                        class="px-6 py-4 whitespace-nowrap text-sm font-bold"
+                                    >
+                                        <span
+                                            :class="{
+                                                'text-green-600':
+                                                    grade.score >= 90,
+                                                'text-blue-600':
+                                                    grade.score >= 80 &&
+                                                    grade.score < 90,
+                                                'text-yellow-600':
+                                                    grade.score >= 70 &&
+                                                    grade.score < 80,
+                                                'text-orange-600':
+                                                    grade.score >= 60 &&
+                                                    grade.score < 70,
+                                                'text-red-600':
+                                                    grade.score < 60,
+                                            }"
+                                        >
+                                            {{ calculateGrade(grade.score) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div
+                            v-if="filteredGrades.length === 0"
+                            class="text-center py-12 text-gray-500"
+                        >
+                            データがありません
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </AdminLayout>
 </template>

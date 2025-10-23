@@ -14,33 +14,84 @@ use Inertia\Inertia;
 class ResultsManagementController extends Controller
 {
     /**
+     * 各パートの問題数を取得
+     */
+    private function getPartQuestionCounts()
+    {
+        return [
+            1 => Question::where('part', 1)->count(),
+            2 => Question::where('part', 2)->count(),
+            3 => Question::where('part', 3)->count(),
+        ];
+    }
+
+    /**
+     * スコア計算（正答: +1点、誤答: -0.25点、未回答: 0点）
+     */
+    private function calculateScore($examSessionId, $part = null)
+    {
+        $query = Answer::where('exam_session_id', $examSessionId);
+        
+        if ($part !== null) {
+            $query->where('part', $part);
+        }
+        
+        $answers = $query->get();
+        
+        $score = 0;
+        foreach ($answers as $answer) {
+            if ($answer->choice === null) {
+                // 未回答: 0点
+                continue;
+            } elseif ($answer->is_correct) {
+                // 正答: +1点
+                $score += 1;
+            } else {
+                // 誤答: -0.25点
+                $score -= 0.25;
+            }
+        }
+        
+        return $score;
+    }
+
+    /**
+     * ランク計算（新基準）
+     * ～35.75: D (Bronze)
+     * 36～50.75: C (Silver)
+     * 51～60.75: B (Gold)
+     * 61～: A (Platinum)
+     */
+    private function calculateRank($score)
+    {
+        if ($score >= 61) return 'Platinum';
+        if ($score >= 51) return 'Gold';
+        if ($score >= 36) return 'Silver';
+        return 'Bronze';
+    }
+
+    /**
      * 成績一覧ダッシュボード(管理者用)
      */
     public function index(Request $request)
     {
-        // 完了したセッションを取得し、正答数を集計
+        $partQuestionCounts = $this->getPartQuestionCounts();
+        $totalQuestions = array_sum($partQuestionCounts);
+
         $sessions = ExamSession::with('user')
             ->whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->latest('finished_at')
             ->get()
-            ->map(function ($session) {
-                // answersテーブルから正答数を集計
-                $correctCount = Answer::where('exam_session_id', $session->id)
-                    ->where('is_correct', 1)
-                    ->count();
-                
-                $totalQuestions = Answer::where('exam_session_id', $session->id)
-                    ->count();
-
-                // ランク判定
-                $rank = $this->calculateRank($correctCount, $totalQuestions);
+            ->map(function ($session) use ($totalQuestions) {
+                $score = $this->calculateScore($session->id);
+                $rank = $this->calculateRank($score);
 
                 return [
                     'id' => $session->id,
                     'user_id' => $session->user_id,
                     'session_uuid' => $session->session_uuid,
-                    'total_score' => $correctCount,
+                    'total_score' => round($score, 2),
                     'total_questions' => $totalQuestions,
                     'rank' => $rank,
                     'finished_at' => $session->finished_at->toIso8601String(),
@@ -52,7 +103,6 @@ class ResultsManagementController extends Controller
                 ];
             });
 
-        // ページネーション用にコレクションを配列に変換
         $perPage = 20;
         $currentPage = $request->get('page', 1);
         $total = $sessions->count();
@@ -75,36 +125,30 @@ class ResultsManagementController extends Controller
     public function sessionDetail($sessionId)
     {
         $session = ExamSession::with('user')->findOrFail($sessionId);
+        $partQuestionCounts = $this->getPartQuestionCounts();
+        $totalQuestions = array_sum($partQuestionCounts);
         
-        // デバッグログ
-        \Log::info('SessionDetail called for session: ' . $sessionId);
-        
-        // answersテーブルから全回答を取得（questionとchoicesもロード）
         $answers = Answer::where('exam_session_id', $sessionId)
             ->with(['question', 'question.choices'])
             ->orderBy('part')
             ->orderBy('question_id')
             ->get();
 
-        \Log::info('Total answers found: ' . $answers->count());
+        $totalScore = $this->calculateScore($sessionId);
+        $rank = $this->calculateRank($totalScore);
 
-        // 総合スコア
-        $totalCorrect = $answers->where('is_correct', 1)->count();
-        $totalQuestions = $answers->count();
-        $rank = $this->calculateRank($totalCorrect, $totalQuestions);
-
-        // パート別にグループ化して詳細情報を構築
         $answersByPart = [];
 
         foreach ([1, 2, 3] as $part) {
             $partAnswers = $answers->where('part', $part);
+            $partScore = $this->calculateScore($sessionId, $part);
+            $total = $partQuestionCounts[$part];
             
+            // 正答数をカウント（表示用）
             $correct = $partAnswers->where('is_correct', 1)->count();
-            $total = $partAnswers->count();
             
             $questions = [];
             foreach ($partAnswers as $answer) {
-                // 正解の選択肢を取得
                 $correctChoice = null;
                 foreach ($answer->question->choices as $choice) {
                     if ($choice->is_correct) {
@@ -123,6 +167,16 @@ class ResultsManagementController extends Controller
                     ];
                 }
 
+                // 各問題のスコアを計算
+                $questionScore = 0;
+                if ($answer->choice === null) {
+                    $questionScore = 0;
+                } elseif ($answer->is_correct) {
+                    $questionScore = 1;
+                } else {
+                    $questionScore = -0.25;
+                }
+
                 $questions[] = [
                     'question_id' => $answer->question_id,
                     'question_number' => $answer->question->number,
@@ -131,6 +185,7 @@ class ResultsManagementController extends Controller
                     'user_choice' => $answer->choice,
                     'correct_choice' => $correctChoice,
                     'is_correct' => (bool)$answer->is_correct,
+                    'score' => $questionScore,
                     'choices' => $choicesArray,
                 ];
             }
@@ -139,15 +194,14 @@ class ResultsManagementController extends Controller
                 'score' => [
                     'correct' => $correct,
                     'total' => $total,
+                    'points' => round($partScore, 2),
                     'percentage' => $total > 0 ? round(($correct / $total) * 100, 1) : 0,
                 ],
                 'questions' => $questions,
             ];
         }
 
-        \Log::info('AnswersByPart structure: ' . json_encode(array_keys($answersByPart)));
-
-        $responseData = [
+        return Inertia::render('Admin/Results/SessionDetail', [
             'session' => [
                 'id' => $session->id,
                 'session_uuid' => $session->session_uuid,
@@ -158,20 +212,15 @@ class ResultsManagementController extends Controller
                 ],
                 'started_at' => $session->started_at->toIso8601String(),
                 'finished_at' => $session->finished_at->toIso8601String(),
-                'total_score' => $totalCorrect,
+                'total_score' => round($totalScore, 2),
                 'total_questions' => $totalQuestions,
                 'percentage' => $totalQuestions > 0 
-                    ? round(($totalCorrect / $totalQuestions) * 100, 1) 
+                    ? round(($totalScore / $totalQuestions) * 100, 1) 
                     : 0,
                 'rank' => $rank,
             ],
             'answersByPart' => $answersByPart,
-        ];
-
-        \Log::info('Response data keys: ' . implode(', ', array_keys($responseData)));
-        \Log::info('AnswersByPart exists: ' . (isset($responseData['answersByPart']) ? 'yes' : 'no'));
-
-        return Inertia::render('Admin/Results/SessionDetail', $responseData);
+        ]);
     }
 
     /**
@@ -180,141 +229,95 @@ class ResultsManagementController extends Controller
     public function userDetail($userId)
     {
         $user = User::findOrFail($userId);
+        $partQuestionCounts = $this->getPartQuestionCounts();
+        $totalQuestions = array_sum($partQuestionCounts);
         
-        // ユーザーの全セッションを取得
         $sessions = ExamSession::where('user_id', $userId)
             ->whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->orderBy('finished_at', 'desc')
             ->get()
-            ->map(function ($session) {
-                $correctCount = Answer::where('exam_session_id', $session->id)
-                    ->where('is_correct', 1)
-                    ->count();
-                
-                $totalQuestions = Answer::where('exam_session_id', $session->id)
-                    ->count();
+            ->map(function ($session) use ($partQuestionCounts, $totalQuestions) {
+                $totalScore = $this->calculateScore($session->id);
 
-                // パート別スコア
                 $partScores = [];
                 for ($part = 1; $part <= 3; $part++) {
+                    $partScore = $this->calculateScore($session->id, $part);
+                    
+                    // 正答数（表示用）
                     $partCorrect = Answer::where('exam_session_id', $session->id)
                         ->where('part', $part)
                         ->where('is_correct', 1)
                         ->count();
-                    
-                    $partTotal = Answer::where('exam_session_id', $session->id)
-                        ->where('part', $part)
-                        ->count();
 
                     $partScores[$part] = [
                         'correct' => $partCorrect,
-                        'total' => $partTotal,
-                        'percentage' => $partTotal > 0 ? round(($partCorrect / $partTotal) * 100, 1) : 0,
+                        'total' => $partQuestionCounts[$part],
+                        'points' => round($partScore, 2),
+                        'percentage' => $partQuestionCounts[$part] > 0 
+                            ? round(($partCorrect / $partQuestionCounts[$part]) * 100, 1) 
+                            : 0,
                     ];
                 }
 
                 return [
                     'id' => $session->id,
                     'session_uuid' => $session->session_uuid,
-                    'total_score' => $correctCount,
+                    'total_score' => round($totalScore, 2),
                     'total_questions' => $totalQuestions,
                     'percentage' => $totalQuestions > 0 
-                        ? round(($correctCount / $totalQuestions) * 100, 1) 
+                        ? round(($totalScore / $totalQuestions) * 100, 1) 
                         : 0,
-                    'rank' => $this->calculateRank($correctCount, $totalQuestions),
+                    'rank' => $this->calculateRank($totalScore),
                     'finished_at' => $session->finished_at->toIso8601String(),
-                    'part_scores' => $partScores,
+                    'part1_score' => $partScores[1]['points'],
+                    'part2_score' => $partScores[2]['points'],
+                    'part3_score' => $partScores[3]['points'],
                 ];
             });
-
-        // 平均スコア計算
-        $averageScore = $sessions->avg('total_score');
-        $bestScore = $sessions->max('total_score');
-        $averagePercentage = $sessions->avg('percentage');
 
         return Inertia::render('Admin/Results/UserDetail', [
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'created_at' => $user->created_at->toIso8601String(),
             ],
             'sessions' => $sessions,
-            'statistics' => [
-                'total_attempts' => $sessions->count(),
-                'average_score' => round($averageScore, 1),
-                'best_score' => $bestScore,
-                'average_percentage' => round($averagePercentage, 1),
-            ],
         ]);
     }
 
     /**
-     * ランク別一覧
+     * 学年別一覧
      */
     public function gradeList(Request $request)
     {
-        $rankFilter = $request->get('rank');
+        $users = User::with(['examSessions' => function ($query) {
+            $query->whereNotNull('finished_at')
+                  ->whereNull('disqualified_at');
+        }])->get();
 
-        // 完了したセッションを取得
-        $sessions = ExamSession::with('user')
-            ->whereNotNull('finished_at')
-            ->whereNull('disqualified_at')
-            ->latest('finished_at')
-            ->get()
-            ->map(function ($session) {
-                $correctCount = Answer::where('exam_session_id', $session->id)
-                    ->where('is_correct', 1)
-                    ->count();
-                
-                $totalQuestions = Answer::where('exam_session_id', $session->id)
-                    ->count();
-
-                $rank = $this->calculateRank($correctCount, $totalQuestions);
-
+        $usersByGrade = $users->groupBy(function ($user) {
+            return $user->grade ?? '未設定';
+        })->map(function ($gradeUsers) {
+            return $gradeUsers->map(function ($user) {
                 return [
-                    'id' => $session->id,
-                    'user_id' => $session->user_id,
-                    'session_uuid' => $session->session_uuid,
-                    'total_score' => $correctCount,
-                    'total_questions' => $totalQuestions,
-                    'percentage' => $totalQuestions > 0 
-                        ? round(($correctCount / $totalQuestions) * 100, 1) 
-                        : 0,
-                    'rank' => $rank,
-                    'finished_at' => $session->finished_at->toIso8601String(),
-                    'user' => [
-                        'id' => $session->user->id,
-                        'name' => $session->user->name,
-                        'email' => $session->user->email,
-                    ],
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'grade' => $user->grade ?? '未設定',
+                    'exam_sessions' => $user->examSessions->map(function ($session) {
+                        $score = $this->calculateScore($session->id);
+                        return [
+                            'total_score' => round($score, 2),
+                        ];
+                    }),
                 ];
             });
-
-        // ランクでフィルタリング
-        if ($rankFilter && $rankFilter !== 'all') {
-            $sessions = $sessions->filter(function ($session) use ($rankFilter) {
-                return $session['rank'] === $rankFilter;
-            });
-        }
-
-        // ランク別の統計
-        $rankCounts = [
-            'Platinum' => 0,
-            'Gold' => 0,
-            'Silver' => 0,
-            'Bronze' => 0,
-            'Unranked' => 0,
-        ];
-
-        foreach ($sessions as $session) {
-            $rankCounts[$session['rank']]++;
-        }
+        });
 
         return Inertia::render('Admin/Results/GradeList', [
-            'sessions' => $sessions->values(),
-            'rankCounts' => $rankCounts,
-            'currentRank' => $rankFilter ?? 'all',
+            'usersByGrade' => $usersByGrade,
         ]);
     }
 
@@ -323,103 +326,72 @@ class ResultsManagementController extends Controller
      */
     public function statistics()
     {
-        // 日別受験者数
-        $dailyStats = ExamSession::whereNotNull('finished_at')
+        $totalSessions = ExamSession::whereNotNull('finished_at')
             ->whereNull('disqualified_at')
-            ->select(DB::raw('DATE(finished_at) as date'), DB::raw('COUNT(*) as count'))
-            ->groupBy('date')
-            ->orderBy('date', 'desc')
-            ->limit(30)
-            ->get();
-
-        // スコア分布
+            ->count();
+        
+        $totalUsers = User::count();
+        
         $sessions = ExamSession::whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->get();
-
-        $scoreDistribution = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // 0-9%, 10-19%, ..., 90-100%
-
+        
+        $totalScore = 0;
+        
         foreach ($sessions as $session) {
-            $correct = Answer::where('exam_session_id', $session->id)
-                ->where('is_correct', 1)
-                ->count();
-            
-            $total = Answer::where('exam_session_id', $session->id)
-                ->count();
-
-            if ($total > 0) {
-                $percentage = ($correct / $total) * 100;
-                $index = min(9, floor($percentage / 10));
-                $scoreDistribution[$index]++;
-            }
+            $score = $this->calculateScore($session->id);
+            $totalScore += $score;
         }
-
-        // パート別平均正答率
-        $partAverages = [];
-        for ($part = 1; $part <= 3; $part++) {
-            $correctSum = DB::table('answers')
-                ->join('exam_sessions', 'answers.exam_session_id', '=', 'exam_sessions.id')
-                ->where('answers.part', $part)
-                ->where('answers.is_correct', 1)
-                ->whereNotNull('exam_sessions.finished_at')
-                ->whereNull('exam_sessions.disqualified_at')
-                ->count();
-
-            $totalSum = DB::table('answers')
-                ->join('exam_sessions', 'answers.exam_session_id', '=', 'exam_sessions.id')
-                ->where('answers.part', $part)
-                ->whereNotNull('exam_sessions.finished_at')
-                ->whereNull('exam_sessions.disqualified_at')
-                ->count();
-
-            $partAverages[$part] = $totalSum > 0 ? round(($correctSum / $totalSum) * 100, 1) : 0;
-        }
-
-        // ランク別統計
-        $rankCounts = [
-            'Platinum' => 0,
-            'Gold' => 0,
-            'Silver' => 0,
-            'Bronze' => 0,
-            'Unranked' => 0,
-        ];
-
-        foreach ($sessions as $session) {
-            $correct = Answer::where('exam_session_id', $session->id)
-                ->where('is_correct', 1)
-                ->count();
-            
-            $total = Answer::where('exam_session_id', $session->id)
-                ->count();
-
-            $rank = $this->calculateRank($correct, $total);
-            $rankCounts[$rank]++;
-        }
+        
+        $averageScore = $totalSessions > 0 
+            ? round($totalScore / $totalSessions, 2) 
+            : 0;
 
         return Inertia::render('Admin/Results/Statistics', [
-            'dailyStats' => $dailyStats,
-            'scoreDistribution' => $scoreDistribution,
-            'partAverages' => $partAverages,
-            'rankCounts' => $rankCounts,
-            'totalSessions' => $sessions->count(),
+            'stats' => [
+                'total_sessions' => $totalSessions,
+                'total_users' => $totalUsers,
+                'average_score' => $averageScore,
+            ],
         ]);
     }
 
     /**
-     * ランク計算
-     */
-    private function calculateRank($correctCount, $totalQuestions)
-    {
-        if ($totalQuestions === 0) {
-            return 'Unranked';
-        }
+ * COM連携ページ（Comlink）
+ */
+public function comlink()
+{
+    $partQuestionCounts = $this->getPartQuestionCounts();
+    $totalQuestions = array_sum($partQuestionCounts);
+    
+    $sessions = ExamSession::with('user')
+        ->whereNotNull('finished_at')
+        ->whereNull('disqualified_at')
+        ->latest('finished_at')
+        ->get()
+        ->map(function ($session) use ($totalQuestions) {
+            $totalScore = $this->calculateScore($session->id);
+            $rank = $this->calculateRank($totalScore);
 
-        $percentage = ($correctCount / $totalQuestions) * 100;
+            return [
+                'id' => $session->id,
+                'user_id' => $session->user_id,
+                'session_uuid' => $session->session_uuid,
+                'total_score' => round($totalScore, 2),
+                'total_questions' => $totalQuestions,
+                'rank' => $rank,
+                'finished_at' => $session->finished_at->toIso8601String(),
+                'user' => [
+                    'id' => $session->user->id,
+                    'name' => $session->user->name,
+                    'email' => $session->user->email,
+                ],
+            ];
+        });
 
-        if ($percentage >= 90) return 'Platinum';
-        if ($percentage >= 75) return 'Gold';
-        if ($percentage >= 60) return 'Silver';
-        if ($percentage >= 40) return 'Bronze';
-        return 'Unranked';
-    }
+    return Inertia::render('Admin/ResultsComlink', [
+        'sessions' => $sessions,
+    ]);
+}
+
 }
