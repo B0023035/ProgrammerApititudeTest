@@ -1,12 +1,39 @@
 <script setup lang="ts">
 import { Head } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-// import AdminResultsTabs from "@/Components/AdminResultsTabs.vue";
+import { computed } from "vue";
+
+interface RankDistribution {
+    Platinum: number;
+    Gold: number;
+    Silver: number;
+    Bronze: number;
+}
+
+interface ScoreDistribution {
+    "90-95": number;
+    "80-89": number;
+    "70-79": number;
+    "60-69": number;
+    "0-59": number;
+}
+
+interface PartAverages {
+    [key: number]: number;
+}
+
+interface MonthlyData {
+    [key: number]: number;
+}
 
 interface Stats {
     total_sessions: number;
     total_users: number;
     average_score: number;
+    rank_distribution: RankDistribution;
+    score_distribution: ScoreDistribution;
+    part_averages: PartAverages;
+    monthly_data: MonthlyData;
 }
 
 interface Props {
@@ -14,6 +41,59 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+// ランク分布のパーセンテージを計算
+const rankPercentages = computed(() => {
+    const total = props.stats.total_sessions;
+    if (total === 0 || !props.stats.rank_distribution) {
+        return { Platinum: 0, Gold: 0, Silver: 0, Bronze: 0 };
+    }
+
+    return {
+        Platinum: Math.round(
+            (props.stats.rank_distribution.Platinum / total) * 100
+        ),
+        Gold: Math.round((props.stats.rank_distribution.Gold / total) * 100),
+        Silver: Math.round(
+            (props.stats.rank_distribution.Silver / total) * 100
+        ),
+        Bronze: Math.round(
+            (props.stats.rank_distribution.Bronze / total) * 100
+        ),
+    };
+});
+
+// 得点分布のパーセンテージを計算
+const scorePercentages = computed(() => {
+    const total = props.stats.total_sessions;
+    if (total === 0 || !props.stats.score_distribution) {
+        return { "90-95": 0, "80-89": 0, "70-79": 0, "60-69": 0, "0-59": 0 };
+    }
+
+    return {
+        "90-95": Math.round(
+            (props.stats.score_distribution["90-95"] / total) * 100
+        ),
+        "80-89": Math.round(
+            (props.stats.score_distribution["80-89"] / total) * 100
+        ),
+        "70-79": Math.round(
+            (props.stats.score_distribution["70-79"] / total) * 100
+        ),
+        "60-69": Math.round(
+            (props.stats.score_distribution["60-69"] / total) * 100
+        ),
+        "0-59": Math.round(
+            (props.stats.score_distribution["0-59"] / total) * 100
+        ),
+    };
+});
+
+// 月別データの最大値を取得(グラフのスケール用)
+const maxMonthlyCount = computed(() => {
+    if (!props.stats.monthly_data) return 1;
+    return Math.max(...Object.values(props.stats.monthly_data), 1);
+});
 </script>
 
 <template>
@@ -125,7 +205,7 @@ const props = defineProps<Props>();
                     </div>
                 </div>
 
-                <!-- グラフエリア(プレースホルダー) -->
+                <!-- グラフエリア -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- ランク分布 -->
                     <div class="bg-white rounded-lg shadow-lg p-6">
@@ -143,12 +223,21 @@ const props = defineProps<Props>();
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
                                             class="bg-purple-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 15%"
+                                            :style="`width: ${rankPercentages.Platinum}%`"
                                         >
                                             <span
+                                                v-if="
+                                                    rankPercentages.Platinum > 0
+                                                "
                                                 class="text-xs text-white font-semibold"
-                                                >15%</span
                                             >
+                                                {{
+                                                    stats.rank_distribution
+                                                        ?.Platinum || 0
+                                                }}人 ({{
+                                                    rankPercentages.Platinum
+                                                }}%)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -163,12 +252,19 @@ const props = defineProps<Props>();
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
                                             class="bg-yellow-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 25%"
+                                            :style="`width: ${rankPercentages.Gold}%`"
                                         >
                                             <span
+                                                v-if="rankPercentages.Gold > 0"
                                                 class="text-xs text-white font-semibold"
-                                                >25%</span
                                             >
+                                                {{
+                                                    stats.rank_distribution
+                                                        .Gold
+                                                }}人 ({{
+                                                    rankPercentages.Gold
+                                                }}%)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -183,12 +279,21 @@ const props = defineProps<Props>();
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
                                             class="bg-gray-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 35%"
+                                            :style="`width: ${rankPercentages.Silver}%`"
                                         >
                                             <span
+                                                v-if="
+                                                    rankPercentages.Silver > 0
+                                                "
                                                 class="text-xs text-white font-semibold"
-                                                >35%</span
                                             >
+                                                {{
+                                                    stats.rank_distribution
+                                                        .Silver
+                                                }}人 ({{
+                                                    rankPercentages.Silver
+                                                }}%)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -203,12 +308,21 @@ const props = defineProps<Props>();
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
                                             class="bg-orange-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 25%"
+                                            :style="`width: ${rankPercentages.Bronze}%`"
                                         >
                                             <span
+                                                v-if="
+                                                    rankPercentages.Bronze > 0
+                                                "
                                                 class="text-xs text-white font-semibold"
-                                                >25%</span
                                             >
+                                                {{
+                                                    stats.rank_distribution
+                                                        .Bronze
+                                                }}人 ({{
+                                                    rankPercentages.Bronze
+                                                }}%)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -219,25 +333,36 @@ const props = defineProps<Props>();
                     <!-- 得点分布 -->
                     <div class="bg-white rounded-lg shadow-lg p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">
-                            得点分布
+                            得点分布 (95点満点)
                         </h2>
                         <div class="space-y-4">
                             <div class="flex items-center">
                                 <div
                                     class="w-24 text-sm font-medium text-gray-700"
                                 >
-                                    90-100点
+                                    90-95点
                                 </div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
                                             class="bg-green-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 20%"
+                                            :style="`width: ${scorePercentages['90-95']}%`"
                                         >
                                             <span
+                                                v-if="
+                                                    scorePercentages['90-95'] >
+                                                    0
+                                                "
                                                 class="text-xs text-white font-semibold"
-                                                >20%</span
                                             >
+                                                {{
+                                                    stats.score_distribution[
+                                                        "90-95"
+                                                    ]
+                                                }}人 ({{
+                                                    scorePercentages["90-95"]
+                                                }}%)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -252,12 +377,23 @@ const props = defineProps<Props>();
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
                                             class="bg-blue-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 30%"
+                                            :style="`width: ${scorePercentages['80-89']}%`"
                                         >
                                             <span
+                                                v-if="
+                                                    scorePercentages['80-89'] >
+                                                    0
+                                                "
                                                 class="text-xs text-white font-semibold"
-                                                >30%</span
                                             >
+                                                {{
+                                                    stats.score_distribution[
+                                                        "80-89"
+                                                    ]
+                                                }}人 ({{
+                                                    scorePercentages["80-89"]
+                                                }}%)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -272,12 +408,23 @@ const props = defineProps<Props>();
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
                                             class="bg-yellow-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 25%"
+                                            :style="`width: ${scorePercentages['70-79']}%`"
                                         >
                                             <span
+                                                v-if="
+                                                    scorePercentages['70-79'] >
+                                                    0
+                                                "
                                                 class="text-xs text-white font-semibold"
-                                                >25%</span
                                             >
+                                                {{
+                                                    stats.score_distribution[
+                                                        "70-79"
+                                                    ]
+                                                }}人 ({{
+                                                    scorePercentages["70-79"]
+                                                }}%)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -292,12 +439,23 @@ const props = defineProps<Props>();
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
                                             class="bg-orange-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 15%"
+                                            :style="`width: ${scorePercentages['60-69']}%`"
                                         >
                                             <span
+                                                v-if="
+                                                    scorePercentages['60-69'] >
+                                                    0
+                                                "
                                                 class="text-xs text-white font-semibold"
-                                                >15%</span
                                             >
+                                                {{
+                                                    stats.score_distribution[
+                                                        "60-69"
+                                                    ]
+                                                }}人 ({{
+                                                    scorePercentages["60-69"]
+                                                }}%)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -306,18 +464,28 @@ const props = defineProps<Props>();
                                 <div
                                     class="w-24 text-sm font-medium text-gray-700"
                                 >
-                                    60点未満
+                                    0-59点
                                 </div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
                                             class="bg-red-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 10%"
+                                            :style="`width: ${scorePercentages['0-59']}%`"
                                         >
                                             <span
+                                                v-if="
+                                                    scorePercentages['0-59'] > 0
+                                                "
                                                 class="text-xs text-white font-semibold"
-                                                >10%</span
                                             >
+                                                {{
+                                                    stats.score_distribution[
+                                                        "0-59"
+                                                    ]
+                                                }}人 ({{
+                                                    scorePercentages["0-59"]
+                                                }}%)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -328,7 +496,7 @@ const props = defineProps<Props>();
                     <!-- Part別平均点 -->
                     <div class="bg-white rounded-lg shadow-lg p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">
-                            Part別平均点
+                            Part別平均点 (95点満点)
                         </h2>
                         <div class="space-y-6">
                             <div>
@@ -341,13 +509,19 @@ const props = defineProps<Props>();
                                     >
                                     <span
                                         class="text-lg font-bold text-blue-600"
-                                        >72.5点</span
+                                        >{{
+                                            stats.part_averages[1] || 0
+                                        }}点</span
                                     >
                                 </div>
                                 <div class="bg-gray-200 rounded-full h-4">
                                     <div
                                         class="bg-blue-500 h-4 rounded-full"
-                                        style="width: 72.5%"
+                                        :style="`width: ${
+                                            ((stats.part_averages[1] || 0) /
+                                                40) *
+                                            100
+                                        }%`"
                                     ></div>
                                 </div>
                             </div>
@@ -361,13 +535,19 @@ const props = defineProps<Props>();
                                     >
                                     <span
                                         class="text-lg font-bold text-green-600"
-                                        >68.3点</span
+                                        >{{
+                                            stats.part_averages[2] || 0
+                                        }}点</span
                                     >
                                 </div>
                                 <div class="bg-gray-200 rounded-full h-4">
                                     <div
                                         class="bg-green-500 h-4 rounded-full"
-                                        style="width: 68.3%"
+                                        :style="`width: ${
+                                            ((stats.part_averages[2] || 0) /
+                                                30) *
+                                            100
+                                        }%`"
                                     ></div>
                                 </div>
                             </div>
@@ -381,13 +561,19 @@ const props = defineProps<Props>();
                                     >
                                     <span
                                         class="text-lg font-bold text-purple-600"
-                                        >75.8点</span
+                                        >{{
+                                            stats.part_averages[3] || 0
+                                        }}点</span
                                     >
                                 </div>
                                 <div class="bg-gray-200 rounded-full h-4">
                                     <div
                                         class="bg-purple-500 h-4 rounded-full"
-                                        style="width: 75.8%"
+                                        :style="`width: ${
+                                            ((stats.part_averages[3] || 0) /
+                                                25) *
+                                            100
+                                        }%`"
                                     ></div>
                                 </div>
                             </div>
@@ -400,122 +586,39 @@ const props = defineProps<Props>();
                             月別受験者数(2025年)
                         </h2>
                         <div class="space-y-3">
-                            <div class="flex items-center">
+                            <div
+                                v-for="month in [
+                                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+                                ]"
+                                :key="month"
+                                class="flex items-center"
+                            >
                                 <div
                                     class="w-16 text-sm font-medium text-gray-700"
                                 >
-                                    1月
+                                    {{ month }}月
                                 </div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-5">
                                         <div
                                             class="bg-indigo-500 h-5 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 45%"
+                                            :style="`width: ${
+                                                (stats.monthly_data[month] /
+                                                    maxMonthlyCount) *
+                                                100
+                                            }%`"
                                         >
                                             <span
+                                                v-if="
+                                                    stats.monthly_data[month] >
+                                                    0
+                                                "
                                                 class="text-xs text-white font-semibold"
-                                                >45</span
                                             >
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div
-                                    class="w-16 text-sm font-medium text-gray-700"
-                                >
-                                    2月
-                                </div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-5">
-                                        <div
-                                            class="bg-indigo-500 h-5 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 52%"
-                                        >
-                                            <span
-                                                class="text-xs text-white font-semibold"
-                                                >52</span
-                                            >
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div
-                                    class="w-16 text-sm font-medium text-gray-700"
-                                >
-                                    3月
-                                </div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-5">
-                                        <div
-                                            class="bg-indigo-500 h-5 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 38%"
-                                        >
-                                            <span
-                                                class="text-xs text-white font-semibold"
-                                                >38</span
-                                            >
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div
-                                    class="w-16 text-sm font-medium text-gray-700"
-                                >
-                                    4月
-                                </div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-5">
-                                        <div
-                                            class="bg-indigo-500 h-5 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 67%"
-                                        >
-                                            <span
-                                                class="text-xs text-white font-semibold"
-                                                >67</span
-                                            >
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div
-                                    class="w-16 text-sm font-medium text-gray-700"
-                                >
-                                    5月
-                                </div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-5">
-                                        <div
-                                            class="bg-indigo-500 h-5 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 71%"
-                                        >
-                                            <span
-                                                class="text-xs text-white font-semibold"
-                                                >71</span
-                                            >
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div
-                                    class="w-16 text-sm font-medium text-gray-700"
-                                >
-                                    6月
-                                </div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-5">
-                                        <div
-                                            class="bg-indigo-500 h-5 rounded-full flex items-center justify-end pr-2"
-                                            style="width: 58%"
-                                        >
-                                            <span
-                                                class="text-xs text-white font-semibold"
-                                                >58</span
-                                            >
+                                                {{
+                                                    stats.monthly_data[month]
+                                                }}人
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -548,9 +651,23 @@ const props = defineProps<Props>();
                             >
                                 統計情報について
                             </h3>
-                            <p class="text-sm text-blue-800">
-                                上記のグラフはサンプルデータを使用しています。実際のデータに基づいたグラフを表示するには、Recharts、Chart.js、D3.jsなどのライブラリを使用してください。
+                            <p class="text-sm text-blue-800 mb-2">
+                                上記のグラフは実際のデータベースから集計された情報です。
                             </p>
+                            <ul
+                                class="text-sm text-blue-800 list-disc list-inside space-y-1"
+                            >
+                                <li>
+                                    得点は95点満点で計算されています(Part1:
+                                    40点、Part2: 30点、Part3: 25点)
+                                </li>
+                                <li>正答: +1点、誤答: -0.25点、未回答: 0点</li>
+                                <li>
+                                    ランク基準:
+                                    Platinum(61点以上)、Gold(51-60点)、Silver(36-50点)、Bronze(35点以下)
+                                </li>
+                                <li>完了したセッションのみが集計対象です</li>
+                            </ul>
                         </div>
                     </div>
                 </div>

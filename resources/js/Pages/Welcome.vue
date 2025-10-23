@@ -11,8 +11,8 @@ onMounted(() => {
     console.log("Auth user:", page.props.auth?.user);
     console.log("Is admin:", page.props.auth?.isAdmin);
 
-    // Welcomeページ(/)以外ではリダイレクトしない
-    if (currentPath !== "/") {
+    // Welcomeページ(/welcome)以外ではリダイレクトしない
+    if (currentPath !== "/welcome") {
         return;
     }
 
@@ -58,12 +58,6 @@ onMounted(() => {
                 class="underline text-sm text-gray-600 hover:text-gray-900"
             >
                 Guest
-            </Link>
-            <Link
-                href="/admin/login"
-                class="underline text-sm text-gray-600 hover:text-gray-900"
-            >
-                Administrator Log in
             </Link>
         </div>
     </div>

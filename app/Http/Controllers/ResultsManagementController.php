@@ -26,7 +26,7 @@ class ResultsManagementController extends Controller
     }
 
     /**
-     * スコア計算（正答: +1点、誤答: -0.25点、未回答: 0点）
+     * スコア計算(正答: +1点、誤答: -0.25点、未回答: 0点)
      */
     private function calculateScore($examSessionId, $part = null)
     {
@@ -56,11 +56,11 @@ class ResultsManagementController extends Controller
     }
 
     /**
-     * ランク計算（新基準）
-     * ～35.75: D (Bronze)
-     * 36～50.75: C (Silver)
-     * 51～60.75: B (Gold)
-     * 61～: A (Platinum)
+     * ランク計算(新基準)
+     * 〜35.75: D (Bronze)
+     * 36〜50.75: C (Silver)
+     * 51〜60.75: B (Gold)
+     * 61〜: A (Platinum)
      */
     private function calculateRank($score)
     {
@@ -144,7 +144,7 @@ class ResultsManagementController extends Controller
             $partScore = $this->calculateScore($sessionId, $part);
             $total = $partQuestionCounts[$part];
             
-            // 正答数をカウント（表示用）
+            // 正答数をカウント(表示用)
             $correct = $partAnswers->where('is_correct', 1)->count();
             
             $questions = [];
@@ -244,7 +244,7 @@ class ResultsManagementController extends Controller
                 for ($part = 1; $part <= 3; $part++) {
                     $partScore = $this->calculateScore($session->id, $part);
                     
-                    // 正答数（表示用）
+                    // 正答数(表示用)
                     $partCorrect = Answer::where('exam_session_id', $session->id)
                         ->where('part', $part)
                         ->where('is_correct', 1)
@@ -336,62 +336,127 @@ class ResultsManagementController extends Controller
             ->whereNull('disqualified_at')
             ->get();
         
-        $totalScore = 0;
+        // 全セッションのスコアを計算
+        $scores = [];
+        $rankCounts = [
+            'Platinum' => 0,
+            'Gold' => 0,
+            'Silver' => 0,
+            'Bronze' => 0,
+        ];
+        
+        $partScores = [1 => [], 2 => [], 3 => []];
         
         foreach ($sessions as $session) {
-            $score = $this->calculateScore($session->id);
-            $totalScore += $score;
+            $totalScore = $this->calculateScore($session->id);
+            $scores[] = $totalScore;
+            
+            // ランク集計
+            $rank = $this->calculateRank($totalScore);
+            $rankCounts[$rank]++;
+            
+            // パート別スコア集計
+            for ($part = 1; $part <= 3; $part++) {
+                $partScore = $this->calculateScore($session->id, $part);
+                $partScores[$part][] = $partScore;
+            }
         }
         
-        $averageScore = $totalSessions > 0 
-            ? round($totalScore / $totalSessions, 2) 
+        $averageScore = count($scores) > 0 
+            ? round(array_sum($scores) / count($scores), 2) 
             : 0;
+        
+        // 得点分布を計算 (95点満点)
+        $scoreDistribution = [
+            '90-95' => 0,
+            '80-89' => 0,
+            '70-79' => 0,
+            '60-69' => 0,
+            '0-59' => 0,
+        ];
+        
+        foreach ($scores as $score) {
+            if ($score >= 90) {
+                $scoreDistribution['90-95']++;
+            } elseif ($score >= 80) {
+                $scoreDistribution['80-89']++;
+            } elseif ($score >= 70) {
+                $scoreDistribution['70-79']++;
+            } elseif ($score >= 60) {
+                $scoreDistribution['60-69']++;
+            } else {
+                $scoreDistribution['0-59']++;
+            }
+        }
+        
+        // パート別平均点を計算
+        $partAverages = [];
+        for ($part = 1; $part <= 3; $part++) {
+            $partAverages[$part] = count($partScores[$part]) > 0
+                ? round(array_sum($partScores[$part]) / count($partScores[$part]), 2)
+                : 0;
+        }
+        
+        // 月別受験者数を計算 (2025年)
+        $monthlyData = [];
+        for ($month = 1; $month <= 12; $month++) {
+            $count = ExamSession::whereNotNull('finished_at')
+                ->whereNull('disqualified_at')
+                ->whereYear('finished_at', 2025)
+                ->whereMonth('finished_at', $month)
+                ->count();
+            
+            $monthlyData[$month] = $count;
+        }
 
         return Inertia::render('Admin/Results/Statistics', [
             'stats' => [
                 'total_sessions' => $totalSessions,
                 'total_users' => $totalUsers,
                 'average_score' => $averageScore,
+                'rank_distribution' => $rankCounts,
+                'score_distribution' => $scoreDistribution,
+                'part_averages' => $partAverages,
+                'monthly_data' => $monthlyData,
             ],
         ]);
     }
 
     /**
- * COM連携ページ（Comlink）
- */
-public function comlink()
-{
-    $partQuestionCounts = $this->getPartQuestionCounts();
-    $totalQuestions = array_sum($partQuestionCounts);
-    
-    $sessions = ExamSession::with('user')
-        ->whereNotNull('finished_at')
-        ->whereNull('disqualified_at')
-        ->latest('finished_at')
-        ->get()
-        ->map(function ($session) use ($totalQuestions) {
-            $totalScore = $this->calculateScore($session->id);
-            $rank = $this->calculateRank($totalScore);
+     * COM連携ページ(Comlink)
+     */
+    public function comlink()
+    {
+        $partQuestionCounts = $this->getPartQuestionCounts();
+        $totalQuestions = array_sum($partQuestionCounts);
+        
+        $sessions = ExamSession::with('user')
+            ->whereNotNull('finished_at')
+            ->whereNull('disqualified_at')
+            ->latest('finished_at')
+            ->get()
+            ->map(function ($session) use ($totalQuestions) {
+                $totalScore = $this->calculateScore($session->id);
+                $rank = $this->calculateRank($totalScore);
 
-            return [
-                'id' => $session->id,
-                'user_id' => $session->user_id,
-                'session_uuid' => $session->session_uuid,
-                'total_score' => round($totalScore, 2),
-                'total_questions' => $totalQuestions,
-                'rank' => $rank,
-                'finished_at' => $session->finished_at->toIso8601String(),
-                'user' => [
-                    'id' => $session->user->id,
-                    'name' => $session->user->name,
-                    'email' => $session->user->email,
-                ],
-            ];
-        });
+                return [
+                    'id' => $session->id,
+                    'user_id' => $session->user_id,
+                    'session_uuid' => $session->session_uuid,
+                    'total_score' => round($totalScore, 2),
+                    'total_questions' => $totalQuestions,
+                    'rank' => $rank,
+                    'finished_at' => $session->finished_at->toIso8601String(),
+                    'user' => [
+                        'id' => $session->user->id,
+                        'name' => $session->user->name,
+                        'email' => $session->user->email,
+                    ],
+                ];
+            });
 
-    return Inertia::render('Admin/ResultsComlink', [
-        'sessions' => $sessions,
-    ]);
-}
-
+        return Inertia::render('Admin/ResultsComlink', [
+            'sessions' => $sessions,
+        ]);
+    }
 }

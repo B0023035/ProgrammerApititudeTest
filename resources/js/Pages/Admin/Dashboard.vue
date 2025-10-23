@@ -34,7 +34,6 @@ const props = defineProps<{
     };
 }>();
 
-// 安全にユーザー名を取得
 const userName = computed(() => {
     return props.auth?.user?.name || "管理者";
 });
@@ -166,6 +165,36 @@ const logout = () => {
 
             <!-- メニューカード -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- イベント管理（新規） -->
+                <Link
+                    :href="route('admin.events.index')"
+                    class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-105 cursor-pointer group"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <h3
+                            class="text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors"
+                        >
+                            🎫 イベント管理
+                        </h3>
+                        <svg
+                            class="w-6 h-6 text-gray-400 group-hover:text-indigo-600 transition-colors"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M9 5l7 7-7 7"
+                            />
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">
+                        セッションコードの作成・管理
+                    </p>
+                </Link>
+
                 <!-- Comlink成績管理システム -->
                 <Link
                     :href="route('admin.results.comlink')"
@@ -281,23 +310,6 @@ const logout = () => {
                     </div>
                     <p class="text-gray-600 text-sm">学年ごとの成績データ</p>
                 </Link>
-
-                <!-- 違反記録 -->
-                <div
-                    class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all"
-                >
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-bold text-gray-900">
-                            ⚠️ 違反記録
-                        </h3>
-                        <span
-                            class="px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm font-semibold"
-                        >
-                            0
-                        </span>
-                    </div>
-                    <p class="text-gray-600 text-sm">最近の違反行為の記録</p>
-                </div>
 
                 <!-- ユーザー管理 -->
                 <Link
