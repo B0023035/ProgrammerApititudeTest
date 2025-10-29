@@ -32,13 +32,13 @@ Route::post('/session/verify', [SessionCodeController::class, 'verify'])->name('
 // ========================================
 Route::prefix('admin')->name('admin.')->group(function () {
 
-    // ゲストのみアクセス可能（未ログイン管理者）
-    // guest:admin を指定することで、adminガードの未認証ユーザーのみアクセス可能
+        // ゲストのみアクセス可能（未ログイン管理者）
     Route::middleware('guest:admin')->group(function () {
-        // ログインページ（認証不要）
+        // 管理者ログインページ（認証不要）
+        // 注意: ルート名を 'admin.login' にして一般ユーザーのログインと区別
         Route::get('/login', function () {
             return Inertia::render('Admin/Login');
-        })->name('login');
+        })->name('login');  // すでに admin. プレフィックスがあるので admin.login になる
         
         Route::post('/login', [AdminAuthController::class, 'login'])->name('login.post');
     });

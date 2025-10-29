@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
-class LoginRequest extends FormRequest
+class AdminLoginRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -41,8 +41,8 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        // 一般ユーザーガード(web)で認証
-        if (! Auth::guard('web')->attempt(
+        // 管理者ガード(admin)で認証
+        if (! Auth::guard('admin')->attempt(
             $this->only('email', 'password'),
             $this->boolean('remember')
         )) {
