@@ -379,32 +379,42 @@ function goToExam() {
     if (isGuest.value) {
         console.log("ゲストモード: 試験セッション作成中...");
 
-        // ★ 修正: POSTリクエストでセッション作成
-        router.visit(route("guest.exam.start"), {
-            method: "post",
-            onFinish: () => {
-                isNavigating.value = false;
-                console.log("ゲスト試験開始処理完了");
-            },
-            onError: (errors) => {
-                console.error("ゲスト試験開始エラー:", errors);
-                isNavigating.value = false;
-                alert("試験の開始に失敗しました。もう一度お試しください。");
-            },
-        });
+        // ゲスト用: POSTで試験開始
+        router.post(
+            route("guest.exam.start"),
+            {},
+            {
+                preserveState: false,
+                preserveScroll: false,
+                onFinish: () => {
+                    isNavigating.value = false;
+                    console.log("ゲスト試験開始処理完了");
+                },
+                onError: (errors) => {
+                    console.error("ゲスト試験開始エラー:", errors);
+                    isNavigating.value = false;
+                    alert("試験の開始に失敗しました。もう一度お試しください。");
+                },
+            }
+        );
     } else {
+        console.log("認証ユーザー: 試験セッション作成中...");
+
+        // ★ 修正: 認証ユーザーもシンプルにPOSTのみ
         router.post(
             route("exam.start"),
             {},
             {
-                onSuccess: () => {
-                    router.get(route("exam.part", { part: currentPart }));
+                preserveState: false,
+                preserveScroll: false,
+                onFinish: () => {
                     isNavigating.value = false;
+                    console.log("認証ユーザー試験開始処理完了");
                 },
                 onError: (errors) => {
                     console.error("本番試験開始エラー:", errors);
                     isNavigating.value = false;
-                    router.get(route("practice.instructions"));
+                    alert("試験の開始に失敗しました。もう一度お試しください。");
                 },
             }
         );

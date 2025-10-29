@@ -1078,7 +1078,10 @@ const completePractice = () => {
         ? "guest.practice.complete"
         : "practice.complete";
 
+    // ★ 修正: preserveState と preserveScroll を追加
     form.post(route(routeName), {
+        preserveState: false, // 状態をリセット
+        preserveScroll: false, // スクロール位置もリセット
         onSuccess: () => {
             console.log("練習完了データ送信完了");
         },
