@@ -1,21 +1,31 @@
 import vue from "eslint-plugin-vue";
-import prettier from "eslint-config-prettier";
+import eslintPluginPrettier from "eslint-plugin-prettier";
+import tsParser from "@typescript-eslint/parser";
+import vueParser from "vue-eslint-parser";
+import tseslint from "@typescript-eslint/eslint-plugin";
 
 export default [
     {
-        files: ["resources/js/**/*.{js,vue}"],
+        files: ["**/*.vue", "**/*.ts", "**/*.js"],
         languageOptions: {
-            ecmaVersion: 2020,
-            sourceType: "module",
+            parser: vueParser,
+            parserOptions: {
+                parser: tsParser,
+                ecmaVersion: "latest",
+                sourceType: "module",
+                extraFileExtensions: [".vue"],
+            },
         },
         plugins: {
             vue,
+            prettier: eslintPluginPrettier,
+            "@typescript-eslint": tseslint,
         },
         rules: {
-            "vue/html-indent": ["error", 2],
-            "vue/max-attributes-per-line": ["error", { singleline: 3 }],
-            "no-unused-vars": "warn",
+            ...(vue.configs["vue3-recommended"] ? vue.configs["vue3-recommended"].rules : {}),
+            "prettier/prettier": "error",
+            "vue/multi-word-component-names": "off",
+            "@typescript-eslint/no-unused-vars": "off",
         },
     },
-    prettier,
 ];

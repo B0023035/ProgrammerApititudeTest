@@ -52,19 +52,11 @@ const logout = () => {
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-4">
-                        <img
-                            src="/images/YIC_logo.png"
-                            alt="YIC Logo"
-                            class="h-10"
-                        />
-                        <h1 class="text-2xl font-bold text-gray-900">
-                            管理者ダッシュボード
-                        </h1>
+                        <img src="/images/YIC_logo.png" alt="YIC Logo" class="h-10" />
+                        <h1 class="text-2xl font-bold text-gray-900">管理者ダッシュボード</h1>
                     </div>
                     <div class="flex items-center space-x-4">
-                        <span class="text-sm text-gray-600">
-                            {{ userName }} さん
-                        </span>
+                        <span class="text-sm text-gray-600"> {{ userName }} さん </span>
                         <button
                             @click="logout"
                             class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
@@ -111,9 +103,7 @@ const logout = () => {
                 >
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm opacity-90 mb-1">
-                                完了セッション
-                            </p>
+                            <p class="text-sm opacity-90 mb-1">完了セッション</p>
                             <p class="text-4xl font-bold">
                                 {{ stats.total_sessions }}
                             </p>
@@ -139,9 +129,7 @@ const logout = () => {
                 >
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm opacity-90 mb-1">
-                                アクティブセッション
-                            </p>
+                            <p class="text-sm opacity-90 mb-1">アクティブセッション</p>
                             <p class="text-4xl font-bold">
                                 {{ stats.active_sessions || 0 }}
                             </p>
@@ -190,9 +178,7 @@ const logout = () => {
                             />
                         </svg>
                     </div>
-                    <p class="text-gray-600 text-sm">
-                        セッションコードの作成・管理
-                    </p>
+                    <p class="text-gray-600 text-sm">セッションコードの作成・管理</p>
                 </Link>
 
                 <!-- Comlink成績管理システム -->
@@ -220,9 +206,7 @@ const logout = () => {
                             />
                         </svg>
                     </div>
-                    <p class="text-gray-600 text-sm">
-                        Web Workerを活用した高速成績分析システム
-                    </p>
+                    <p class="text-gray-600 text-sm">Web Workerを活用した高速成績分析システム</p>
                 </Link>
 
                 <!-- 通常の成績管理 -->
@@ -278,9 +262,7 @@ const logout = () => {
                             />
                         </svg>
                     </div>
-                    <p class="text-gray-600 text-sm">
-                        詳細な統計データとグラフ表示
-                    </p>
+                    <p class="text-gray-600 text-sm">詳細な統計データとグラフ表示</p>
                 </Link>
 
                 <!-- 学年別一覧 -->
@@ -336,9 +318,7 @@ const logout = () => {
                             />
                         </svg>
                     </div>
-                    <p class="text-gray-600 text-sm">
-                        ユーザーアカウントの管理
-                    </p>
+                    <p class="text-gray-600 text-sm">ユーザーアカウントの管理</p>
                 </Link>
             </div>
 
@@ -347,9 +327,7 @@ const logout = () => {
                 v-if="recentSessions && recentSessions.length > 0"
                 class="mt-8 bg-white rounded-xl shadow-lg p-6"
             >
-                <h3 class="text-xl font-bold text-gray-900 mb-4">
-                    最近の受験セッション
-                </h3>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">最近の受験セッション</h3>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -377,19 +355,11 @@ const logout = () => {
                                 :key="session.id"
                                 class="hover:bg-gray-50"
                             >
-                                <td
-                                    class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                                >
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {{ session.user?.name || "不明" }}
                                 </td>
-                                <td
-                                    class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
-                                >
-                                    {{
-                                        new Date(
-                                            session.finished_at
-                                        ).toLocaleString("ja-JP")
-                                    }}
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ new Date(session.finished_at).toLocaleString("ja-JP") }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                                     <span

@@ -143,36 +143,24 @@ const getPartColor = (part: number) => {
                         <div class="border rounded-lg p-4">
                             <p class="text-sm text-gray-600 mb-1">開始日時</p>
                             <p class="text-sm font-medium">
-                                {{
-                                    new Date(session.started_at).toLocaleString(
-                                        "ja-JP"
-                                    )
-                                }}
+                                {{ new Date(session.started_at).toLocaleString("ja-JP") }}
                             </p>
                         </div>
                         <div class="border rounded-lg p-4">
                             <p class="text-sm text-gray-600 mb-1">完了日時</p>
                             <p class="text-sm font-medium">
-                                {{
-                                    new Date(
-                                        session.finished_at
-                                    ).toLocaleString("ja-JP")
-                                }}
+                                {{ new Date(session.finished_at).toLocaleString("ja-JP") }}
                             </p>
                         </div>
                         <div class="border rounded-lg p-4">
-                            <p class="text-sm text-gray-600 mb-1">
-                                セッションID
-                            </p>
+                            <p class="text-sm text-gray-600 mb-1">セッションID</p>
                             <p class="text-xs font-mono">
                                 {{ session.session_uuid.substring(0, 8) }}...
                             </p>
                         </div>
                         <div class="border rounded-lg p-4">
                             <p class="text-sm text-gray-600 mb-1">回答数</p>
-                            <p class="text-sm font-medium">
-                                {{ session.total_questions }}問
-                            </p>
+                            <p class="text-sm font-medium">{{ session.total_questions }}問</p>
                         </div>
                     </div>
                 </div>
@@ -187,9 +175,7 @@ const getPartColor = (part: number) => {
                             {{ session.total_score }}
                         </div>
                         <div class="text-sm opacity-75 mt-2">
-                            {{ session.total_questions }}問中 ({{
-                                session.percentage
-                            }}%)
+                            {{ session.total_questions }}問中 ({{ session.percentage }}%)
                         </div>
                     </div>
 
@@ -199,9 +185,7 @@ const getPartColor = (part: number) => {
                         class="bg-gradient-to-br rounded-xl shadow-lg p-6 text-white"
                         :class="getPartColor(parseInt(part))"
                     >
-                        <div class="text-sm opacity-90 mb-2">
-                            Part {{ part }}
-                        </div>
+                        <div class="text-sm opacity-90 mb-2">Part {{ part }}</div>
                         <div class="text-4xl font-bold">
                             {{ answersByPart[part]?.score?.correct || 0 }}
                         </div>
@@ -220,21 +204,19 @@ const getPartColor = (part: number) => {
                     class="bg-white rounded-lg shadow-lg overflow-hidden mb-6"
                 >
                     <div class="p-6 border-b border-gray-200 bg-gray-50">
-                        <h2 class="text-2xl font-bold text-gray-900">
-                            Part {{ part }} - 回答詳細
-                        </h2>
+                        <h2 class="text-2xl font-bold text-gray-900">Part {{ part }} - 回答詳細</h2>
                         <p class="text-sm text-gray-600 mt-1">
                             {{ answersByPart[part]?.score?.correct || 0 }} /
-                            {{ answersByPart[part]?.score?.total || 0 }} 問正解
-                            ({{ answersByPart[part]?.score?.percentage || 0 }}%)
+                            {{ answersByPart[part]?.score?.total || 0 }} 問正解 ({{
+                                answersByPart[part]?.score?.percentage || 0
+                            }}%)
                         </p>
                     </div>
 
                     <div class="p-6">
                         <div class="space-y-4">
                             <div
-                                v-for="(question, index) in answersByPart[part]
-                                    ?.questions || []"
+                                v-for="(question, index) in answersByPart[part]?.questions || []"
                                 :key="question.question_id"
                                 class="border rounded-lg p-4"
                                 :class="
@@ -246,9 +228,7 @@ const getPartColor = (part: number) => {
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1">
                                         <div class="flex items-center mb-2">
-                                            <p
-                                                class="font-medium text-gray-900"
-                                            >
+                                            <p class="font-medium text-gray-900">
                                                 問題
                                                 {{ question.question_number }}
                                             </p>
@@ -292,24 +272,17 @@ const getPartColor = (part: number) => {
                                                     'bg-green-100 border border-green-300':
                                                         choice.is_correct,
                                                     'bg-red-100 border border-red-300':
-                                                        choice.label ===
-                                                            question.user_choice &&
+                                                        choice.label === question.user_choice &&
                                                         !choice.is_correct,
                                                     'bg-gray-50':
-                                                        choice.label !==
-                                                            question.user_choice &&
+                                                        choice.label !== question.user_choice &&
                                                         !choice.is_correct,
                                                 }"
                                             >
-                                                <span
-                                                    class="font-medium text-sm mr-2"
-                                                >
+                                                <span class="font-medium text-sm mr-2">
                                                     {{ choice.label }}.
                                                 </span>
-                                                <span
-                                                    v-if="choice.text"
-                                                    class="text-sm"
-                                                >
+                                                <span v-if="choice.text" class="text-sm">
                                                     {{ choice.text }}
                                                 </span>
                                                 <img
@@ -325,10 +298,7 @@ const getPartColor = (part: number) => {
                                                     (正解)
                                                 </span>
                                                 <span
-                                                    v-if="
-                                                        choice.label ===
-                                                        question.user_choice
-                                                    "
+                                                    v-if="choice.label === question.user_choice"
                                                     class="ml-2 text-xs text-blue-700"
                                                 >
                                                     (受験者の選択)
@@ -337,13 +307,9 @@ const getPartColor = (part: number) => {
                                         </div>
 
                                         <!-- 回答情報 -->
-                                        <div
-                                            class="grid grid-cols-2 gap-4 pt-3 border-t"
-                                        >
+                                        <div class="grid grid-cols-2 gap-4 pt-3 border-t">
                                             <div>
-                                                <p
-                                                    class="text-xs text-gray-600 mb-1"
-                                                >
+                                                <p class="text-xs text-gray-600 mb-1">
                                                     受験者の回答
                                                 </p>
                                                 <p
@@ -354,24 +320,13 @@ const getPartColor = (part: number) => {
                                                             : 'text-red-700'
                                                     "
                                                 >
-                                                    {{
-                                                        question.user_choice ||
-                                                        "未回答"
-                                                    }}
+                                                    {{ question.user_choice || "未回答" }}
                                                 </p>
                                             </div>
                                             <div>
-                                                <p
-                                                    class="text-xs text-gray-600 mb-1"
-                                                >
-                                                    正解
-                                                </p>
-                                                <p
-                                                    class="text-sm font-medium text-green-700"
-                                                >
-                                                    {{
-                                                        question.correct_choice
-                                                    }}
+                                                <p class="text-xs text-gray-600 mb-1">正解</p>
+                                                <p class="text-sm font-medium text-green-700">
+                                                    {{ question.correct_choice }}
                                                 </p>
                                             </div>
                                         </div>

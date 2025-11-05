@@ -35,9 +35,7 @@ const logout = () => {
                                 class="h-10 cursor-pointer hover:opacity-80 transition-opacity"
                             />
                         </Link>
-                        <h1 class="text-2xl font-bold text-gray-900">
-                            管理者ダッシュボード
-                        </h1>
+                        <h1 class="text-2xl font-bold text-gray-900">管理者ダッシュボード</h1>
                     </div>
                     <div class="flex items-center space-x-4">
                         <span class="text-sm text-gray-600">

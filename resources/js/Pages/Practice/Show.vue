@@ -13,11 +13,7 @@ const answers = ref<{ [key: number]: string }>({});
     <div>
         <h2>練習問題 第{{ props.section }}部</h2>
 
-        <div
-            v-for="(q, index) in props.questions"
-            :key="q.id"
-            class="question-block"
-        >
+        <div v-for="(q, index) in props.questions" :key="q.id" class="question-block">
             <p>{{ index + 1 }}. {{ q.question }}</p>
 
             <div v-for="choice in q.choices" :key="choice.id">

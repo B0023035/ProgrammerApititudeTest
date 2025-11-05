@@ -45,9 +45,7 @@ const page = usePage<CustomPageProps>();
 const isNavigating = ref(false);
 
 // ゲスト判定
-const isGuest = computed(
-    () => !page.props.auth?.user || page.props.isGuest === true
-);
+const isGuest = computed(() => !page.props.auth?.user || page.props.isGuest === true);
 
 function getAnswersData(): Record<number, string> {
     let answersObj: Record<number, string> = {};
@@ -86,10 +84,7 @@ const processedQuestions = computed(() => {
     });
 });
 
-const getImagePath = (
-    imageName: any,
-    imageType: "questions" | "choices"
-): string => {
+const getImagePath = (imageName: any, imageType: "questions" | "choices"): string => {
     const rawImageName = imageName ? String(imageName) : null;
 
     if (
@@ -103,19 +98,14 @@ const getImagePath = (
 
     const trimmedName = rawImageName.trim();
     const validExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
-    const hasValidExtension = validExtensions.some((ext) =>
-        trimmedName.toLowerCase().endsWith(ext)
-    );
+    const hasValidExtension = validExtensions.some(ext => trimmedName.toLowerCase().endsWith(ext));
 
     if (!hasValidExtension) {
         return "";
     }
 
     try {
-        const imagePath = new URL(
-            `./images/${imageType}/${trimmedName}`,
-            import.meta.url
-        ).href;
+        const imagePath = new URL(`./images/${imageType}/${trimmedName}`, import.meta.url).href;
         return imagePath;
     } catch (error) {
         return `/images/${imageType}/${trimmedName}`;
@@ -155,10 +145,7 @@ const layoutComponent = computed(() => {
 });
 
 function getCurrentPart(): number {
-    if (
-        page.props.practiceQuestions &&
-        page.props.practiceQuestions.length > 0
-    ) {
+    if (page.props.practiceQuestions && page.props.practiceQuestions.length > 0) {
         return page.props.practiceQuestions[0].part;
     }
     return page.props.currentPart || 1;
@@ -190,7 +177,7 @@ function goToExam() {
                 isNavigating.value = false;
                 console.log("ゲスト試験開始処理完了");
             },
-            onError: (errors) => {
+            onError: errors => {
                 console.error("ゲスト試験開始エラー:", errors);
                 isNavigating.value = false;
                 alert("試験の開始に失敗しました。もう一度お試しください。");
@@ -212,7 +199,7 @@ function goToExam() {
                 isNavigating.value = false;
                 console.log("認証ユーザー試験開始処理完了");
             },
-            onError: (errors) => {
+            onError: errors => {
                 console.error("本番試験開始エラー:", errors);
                 isNavigating.value = false;
                 alert("試験の開始に失敗しました。もう一度お試しください。");
@@ -221,27 +208,19 @@ function goToExam() {
     }
 }
 
-function getChoiceClass(
-    choice: ChoiceType,
-    question: PracticeQuestionType
-): string {
+function getChoiceClass(choice: ChoiceType, question: PracticeQuestionType): string {
     const classes = ["border-gray-300"];
 
     const choiceLabel = String(choice.label).trim();
     const questionAnswer = String(question.answer).trim();
-    const selectedAnswer = question.selected
-        ? String(question.selected).trim()
-        : null;
+    const selectedAnswer = question.selected ? String(question.selected).trim() : null;
 
     if (choiceLabel === questionAnswer) {
         classes.push("bg-green-100", "border-green-400");
         if (selectedAnswer === questionAnswer) {
             classes.push("bg-green-200", "border-green-500", "shadow-md");
         }
-    } else if (
-        selectedAnswer === choiceLabel &&
-        choiceLabel !== questionAnswer
-    ) {
+    } else if (selectedAnswer === choiceLabel && choiceLabel !== questionAnswer) {
         classes.push("bg-red-100", "border-red-400");
     } else {
         classes.push("bg-white", "hover:bg-gray-50");
@@ -262,9 +241,7 @@ function getChoiceClass(
                 class="max-w-7xl mx-auto flex justify-between items-center p-4 bg-white border-b shadow-sm"
             >
                 <h2 class="text-xl font-bold text-gray-800">
-                    解説　第{{
-                        getCurrentPart()
-                    }}部には次のような問題があります。
+                    解説　第{{ getCurrentPart() }}部には次のような問題があります。
                 </h2>
                 <button
                     @click="goToExam"
@@ -285,9 +262,7 @@ function getChoiceClass(
                     <!-- 上段:問題番号と部ごとの説明文 -->
                     <div class="flex justify-between items-start mb-6">
                         <!-- 左:問題番号 -->
-                        <div class="text-lg font-bold text-gray-800">
-                            問題 {{ q.number }}
-                        </div>
+                        <div class="text-lg font-bold text-gray-800">問題 {{ q.number }}</div>
 
                         <!-- 中央:部の説明文 -->
                         <div
@@ -306,23 +281,14 @@ function getChoiceClass(
                     </div>
 
                     <!-- 中段:問題文と選択肢(第1部・第2部) -->
-                    <div
-                        class="flex gap-6 mb-6"
-                        v-if="q.part === 1 || q.part === 2"
-                    >
+                    <div class="flex gap-6 mb-6" v-if="q.part === 1 || q.part === 2">
                         <!-- 左:問題文と問題画像 -->
                         <div class="flex-1">
                             <p class="text-lg font-bold mb-4 text-gray-800">
                                 {{ q.text }}
                             </p>
                             <!-- 問題画像を追加 -->
-                            <div
-                                v-if="
-                                    q.image &&
-                                    getImagePath(q.image, 'questions')
-                                "
-                                class="mt-4"
-                            >
+                            <div v-if="q.image && getImagePath(q.image, 'questions')" class="mt-4">
                                 <img
                                     :src="getImagePath(q.image, 'questions')"
                                     class="w-full max-w-sm h-auto rounded-lg shadow-md border border-gray-200"
@@ -346,10 +312,7 @@ function getChoiceClass(
                                 </div>
                                 <!-- 選択肢画像を修正 -->
                                 <img
-                                    v-if="
-                                        choice.image &&
-                                        getImagePath(choice.image, 'choices')
-                                    "
+                                    v-if="choice.image && getImagePath(choice.image, 'choices')"
                                     :src="getImagePath(choice.image, 'choices')"
                                     class="mt-2 max-w-[120px] max-h-[80px] object-contain rounded border shadow-sm"
                                     :alt="`選択肢${choice.label}`"
@@ -366,10 +329,7 @@ function getChoiceClass(
                             {{ q.text }}
                         </p>
                         <!-- 問題画像を追加 -->
-                        <div
-                            v-if="q.image && getImagePath(q.image, 'questions')"
-                            class="mb-4"
-                        >
+                        <div v-if="q.image && getImagePath(q.image, 'questions')" class="mb-4">
                             <img
                                 :src="getImagePath(q.image, 'questions')"
                                 class="w-full max-w-lg h-auto rounded-lg shadow-md border border-gray-200"
@@ -390,10 +350,7 @@ function getChoiceClass(
                                 </div>
                                 <!-- 選択肢画像を修正 -->
                                 <img
-                                    v-if="
-                                        choice.image &&
-                                        getImagePath(choice.image, 'choices')
-                                    "
+                                    v-if="choice.image && getImagePath(choice.image, 'choices')"
                                     :src="getImagePath(choice.image, 'choices')"
                                     class="mt-2 max-w-[120px] max-h-[80px] object-contain rounded border shadow-sm"
                                     :alt="`選択肢${choice.label}`"
@@ -415,21 +372,15 @@ function getChoiceClass(
                                 >
                                     ✓ 正解!
                                 </span>
-                                <span
-                                    v-else
-                                    class="text-red-600 font-bold text-xl"
-                                >
+                                <span v-else class="text-red-600 font-bold text-xl">
                                     ✗ 不正解
                                 </span>
                                 <span class="ml-4 text-gray-700 text-base">
-                                    あなたの回答: {{ q.selected.trim() }} |
-                                    正解: {{ q.answer.trim() }}
+                                    あなたの回答: {{ q.selected.trim() }} | 正解:
+                                    {{ q.answer.trim() }}
                                 </span>
                             </span>
-                            <span
-                                v-else
-                                class="text-gray-500 font-semibold text-base"
-                            >
+                            <span v-else class="text-gray-500 font-semibold text-base">
                                 未回答
                                 <span class="ml-4 text-gray-700">
                                     正解: {{ q.answer.trim() }}
@@ -439,18 +390,14 @@ function getChoiceClass(
                     </div>
 
                     <!-- 下段:解説 -->
-                    <div
-                        class="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg"
-                    >
+                    <div class="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
                         <div class="flex items-start gap-3">
-                            <span
-                                class="font-bold text-blue-800 flex-shrink-0 text-base"
+                            <span class="font-bold text-blue-800 flex-shrink-0 text-base"
                                 >解説:</span
                             >
-                            <span
-                                class="text-gray-700 leading-relaxed text-base"
-                                >{{ q.explanation }}</span
-                            >
+                            <span class="text-gray-700 leading-relaxed text-base">{{
+                                q.explanation
+                            }}</span>
                         </div>
                     </div>
                 </div>

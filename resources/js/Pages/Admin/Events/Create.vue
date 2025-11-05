@@ -32,7 +32,7 @@ const submit = () => {
         onSuccess: () => {
             alert("イベントを作成しました。");
         },
-        onError: (errors) => {
+        onError: errors => {
             console.error("エラー:", errors);
         },
     });
@@ -66,12 +66,8 @@ const submit = () => {
                         </svg>
                         イベント一覧に戻る
                     </Link>
-                    <h1 class="text-3xl font-bold text-gray-900">
-                        新規イベント作成
-                    </h1>
-                    <p class="mt-2 text-gray-600">
-                        セッションコードを発行するイベントを作成します
-                    </p>
+                    <h1 class="text-3xl font-bold text-gray-900">新規イベント作成</h1>
+                    <p class="mt-2 text-gray-600">セッションコードを発行するイベントを作成します</p>
                 </div>
 
                 <!-- フォーム -->
@@ -79,10 +75,7 @@ const submit = () => {
                     <form @submit.prevent="submit" class="space-y-6">
                         <!-- イベント名 -->
                         <div>
-                            <label
-                                for="name"
-                                class="block text-sm font-medium text-gray-700 mb-2"
-                            >
+                            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
                                 イベント名
                                 <span class="text-red-500">*</span>
                             </label>
@@ -94,10 +87,7 @@ const submit = () => {
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="例: 2025年度 春期 適性検査"
                             />
-                            <p
-                                v-if="form.errors.name"
-                                class="mt-1 text-sm text-red-600"
-                            >
+                            <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">
                                 {{ form.errors.name }}
                             </p>
                         </div>
@@ -126,29 +116,21 @@ const submit = () => {
                                     :disabled="isGenerating"
                                     class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                                 >
-                                    <span v-if="!isGenerating"
-                                        >ランダム生成</span
-                                    >
+                                    <span v-if="!isGenerating">ランダム生成</span>
                                     <span v-else>生成中...</span>
                                 </button>
                             </div>
                             <p class="mt-1 text-xs text-gray-500">
                                 受験者がアクセスする際に使用するコードです
                             </p>
-                            <p
-                                v-if="form.errors.passphrase"
-                                class="mt-1 text-sm text-red-600"
-                            >
+                            <p v-if="form.errors.passphrase" class="mt-1 text-sm text-red-600">
                                 {{ form.errors.passphrase }}
                             </p>
                         </div>
 
                         <!-- 開始日時 -->
                         <div>
-                            <label
-                                for="begin"
-                                class="block text-sm font-medium text-gray-700 mb-2"
-                            >
+                            <label for="begin" class="block text-sm font-medium text-gray-700 mb-2">
                                 開始日時
                                 <span class="text-red-500">*</span>
                             </label>
@@ -159,20 +141,14 @@ const submit = () => {
                                 required
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
-                            <p
-                                v-if="form.errors.begin"
-                                class="mt-1 text-sm text-red-600"
-                            >
+                            <p v-if="form.errors.begin" class="mt-1 text-sm text-red-600">
                                 {{ form.errors.begin }}
                             </p>
                         </div>
 
                         <!-- 終了日時 -->
                         <div>
-                            <label
-                                for="end"
-                                class="block text-sm font-medium text-gray-700 mb-2"
-                            >
+                            <label for="end" class="block text-sm font-medium text-gray-700 mb-2">
                                 終了日時
                                 <span class="text-red-500">*</span>
                             </label>
@@ -183,19 +159,14 @@ const submit = () => {
                                 required
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
-                            <p
-                                v-if="form.errors.end"
-                                class="mt-1 text-sm text-red-600"
-                            >
+                            <p v-if="form.errors.end" class="mt-1 text-sm text-red-600">
                                 {{ form.errors.end }}
                             </p>
                         </div>
 
                         <!-- 出題形式 -->
                         <div>
-                            <label
-                                class="block text-sm font-medium text-gray-700 mb-2"
-                            >
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
                                 出題形式
                                 <span class="text-red-500">*</span>
                             </label>
@@ -210,12 +181,9 @@ const submit = () => {
                                         class="mr-3"
                                     />
                                     <div>
-                                        <div class="font-medium text-gray-900">
-                                            フル版(推奨)
-                                        </div>
+                                        <div class="font-medium text-gray-900">フル版(推奨)</div>
                                         <div class="text-sm text-gray-500">
-                                            Part1: 40問、Part2: 30問、Part3:
-                                            25問(合計95問)
+                                            Part1: 40問、Part2: 30問、Part3: 25問(合計95問)
                                         </div>
                                     </div>
                                 </label>
@@ -229,9 +197,7 @@ const submit = () => {
                                         class="mr-3"
                                     />
                                     <div>
-                                        <div class="font-medium text-gray-900">
-                                            45分版
-                                        </div>
+                                        <div class="font-medium text-gray-900">45分版</div>
                                         <div class="text-sm text-gray-500">
                                             問題数を調整した45分版(実装予定)
                                         </div>
@@ -247,19 +213,14 @@ const submit = () => {
                                         class="mr-3"
                                     />
                                     <div>
-                                        <div class="font-medium text-gray-900">
-                                            30分版
-                                        </div>
+                                        <div class="font-medium text-gray-900">30分版</div>
                                         <div class="text-sm text-gray-500">
                                             問題数を調整した30分版(実装予定)
                                         </div>
                                     </div>
                                 </label>
                             </div>
-                            <p
-                                v-if="form.errors.exam_type"
-                                class="mt-1 text-sm text-red-600"
-                            >
+                            <p v-if="form.errors.exam_type" class="mt-1 text-sm text-red-600">
                                 {{ form.errors.exam_type }}
                             </p>
                         </div>

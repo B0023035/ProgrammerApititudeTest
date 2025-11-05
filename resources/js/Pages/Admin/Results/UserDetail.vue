@@ -36,7 +36,7 @@ const averageScore = computed(() => {
 
 const bestScore = computed(() => {
     if (props.sessions.length === 0) return 0;
-    return Math.max(...props.sessions.map((s) => s.total_score));
+    return Math.max(...props.sessions.map(s => s.total_score));
 });
 
 const getRankColor = (rank: string) => {
@@ -97,11 +97,7 @@ const getRankColor = (rank: string) => {
                                 </p>
                                 <p class="text-sm text-gray-500 mt-2">
                                     登録日:
-                                    {{
-                                        new Date(
-                                            user.created_at
-                                        ).toLocaleDateString("ja-JP")
-                                    }}
+                                    {{ new Date(user.created_at).toLocaleDateString("ja-JP") }}
                                 </p>
                             </div>
                         </div>
@@ -142,9 +138,7 @@ const getRankColor = (rank: string) => {
                 <!-- 受験履歴 -->
                 <div class="bg-white rounded-lg shadow-lg overflow-hidden">
                     <div class="p-6 border-b border-gray-200">
-                        <h2 class="text-2xl font-bold text-gray-900">
-                            受験履歴
-                        </h2>
+                        <h2 class="text-2xl font-bold text-gray-900">受験履歴</h2>
                     </div>
 
                     <div v-if="sessions.length > 0" class="overflow-x-auto">
@@ -194,33 +188,21 @@ const getRankColor = (rank: string) => {
                                     :key="session.id"
                                     class="hover:bg-gray-50 transition-colors"
                                 >
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                                    >
-                                        {{
-                                            new Date(
-                                                session.finished_at
-                                            ).toLocaleString("ja-JP")
-                                        }}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        {{ new Date(session.finished_at).toLocaleString("ja-JP") }}
                                     </td>
                                     <td
                                         class="px-6 py-4 whitespace-nowrap text-lg font-bold text-gray-900"
                                     >
                                         {{ session.total_score }}点
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                         {{ session.part1_score || "-" }}
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                         {{ session.part2_score || "-" }}
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                         {{ session.part3_score || "-" }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
@@ -234,10 +216,9 @@ const getRankColor = (rank: string) => {
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <Link
                                             :href="
-                                                route(
-                                                    'admin.results.session-detail',
-                                                    { sessionId: session.id }
-                                                )
+                                                route('admin.results.session-detail', {
+                                                    sessionId: session.id,
+                                                })
                                             "
                                             class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
                                         >

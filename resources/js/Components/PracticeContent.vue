@@ -1,10 +1,7 @@
 <template>
     <div class="p-4">
         <!-- ゲストモード表示 -->
-        <div
-            v-if="isGuest"
-            class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded"
-        >
+        <div v-if="isGuest" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
             <div class="flex items-center gap-2">
                 <span class="text-yellow-600 font-semibold">ゲストモード</span>
                 <span class="text-yellow-700">解答は保存されません</span>
@@ -51,10 +48,7 @@
                         キャンセル
                     </button>
                 </div>
-                <div
-                    v-if="form.errors?.answers"
-                    class="mt-2 text-red-600 text-sm"
-                >
+                <div v-if="form.errors?.answers" class="mt-2 text-red-600 text-sm">
                     {{ form.errors.answers }}
                 </div>
             </div>
@@ -74,9 +68,7 @@
         </div>
 
         <!-- 問題番号 -->
-        <div class="mb-2 text-left font-semibold">
-            問題 {{ currentQuestion.number }}
-        </div>
+        <div class="mb-2 text-left font-semibold">問題 {{ currentQuestion.number }}</div>
 
         <!-- 中段：問題文と選択肢 -->
         <div
@@ -96,8 +88,7 @@
                     class="px-2 py-1 border rounded hover:bg-gray-100 transition-colors"
                     :class="{
                         'bg-green-300 border-green-500':
-                            answerStatus[currentIndex].selected ===
-                            choice.label,
+                            answerStatus[currentIndex].selected === choice.label,
                     }"
                     @click="$emit('handleAnswer', choice.label)"
                 >
@@ -122,8 +113,7 @@
                     class="px-2 py-1 border rounded hover:bg-gray-100 transition-colors"
                     :class="{
                         'bg-green-300 border-green-500':
-                            answerStatus[currentIndex].selected ===
-                            choice.label,
+                            answerStatus[currentIndex].selected === choice.label,
                     }"
                     @click="$emit('handleAnswer', choice.label)"
                 >
@@ -145,9 +135,7 @@
         >
             <!-- 左：解答状況表 -->
             <div class="overflow-x-auto flex-1">
-                <table
-                    class="table-auto border-collapse border border-gray-300 text-center"
-                >
+                <table class="table-auto border-collapse border border-gray-300 text-center">
                     <thead>
                         <tr>
                             <th
@@ -224,9 +212,7 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table
-                    class="table-auto border-collapse border border-gray-300 text-center"
-                >
+                <table class="table-auto border-collapse border border-gray-300 text-center">
                     <thead>
                         <tr>
                             <th
@@ -297,7 +283,9 @@ defineEmits([
 
 <style scoped>
 .transition-colors {
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    transition:
+        background-color 0.2s ease-in-out,
+        border-color 0.2s ease-in-out;
 }
 
 button:disabled {

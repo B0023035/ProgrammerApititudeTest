@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = withDefaults(
     defineProps<{
         show?: boolean;
-        maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+        maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
         closeable?: boolean;
     }>(),
     {
         show: false,
-        maxWidth: '2xl',
+        maxWidth: "2xl",
         closeable: true,
-    },
+    }
 );
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(["close"]);
 const dialog = ref();
 const showSlot = ref(props.show);
 
@@ -22,29 +22,29 @@ watch(
     () => props.show,
     () => {
         if (props.show) {
-            document.body.style.overflow = 'hidden';
+            document.body.style.overflow = "hidden";
             showSlot.value = true;
 
             dialog.value?.showModal();
         } else {
-            document.body.style.overflow = '';
+            document.body.style.overflow = "";
 
             setTimeout(() => {
                 dialog.value?.close();
                 showSlot.value = false;
             }, 200);
         }
-    },
+    }
 );
 
 const close = () => {
     if (props.closeable) {
-        emit('close');
+        emit("close");
     }
 };
 
 const closeOnEscape = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
         e.preventDefault();
 
         if (props.show) {
@@ -53,21 +53,21 @@ const closeOnEscape = (e: KeyboardEvent) => {
     }
 };
 
-onMounted(() => document.addEventListener('keydown', closeOnEscape));
+onMounted(() => document.addEventListener("keydown", closeOnEscape));
 
 onUnmounted(() => {
-    document.removeEventListener('keydown', closeOnEscape);
+    document.removeEventListener("keydown", closeOnEscape);
 
-    document.body.style.overflow = '';
+    document.body.style.overflow = "";
 });
 
 const maxWidthClass = computed(() => {
     return {
-        sm: 'sm:max-w-sm',
-        md: 'sm:max-w-md',
-        lg: 'sm:max-w-lg',
-        xl: 'sm:max-w-xl',
-        '2xl': 'sm:max-w-2xl',
+        sm: "sm:max-w-sm",
+        md: "sm:max-w-md",
+        lg: "sm:max-w-lg",
+        xl: "sm:max-w-xl",
+        "2xl": "sm:max-w-2xl",
     }[props.maxWidth];
 });
 </script>
@@ -77,10 +77,7 @@ const maxWidthClass = computed(() => {
         class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
         ref="dialog"
     >
-        <div
-            class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0"
-            scroll-region
-        >
+        <div class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0" scroll-region>
             <Transition
                 enter-active-class="ease-out duration-300"
                 enter-from-class="opacity-0"
@@ -89,14 +86,8 @@ const maxWidthClass = computed(() => {
                 leave-from-class="opacity-100"
                 leave-to-class="opacity-0"
             >
-                <div
-                    v-show="show"
-                    class="fixed inset-0 transform transition-all"
-                    @click="close"
-                >
-                    <div
-                        class="absolute inset-0 bg-gray-500 opacity-75"
-                    />
+                <div v-show="show" class="fixed inset-0 transform transition-all" @click="close">
+                    <div class="absolute inset-0 bg-gray-500 opacity-75" />
                 </div>
             </Transition>
 

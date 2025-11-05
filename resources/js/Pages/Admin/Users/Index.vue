@@ -33,7 +33,7 @@ const filteredUsers = computed(() => {
 
     const query = searchQuery.value.toLowerCase();
     return props.users.data.filter(
-        (user) =>
+        user =>
             user.name.toLowerCase().includes(query) ||
             user.email.toLowerCase().includes(query) ||
             user.grade?.toLowerCase().includes(query)
@@ -49,12 +49,8 @@ const filteredUsers = computed(() => {
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- ヘッダー -->
                 <div class="mb-6">
-                    <h1 class="text-3xl font-bold text-gray-900">
-                        👥 ユーザー管理
-                    </h1>
-                    <p class="mt-2 text-gray-600">
-                        登録されているユーザーの一覧と管理
-                    </p>
+                    <h1 class="text-3xl font-bold text-gray-900">👥 ユーザー管理</h1>
+                    <p class="mt-2 text-gray-600">登録されているユーザーの一覧と管理</p>
                 </div>
 
                 <!-- 統計カード -->
@@ -64,9 +60,7 @@ const filteredUsers = computed(() => {
                     >
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm opacity-90 mb-1">
-                                    総ユーザー数
-                                </p>
+                                <p class="text-sm opacity-90 mb-1">総ユーザー数</p>
                                 <p class="text-4xl font-bold">
                                     {{ users.total }}
                                 </p>
@@ -180,9 +174,7 @@ const filteredUsers = computed(() => {
                                     :key="user.id"
                                     class="hover:bg-gray-50 transition-colors"
                                 >
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         #{{ user.id }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
@@ -193,51 +185,34 @@ const filteredUsers = computed(() => {
                                                 {{ user.name.charAt(0) }}
                                             </div>
                                             <div class="ml-4">
-                                                <div
-                                                    class="text-sm font-medium text-gray-900"
-                                                >
+                                                <div class="text-sm font-medium text-gray-900">
                                                     {{ user.name }}
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {{ user.email }}
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ user.grade || "-" }}
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         <span
                                             class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold"
                                         >
                                             {{ user.exam_sessions_count }}回
                                         </span>
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
-                                    >
-                                        {{
-                                            new Date(
-                                                user.created_at
-                                            ).toLocaleDateString("ja-JP")
-                                        }}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ new Date(user.created_at).toLocaleDateString("ja-JP") }}
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm font-medium"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <Link
                                             :href="
-                                                route(
-                                                    'admin.results.user-detail',
-                                                    { userId: user.id }
-                                                )
+                                                route('admin.results.user-detail', {
+                                                    userId: user.id,
+                                                })
                                             "
                                             class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                                         >
@@ -248,10 +223,7 @@ const filteredUsers = computed(() => {
                             </tbody>
                         </table>
 
-                        <div
-                            v-if="filteredUsers.length === 0"
-                            class="text-center py-12"
-                        >
+                        <div v-if="filteredUsers.length === 0" class="text-center py-12">
                             <svg
                                 class="mx-auto h-12 w-12 text-gray-400"
                                 fill="none"

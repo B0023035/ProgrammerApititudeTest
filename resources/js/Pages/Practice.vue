@@ -15,9 +15,7 @@
                 </div>
 
                 <div class="space-y-4 mb-6">
-                    <div
-                        class="bg-blue-50 border border-blue-200 rounded-lg p-4"
-                    >
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <div class="flex items-center gap-2 mb-2">
                             <svg
                                 class="w-5 h-5 text-blue-600"
@@ -32,20 +30,15 @@
                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                                 ></path>
                             </svg>
-                            <span class="font-semibold text-blue-800"
-                                >問題数</span
-                            >
+                            <span class="font-semibold text-blue-800">問題数</span>
                         </div>
                         <p class="text-blue-700">
-                            全部で<span class="font-bold text-xl"
-                                >{{ questions.length }}問</span
+                            全部で<span class="font-bold text-xl">{{ questions.length }}問</span
                             >出題されます
                         </p>
                     </div>
 
-                    <div
-                        class="bg-green-50 border border-green-200 rounded-lg p-4"
-                    >
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                         <div class="flex items-center gap-2 mb-2">
                             <svg
                                 class="w-5 h-5 text-green-600"
@@ -60,17 +53,11 @@
                                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                                 ></path>
                             </svg>
-                            <span class="font-semibold text-green-800"
-                                >制限時間</span
-                            >
+                            <span class="font-semibold text-green-800">制限時間</span>
                         </div>
                         <p class="text-green-700">
                             <span class="font-bold text-xl">
-                                {{
-                                    Math.floor(
-                                        (page.props.partTime || 300) / 60
-                                    )
-                                }}分
+                                {{ Math.floor((page.props.partTime || 300) / 60) }}分
                             </span>
                         </p>
                     </div>
@@ -103,10 +90,7 @@
             </div>
         </nav>
 
-        <main
-            class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8"
-            v-show="!showPracticeStartPopup"
-        >
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8" v-show="!showPracticeStartPopup">
             <div class="p-4">
                 <!-- 上部ヘッダー -->
                 <div
@@ -125,11 +109,7 @@
                         @click="showConfirm = true"
                         :disabled="form.processing"
                     >
-                        {{
-                            form.processing
-                                ? "送信中..."
-                                : getCompleteButtonText()
-                        }}
+                        {{ form.processing ? "送信中..." : getCompleteButtonText() }}
                     </button>
                 </div>
 
@@ -142,8 +122,7 @@
                         <h3 class="text-lg font-semibold mb-4">確認</h3>
                         <p class="mb-4">{{ getConfirmMessage() }}</p>
                         <div class="mb-4 text-sm text-gray-600">
-                            回答済み: {{ getAnsweredCount() }} /
-                            {{ questions.length }} 問
+                            回答済み: {{ getAnsweredCount() }} / {{ questions.length }} 問
                         </div>
                         <div class="flex justify-end gap-2">
                             <button
@@ -167,12 +146,8 @@
                 <!-- 問題表示エリア全体 -->
                 <div class="problem-display-area">
                     <!-- 部ごとの説明文（全体の上部に表示）-->
-                    <div
-                        class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg"
-                    >
-                        <div
-                            class="font-semibold text-blue-800 text-base text-left"
-                        >
+                    <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="font-semibold text-blue-800 text-base text-left">
                             <template v-if="currentPart === 1">
                                 文字列のパターンを見つけて配列を完成させてください
                             </template>
@@ -198,17 +173,14 @@
                             >
                                 <!-- 問題番号 -->
                                 <div class="mb-3 text-left">
-                                    <span
-                                        class="text-xl font-bold text-gray-800"
+                                    <span class="text-xl font-bold text-gray-800"
                                         >問 {{ currentQuestion.number }}</span
                                     >
                                 </div>
 
                                 <!-- 問題文 -->
                                 <div v-if="currentQuestion.text" class="mb-4">
-                                    <p
-                                        class="text-xl leading-relaxed text-gray-800 font-medium"
-                                    >
+                                    <p class="text-xl leading-relaxed text-gray-800 font-medium">
                                         {{ currentQuestion.text }}
                                     </p>
                                 </div>
@@ -220,18 +192,8 @@
                                 >
                                     <div class="w-full max-w-xs">
                                         <img
-                                            v-if="
-                                                getImagePath(
-                                                    currentQuestion.image,
-                                                    'questions'
-                                                )
-                                            "
-                                            :src="
-                                                getImagePath(
-                                                    currentQuestion.image,
-                                                    'questions'
-                                                )
-                                            "
+                                            v-if="getImagePath(currentQuestion.image, 'questions')"
+                                            :src="getImagePath(currentQuestion.image, 'questions')"
                                             class="w-full h-auto rounded-lg shadow-md border border-gray-200"
                                             :alt="`問題${currentQuestion.number}`"
                                             @error="handleImageError"
@@ -241,9 +203,7 @@
                                             v-else
                                             class="flex items-center justify-center h-32 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300"
                                         >
-                                            <div
-                                                class="text-center text-gray-500"
-                                            >
+                                            <div class="text-center text-gray-500">
                                                 <svg
                                                     class="w-8 h-8 mx-auto mb-2"
                                                     fill="none"
@@ -257,9 +217,7 @@
                                                         d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2z"
                                                     ></path>
                                                 </svg>
-                                                <div class="text-sm">
-                                                    画像を読み込み中...
-                                                </div>
+                                                <div class="text-sm">画像を読み込み中...</div>
                                             </div>
                                         </div>
                                     </div>
@@ -267,12 +225,8 @@
                             </div>
 
                             <!-- 下部：回答状況の表（縦の高さ調整） -->
-                            <div
-                                class="bg-gray-50 border rounded p-3 min-h-[220px]"
-                            >
-                                <h3 class="font-semibold mb-3 text-sm">
-                                    回答状況
-                                </h3>
+                            <div class="bg-gray-50 border rounded p-3 min-h-[220px]">
+                                <h3 class="font-semibold mb-3 text-sm">回答状況</h3>
                                 <div
                                     class="overflow-x-auto"
                                     style="max-height: 300px; overflow-y: auto"
@@ -280,9 +234,7 @@
                                     <table
                                         class="table-auto border-collapse border border-gray-300 text-center w-full text-xs"
                                     >
-                                        <thead
-                                            class="bg-gray-100 sticky top-0 z-20"
-                                        >
+                                        <thead class="bg-gray-100 sticky top-0 z-20">
                                             <tr class="bg-gray-100">
                                                 <th
                                                     class="bg-gray-100 px-2 py-2 w-8 text-xs align-middle border border-gray-300"
@@ -301,14 +253,11 @@
                                         </thead>
                                         <tbody>
                                             <tr
-                                                v-for="(
-                                                    ans, idx
-                                                ) in answerStatus"
+                                                v-for="(ans, idx) in answerStatus"
                                                 :key="ans.questionNumber"
                                                 class="hover:bg-gray-50"
                                                 :class="{
-                                                    'bg-yellow-100':
-                                                        idx === currentIndex,
+                                                    'bg-yellow-100': idx === currentIndex,
                                                 }"
                                             >
                                                 <td
@@ -317,9 +266,7 @@
                                                 >
                                                     {{ ans.questionNumber }}
                                                 </td>
-                                                <td
-                                                    class="border px-1 py-1 text-xs"
-                                                >
+                                                <td class="border px-1 py-1 text-xs">
                                                     {{ ans.selected || "-" }}
                                                 </td>
                                                 <td class="border px-1 py-1">
@@ -351,18 +298,14 @@
                             <!-- 選択肢ボタン -->
                             <div class="grid grid-cols-2 gap-3 flex-1">
                                 <button
-                                    v-for="(
-                                        choice, choiceIndex
-                                    ) in validatedChoices"
+                                    v-for="(choice, choiceIndex) in validatedChoices"
                                     :key="getChoiceKey(choice, choiceIndex)"
                                     class="group p-3 border-2 rounded-lg transition-all duration-200 text-center min-h-[80px] flex flex-col justify-center hover:shadow-md"
                                     :class="{
                                         'bg-blue-100 border-blue-500 shadow-lg scale-105':
-                                            answerStatus[currentIndex]
-                                                ?.selected === choice.label,
+                                            answerStatus[currentIndex]?.selected === choice.label,
                                         'border-gray-200 hover:border-blue-300 hover:bg-blue-50':
-                                            answerStatus[currentIndex]
-                                                ?.selected !== choice.label,
+                                            answerStatus[currentIndex]?.selected !== choice.label,
                                     }"
                                     @click="handleAnswer(choice.label)"
                                 >
@@ -372,11 +315,11 @@
                                         class="text-2xl leading-relaxed"
                                         :class="{
                                             'text-blue-800':
-                                                answerStatus[currentIndex]
-                                                    ?.selected === choice.label,
+                                                answerStatus[currentIndex]?.selected ===
+                                                choice.label,
                                             'text-gray-700':
-                                                answerStatus[currentIndex]
-                                                    ?.selected !== choice.label,
+                                                answerStatus[currentIndex]?.selected !==
+                                                choice.label,
                                         }"
                                     >
                                         {{ choice.text }}
@@ -387,23 +330,13 @@
                                         v-if="currentPart === 2"
                                         class="flex justify-center items-center flex-1"
                                     >
-                                        <div
-                                            v-if="shouldShowChoiceImage(choice)"
-                                        >
+                                        <div v-if="shouldShowChoiceImage(choice)">
                                             <img
                                                 v-if="
                                                     choice.image &&
-                                                    getImagePath(
-                                                        choice.image,
-                                                        'choices'
-                                                    )
+                                                    getImagePath(choice.image, 'choices')
                                                 "
-                                                :src="
-                                                    getImagePath(
-                                                        choice.image,
-                                                        'choices'
-                                                    )
-                                                "
+                                                :src="getImagePath(choice.image, 'choices')"
                                                 class="max-w-[80px] max-h-[50px] object-contain rounded border shadow-sm"
                                                 :alt="`選択肢${choice.label}`"
                                                 @error="handleImageError"
@@ -413,14 +346,9 @@
                                                 v-else
                                                 class="flex items-center justify-center w-[80px] h-[50px] bg-gray-100 rounded border-2 border-dashed border-gray-300"
                                             >
-                                                <div
-                                                    class="text-center text-gray-400 text-xs"
-                                                >
+                                                <div class="text-center text-gray-400 text-xs">
                                                     <div>
-                                                        {{
-                                                            choice.image ||
-                                                            "画像なし"
-                                                        }}
+                                                        {{ choice.image || "画像なし" }}
                                                     </div>
                                                 </div>
                                             </div>
@@ -431,9 +359,7 @@
                                             v-if="!choice.image"
                                             class="flex items-center justify-center w-[80px] h-[50px] bg-red-50 rounded border-2 border-dashed border-red-300"
                                         >
-                                            <div
-                                                class="text-center text-red-500 text-xs"
-                                            >
+                                            <div class="text-center text-red-500 text-xs">
                                                 <div>⚠️</div>
                                                 <div>画像データなし</div>
                                             </div>
@@ -453,9 +379,7 @@
                                 </button>
                                 <button
                                     class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
-                                    :disabled="
-                                        currentIndex === questions.length - 1
-                                    "
+                                    :disabled="currentIndex === questions.length - 1"
                                     @click="nextQuestion"
                                 >
                                     次の問題
@@ -467,9 +391,7 @@
                     <!-- 第三部：縦並びレイアウト -->
                     <div v-else class="mb-6">
                         <!-- 問題エリア -->
-                        <div
-                            class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-4"
-                        >
+                        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-4">
                             <!-- 問題番号 -->
                             <div class="mb-4 text-left">
                                 <span class="text-2xl font-bold text-gray-800"
@@ -478,22 +400,15 @@
                             </div>
 
                             <!-- 問題文 -->
-                            <div
-                                class="min-h-[81px] flex items-start"
-                                v-if="currentQuestion.text"
-                            >
-                                <p
-                                    class="text-xl leading-relaxed text-gray-700 mb-4"
-                                >
+                            <div class="min-h-[81px] flex items-start" v-if="currentQuestion.text">
+                                <p class="text-xl leading-relaxed text-gray-700 mb-4">
                                     {{ currentQuestion.text }}
                                 </p>
                             </div>
                         </div>
 
                         <!-- 選択肢エリア（横並び） -->
-                        <div
-                            class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-4"
-                        >
+                        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-4">
                             <div class="mb-4">
                                 <h3
                                     class="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2"
@@ -504,24 +419,14 @@
 
                             <div class="flex flex-wrap gap-3">
                                 <button
-                                    v-for="(
-                                        choice, choiceIndex
-                                    ) in validatedChoices"
-                                    :key="
-                                        getChoiceKey(
-                                            choice,
-                                            choiceIndex,
-                                            'part3'
-                                        )
-                                    "
+                                    v-for="(choice, choiceIndex) in validatedChoices"
+                                    :key="getChoiceKey(choice, choiceIndex, 'part3')"
                                     class="flex-1 min-w-0 p-4 border-2 rounded-lg transition-all duration-200 text-left hover:shadow-md flex flex-col items-center justify-center"
                                     :class="{
                                         'bg-blue-100 border-blue-500 shadow-lg':
-                                            answerStatus[currentIndex]
-                                                ?.selected === choice.label,
+                                            answerStatus[currentIndex]?.selected === choice.label,
                                         'border-gray-200 hover:border-blue-300 hover:bg-blue-50':
-                                            answerStatus[currentIndex]
-                                                ?.selected !== choice.label,
+                                            answerStatus[currentIndex]?.selected !== choice.label,
                                     }"
                                     @click="handleAnswer(choice.label)"
                                 >
@@ -532,14 +437,10 @@
                                                 class="text-2xl font-bold mb-3"
                                                 :class="{
                                                     'text-blue-600':
-                                                        answerStatus[
-                                                            currentIndex
-                                                        ]?.selected ===
+                                                        answerStatus[currentIndex]?.selected ===
                                                         choice.label,
                                                     'text-gray-600':
-                                                        answerStatus[
-                                                            currentIndex
-                                                        ]?.selected !==
+                                                        answerStatus[currentIndex]?.selected !==
                                                         choice.label,
                                                 }"
                                             >
@@ -552,14 +453,10 @@
                                                 class="text-lg leading-relaxed"
                                                 :class="{
                                                     'text-blue-800':
-                                                        answerStatus[
-                                                            currentIndex
-                                                        ]?.selected ===
+                                                        answerStatus[currentIndex]?.selected ===
                                                         choice.label,
                                                     'text-gray-700':
-                                                        answerStatus[
-                                                            currentIndex
-                                                        ]?.selected !==
+                                                        answerStatus[currentIndex]?.selected !==
                                                         choice.label,
                                                 }"
                                             >
@@ -572,14 +469,10 @@
                         </div>
 
                         <!-- 下部：回答状況と ナビゲーションボタンを横並び -->
-                        <div
-                            class="flex justify-between items-start mt-4 gap-4"
-                        >
+                        <div class="flex justify-between items-start mt-4 gap-4">
                             <!-- 左側：回答状況（幅を広げて表示） -->
                             <div class="bg-gray-50 border rounded p-3 w-96">
-                                <h3 class="font-semibold mb-3 text-sm">
-                                    回答状況
-                                </h3>
+                                <h3 class="font-semibold mb-3 text-sm">回答状況</h3>
                                 <div
                                     class="overflow-x-auto"
                                     style="max-height: 200px; overflow-y: auto"
@@ -587,9 +480,7 @@
                                     <table
                                         class="table-auto border-collapse border border-gray-300 text-center text-xs w-full"
                                     >
-                                        <thead
-                                            class="bg-gray-100 sticky top-0 z-20"
-                                        >
+                                        <thead class="bg-gray-100 sticky top-0 z-20">
                                             <tr class="bg-gray-100">
                                                 <th
                                                     class="border border-gray-300 px-2 py-2 w-8 text-xs align-middle bg-gray-100 border-b-2"
@@ -610,14 +501,11 @@
                                         </thead>
                                         <tbody>
                                             <tr
-                                                v-for="(
-                                                    ans, idx
-                                                ) in answerStatus"
+                                                v-for="(ans, idx) in answerStatus"
                                                 :key="ans.questionNumber"
                                                 class="hover:bg-gray-50"
                                                 :class="{
-                                                    'bg-yellow-100':
-                                                        idx === currentIndex,
+                                                    'bg-yellow-100': idx === currentIndex,
                                                 }"
                                             >
                                                 <td
@@ -626,9 +514,7 @@
                                                 >
                                                     {{ ans.questionNumber }}
                                                 </td>
-                                                <td
-                                                    class="border px-2 py-1 text-xs"
-                                                >
+                                                <td class="border px-2 py-1 text-xs">
                                                     {{ ans.selected || "-" }}
                                                 </td>
                                                 <td class="border px-2 py-1">
@@ -655,9 +541,7 @@
                                 </button>
                                 <button
                                     class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
-                                    :disabled="
-                                        currentIndex === questions.length - 1
-                                    "
+                                    :disabled="currentIndex === questions.length - 1"
                                     @click="nextQuestion"
                                 >
                                     次の問題
@@ -808,10 +692,7 @@ const showConfirm = ref(false);
 const initializeQuestions = () => {
     const allQuestions = page.props.practiceQuestions || [];
     const filteredQuestions = allQuestions.filter((q: QuestionType) => {
-        return (
-            parseInt(q.part.toString()) ===
-            parseInt(currentPart.value.toString())
-        );
+        return parseInt(q.part.toString()) === parseInt(currentPart.value.toString());
     });
 
     questions.value = filteredQuestions;
@@ -823,9 +704,7 @@ const initializeQuestions = () => {
 };
 
 // ゲストモード判定
-const isGuest = computed(
-    () => !page.props.auth?.user || page.props.isGuest === true
-);
+const isGuest = computed(() => !page.props.auth?.user || page.props.isGuest === true);
 
 // フォーム設定
 const form = useForm({
@@ -838,9 +717,7 @@ const form = useForm({
     totalQuestions: 0,
 });
 
-const currentQuestion = computed(
-    () => questions.value[currentIndex.value] || {}
-);
+const currentQuestion = computed(() => questions.value[currentIndex.value] || {});
 
 // 練習開始
 function startPractice() {
@@ -855,15 +732,12 @@ const validatedChoices = computed(() => {
     }
 
     const choices = currentQuestion.value.choices;
-    const validPartChoices = choices.filter((choice) => {
+    const validPartChoices = choices.filter(choice => {
         const choicePart = choice.part;
         if (choicePart === undefined || choicePart === null) {
             return false;
         }
-        return (
-            parseInt(choicePart.toString()) ===
-            parseInt(currentPart.value.toString())
-        );
+        return parseInt(choicePart.toString()) === parseInt(currentPart.value.toString());
     });
 
     if (validPartChoices.length === 0) {
@@ -871,7 +745,7 @@ const validatedChoices = computed(() => {
     }
 
     const uniqueChoiceIds = new Set<number>();
-    const uniqueChoices = validPartChoices.filter((choice) => {
+    const uniqueChoices = validPartChoices.filter(choice => {
         if (!choice || !choice.id) {
             return false;
         }
@@ -883,7 +757,7 @@ const validatedChoices = computed(() => {
     });
 
     const uniqueLabels = new Set<string>();
-    const finalChoices = uniqueChoices.filter((choice) => {
+    const finalChoices = uniqueChoices.filter(choice => {
         if (!choice.label) {
             return false;
         }
@@ -898,11 +772,7 @@ const validatedChoices = computed(() => {
     return finalChoices;
 });
 
-const getChoiceKey = (
-    choice: ChoiceType,
-    index: number,
-    prefix: string = ""
-) => {
+const getChoiceKey = (choice: ChoiceType, index: number, prefix: string = "") => {
     const questionId = currentQuestion.value.id || 0;
     const choiceId = choice.id || index;
     const baseKey = prefix
@@ -913,9 +783,7 @@ const getChoiceKey = (
 
 // タイマー関連
 const remainingTime = ref<number>(
-    page.props.remainingTime !== undefined
-        ? page.props.remainingTime
-        : page.props.partTime || 300
+    page.props.remainingTime !== undefined ? page.props.remainingTime : page.props.partTime || 300
 );
 
 const timerDisplay = computed(() => {
@@ -929,10 +797,7 @@ const timerDisplay = computed(() => {
 let timer: number | undefined;
 
 // 画像パス生成
-const getImagePath = (
-    imageName: any,
-    imageType: "questions" | "choices"
-): string => {
+const getImagePath = (imageName: any, imageType: "questions" | "choices"): string => {
     const rawImageName = imageName ? String(imageName) : null;
 
     if (
@@ -946,9 +811,7 @@ const getImagePath = (
 
     const trimmedName = rawImageName.trim();
     const validExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
-    const hasValidExtension = validExtensions.some((ext) =>
-        trimmedName.toLowerCase().endsWith(ext)
-    );
+    const hasValidExtension = validExtensions.some(ext => trimmedName.toLowerCase().endsWith(ext));
 
     if (!hasValidExtension) {
         return "";
@@ -983,9 +846,7 @@ const shouldShowQuestionImage = computed(() => {
 });
 
 const shouldShowChoiceImage = (choice: ChoiceType) => {
-    return (
-        currentPart.value === 2 && choice.image && choice.image.trim() !== ""
-    );
+    return currentPart.value === 2 && choice.image && choice.image.trim() !== "";
 };
 
 const handleImageLoad = (event: Event) => {
@@ -1015,10 +876,7 @@ const handleImageError = (event: Event): void => {
     }
 };
 
-const showImagePlaceholder = (
-    parent: HTMLElement | null,
-    imageName: string
-) => {
+const showImagePlaceholder = (parent: HTMLElement | null, imageName: string) => {
     if (parent && !parent.querySelector(".image-placeholder")) {
         const placeholder = document.createElement("div");
         placeholder.className =
@@ -1041,8 +899,7 @@ const showImagePlaceholder = (
 // Practice.vue の completePractice 関数を以下のように修正
 
 const completePractice = () => {
-    form.practiceSessionId =
-        props.practiceSessionId || page.props.practiceSessionId || "";
+    form.practiceSessionId = props.practiceSessionId || page.props.practiceSessionId || "";
     form.part = currentPart.value;
     form.endTime = Date.now();
     form.timeSpent = Math.floor((Date.now() - form.startTime) / 1000);
@@ -1069,15 +926,10 @@ const completePractice = () => {
 
     if (!form.totalQuestions || form.totalQuestions === 0) {
         form.totalQuestions = questions.value.length;
-        console.warn(
-            "totalQuestionsが0だったため、questions.lengthで上書き:",
-            form.totalQuestions
-        );
+        console.warn("totalQuestionsが0だったため、questions.lengthで上書き:", form.totalQuestions);
     }
 
-    const routeName = isGuest.value
-        ? "guest.practice.complete"
-        : "practice.complete";
+    const routeName = isGuest.value ? "guest.practice.complete" : "practice.complete";
 
     // ★ 重要修正: これらのオプションを削除または変更
     form.post(route(routeName), {
@@ -1090,25 +942,23 @@ const completePractice = () => {
             console.log("Route:", routeName);
             console.log("Data:", form.data());
         },
-        onSuccess: (response) => {
+        onSuccess: response => {
             console.log("練習完了データ送信完了");
             console.log("Response:", response);
             // ★ 削除: 手動でのページ遷移は不要
             // Inertia.jsがサーバーからのredirect()を自動処理する
         },
-        onError: (errors) => {
+        onError: errors => {
             showConfirm.value = false;
             console.error("練習完了エラー:", errors);
 
             if (errors.practiceSessionId) {
                 alert(`セッションエラー: ${errors.practiceSessionId}`);
             } else if (errors.totalQuestions) {
-                alert(
-                    `エラー: totalQuestionsの検証に失敗しました。\n値: ${form.totalQuestions}`
-                );
+                alert(`エラー: totalQuestionsの検証に失敗しました。\n値: ${form.totalQuestions}`);
             } else {
                 const errorMessages = Object.keys(errors)
-                    .map((key) => `${key}: ${errors[key]}`)
+                    .map(key => `${key}: ${errors[key]}`)
                     .join("\n");
                 alert(`エラーが発生しました:\n${errorMessages}`);
             }
@@ -1140,7 +990,7 @@ function updateFormAnswers() {
 }
 
 function getAnsweredCount(): number {
-    return answerStatus.value.filter((ans) => ans.selected).length;
+    return answerStatus.value.filter(ans => ans.selected).length;
 }
 
 function prevQuestion() {

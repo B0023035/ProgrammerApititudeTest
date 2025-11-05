@@ -23,7 +23,7 @@ const submit = () => {
         onFinish: () => {
             form.reset("password");
         },
-        onError: (errors) => {
+        onError: errors => {
             console.error("Admin login errors:", errors);
             if (errors.email) {
                 serverError.value = errors.email;
@@ -43,9 +43,7 @@ const submit = () => {
     <div
         class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900"
     >
-        <div
-            class="absolute inset-0 bg-[url('/images/grid.svg')] bg-center opacity-20"
-        ></div>
+        <div class="absolute inset-0 bg-[url('/images/grid.svg')] bg-center opacity-20"></div>
 
         <div class="relative w-full max-w-md">
             <!-- ロゴエリア -->
@@ -56,40 +54,27 @@ const submit = () => {
                         alt="YIC Logo"
                         class="h-16 mx-auto mb-4 drop-shadow-2xl"
                     />
-                    <h1 class="text-3xl font-bold text-white mb-2">
-                        管理者ログイン
-                    </h1>
+                    <h1 class="text-3xl font-bold text-white mb-2">管理者ログイン</h1>
                     <p class="text-gray-300 text-sm">Admin Portal</p>
                 </div>
             </div>
 
             <!-- ログインフォーム -->
-            <div
-                class="bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-8"
-            >
+            <div class="bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-8">
                 <!-- ステータスメッセージ -->
-                <div
-                    v-if="status"
-                    class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg"
-                >
+                <div v-if="status" class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <p class="text-sm text-green-600">{{ status }}</p>
                 </div>
 
                 <!-- サーバーエラー表示 -->
-                <div
-                    v-if="serverError"
-                    class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg"
-                >
+                <div v-if="serverError" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                     <p class="text-sm text-red-600">{{ serverError }}</p>
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-6">
                     <!-- メールアドレス -->
                     <div>
-                        <label
-                            for="email"
-                            class="block text-sm font-semibold text-gray-700 mb-2"
-                        >
+                        <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
                             メールアドレス
                         </label>
                         <div class="relative">
@@ -122,10 +107,7 @@ const submit = () => {
                                 placeholder="admin@example.com"
                             />
                         </div>
-                        <p
-                            v-if="form.errors.email"
-                            class="mt-2 text-sm text-red-600"
-                        >
+                        <p v-if="form.errors.email" class="mt-2 text-sm text-red-600">
                             {{ form.errors.email }}
                         </p>
                     </div>
@@ -169,10 +151,7 @@ const submit = () => {
                                 placeholder="••••••••"
                             />
                         </div>
-                        <p
-                            v-if="form.errors.password"
-                            class="mt-2 text-sm text-red-600"
-                        >
+                        <p v-if="form.errors.password" class="mt-2 text-sm text-red-600">
                             {{ form.errors.password }}
                         </p>
                     </div>
@@ -185,10 +164,7 @@ const submit = () => {
                             type="checkbox"
                             class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                         />
-                        <label
-                            for="remember"
-                            class="ml-2 block text-sm text-gray-700"
-                        >
+                        <label for="remember" class="ml-2 block text-sm text-gray-700">
                             ログイン状態を保持する
                         </label>
                     </div>

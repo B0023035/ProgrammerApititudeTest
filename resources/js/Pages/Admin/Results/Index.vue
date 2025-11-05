@@ -38,7 +38,7 @@ const filteredSessions = computed(() => {
 
     const query = searchQuery.value.toLowerCase();
     return props.sessions.data.filter(
-        (session) =>
+        session =>
             session.user.name.toLowerCase().includes(query) ||
             session.user.email.toLowerCase().includes(query) ||
             session.rank.toLowerCase().includes(query)
@@ -75,21 +75,15 @@ const viewUserDetail = (userId: number) => {
                     <h1 class="text-3xl font-bold text-gray-900">
                         📊 成績管理 - 受験セッション一覧
                     </h1>
-                    <p class="mt-2 text-gray-600">
-                        全ての受験セッションを確認できます
-                    </p>
+                    <p class="mt-2 text-gray-600">全ての受験セッションを確認できます</p>
                 </div>
 
                 <!-- 統計カード -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div
-                        class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500"
-                    >
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600">
-                                    総セッション数
-                                </p>
+                                <p class="text-sm text-gray-600">総セッション数</p>
                                 <p class="text-3xl font-bold text-gray-900">
                                     {{ sessions.total }}
                                 </p>
@@ -112,9 +106,7 @@ const viewUserDetail = (userId: number) => {
                         </div>
                     </div>
 
-                    <div
-                        class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500"
-                    >
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-gray-600">表示中</p>
@@ -146,14 +138,10 @@ const viewUserDetail = (userId: number) => {
                         </div>
                     </div>
 
-                    <div
-                        class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500"
-                    >
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600">
-                                    現在のページ
-                                </p>
+                                <p class="text-sm text-gray-600">現在のページ</p>
                                 <p class="text-3xl font-bold text-gray-900">
                                     {{ sessions.current_page }} /
                                     {{ sessions.last_page }}
@@ -249,9 +237,7 @@ const viewUserDetail = (userId: number) => {
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div
                                             class="text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800"
-                                            @click="
-                                                viewUserDetail(session.user_id)
-                                            "
+                                            @click="viewUserDetail(session.user_id)"
                                         >
                                             {{ session.user.name }}
                                         </div>
@@ -260,9 +246,7 @@ const viewUserDetail = (userId: number) => {
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div
-                                            class="text-lg font-bold text-gray-900"
-                                        >
+                                        <div class="text-lg font-bold text-gray-900">
                                             {{ session.total_score }}点
                                         </div>
                                     </td>
@@ -277,17 +261,15 @@ const viewUserDetail = (userId: number) => {
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">
                                             {{
-                                                new Date(
-                                                    session.finished_at
-                                                ).toLocaleString("ja-JP")
+                                                new Date(session.finished_at).toLocaleString(
+                                                    "ja-JP"
+                                                )
                                             }}
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <button
-                                            @click="
-                                                viewSessionDetail(session.id)
-                                            "
+                                            @click="viewSessionDetail(session.id)"
                                             class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
                                         >
                                             詳細を見る

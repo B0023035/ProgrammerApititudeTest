@@ -50,16 +50,10 @@ const rankPercentages = computed(() => {
     }
 
     return {
-        Platinum: Math.round(
-            (props.stats.rank_distribution.Platinum / total) * 100
-        ),
+        Platinum: Math.round((props.stats.rank_distribution.Platinum / total) * 100),
         Gold: Math.round((props.stats.rank_distribution.Gold / total) * 100),
-        Silver: Math.round(
-            (props.stats.rank_distribution.Silver / total) * 100
-        ),
-        Bronze: Math.round(
-            (props.stats.rank_distribution.Bronze / total) * 100
-        ),
+        Silver: Math.round((props.stats.rank_distribution.Silver / total) * 100),
+        Bronze: Math.round((props.stats.rank_distribution.Bronze / total) * 100),
     };
 });
 
@@ -71,21 +65,11 @@ const scorePercentages = computed(() => {
     }
 
     return {
-        "90-95": Math.round(
-            (props.stats.score_distribution["90-95"] / total) * 100
-        ),
-        "80-89": Math.round(
-            (props.stats.score_distribution["80-89"] / total) * 100
-        ),
-        "70-79": Math.round(
-            (props.stats.score_distribution["70-79"] / total) * 100
-        ),
-        "60-69": Math.round(
-            (props.stats.score_distribution["60-69"] / total) * 100
-        ),
-        "0-59": Math.round(
-            (props.stats.score_distribution["0-59"] / total) * 100
-        ),
+        "90-95": Math.round((props.stats.score_distribution["90-95"] / total) * 100),
+        "80-89": Math.round((props.stats.score_distribution["80-89"] / total) * 100),
+        "70-79": Math.round((props.stats.score_distribution["70-79"] / total) * 100),
+        "60-69": Math.round((props.stats.score_distribution["60-69"] / total) * 100),
+        "0-59": Math.round((props.stats.score_distribution["0-59"] / total) * 100),
     };
 });
 
@@ -104,12 +88,8 @@ const maxMonthlyCount = computed(() => {
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- ヘッダー -->
                 <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-gray-900">
-                        📊 統計・グラフ
-                    </h1>
-                    <p class="mt-2 text-gray-600">
-                        全体の統計情報とグラフを確認できます
-                    </p>
+                    <h1 class="text-3xl font-bold text-gray-900">📊 統計・グラフ</h1>
+                    <p class="mt-2 text-gray-600">全体の統計情報とグラフを確認できます</p>
                 </div>
 
                 <!-- タブナビゲーション -->
@@ -122,15 +102,11 @@ const maxMonthlyCount = computed(() => {
                     >
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm opacity-90 mb-2">
-                                    総セッション数
-                                </p>
+                                <p class="text-sm opacity-90 mb-2">総セッション数</p>
                                 <p class="text-5xl font-bold">
                                     {{ stats.total_sessions }}
                                 </p>
-                                <p class="text-sm opacity-75 mt-2">
-                                    セッション
-                                </p>
+                                <p class="text-sm opacity-75 mt-2">セッション</p>
                             </div>
                             <svg
                                 class="w-16 h-16 opacity-50"
@@ -153,9 +129,7 @@ const maxMonthlyCount = computed(() => {
                     >
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm opacity-90 mb-2">
-                                    登録ユーザー数
-                                </p>
+                                <p class="text-sm opacity-90 mb-2">登録ユーザー数</p>
                                 <p class="text-5xl font-bold">
                                     {{ stats.total_users }}
                                 </p>
@@ -209,16 +183,10 @@ const maxMonthlyCount = computed(() => {
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- ランク分布 -->
                     <div class="bg-white rounded-lg shadow-lg p-6">
-                        <h2 class="text-xl font-bold text-gray-900 mb-4">
-                            ランク分布
-                        </h2>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">ランク分布</h2>
                         <div class="space-y-4">
                             <div class="flex items-center">
-                                <div
-                                    class="w-24 text-sm font-medium text-gray-700"
-                                >
-                                    Platinum
-                                </div>
+                                <div class="w-24 text-sm font-medium text-gray-700">Platinum</div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
@@ -226,15 +194,10 @@ const maxMonthlyCount = computed(() => {
                                             :style="`width: ${rankPercentages.Platinum}%`"
                                         >
                                             <span
-                                                v-if="
-                                                    rankPercentages.Platinum > 0
-                                                "
+                                                v-if="rankPercentages.Platinum > 0"
                                                 class="text-xs text-white font-semibold"
                                             >
-                                                {{
-                                                    stats.rank_distribution
-                                                        ?.Platinum || 0
-                                                }}人 ({{
+                                                {{ stats.rank_distribution?.Platinum || 0 }}人 ({{
                                                     rankPercentages.Platinum
                                                 }}%)
                                             </span>
@@ -243,11 +206,7 @@ const maxMonthlyCount = computed(() => {
                                 </div>
                             </div>
                             <div class="flex items-center">
-                                <div
-                                    class="w-24 text-sm font-medium text-gray-700"
-                                >
-                                    Gold
-                                </div>
+                                <div class="w-24 text-sm font-medium text-gray-700">Gold</div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
@@ -258,10 +217,7 @@ const maxMonthlyCount = computed(() => {
                                                 v-if="rankPercentages.Gold > 0"
                                                 class="text-xs text-white font-semibold"
                                             >
-                                                {{
-                                                    stats.rank_distribution
-                                                        .Gold
-                                                }}人 ({{
+                                                {{ stats.rank_distribution.Gold }}人 ({{
                                                     rankPercentages.Gold
                                                 }}%)
                                             </span>
@@ -270,11 +226,7 @@ const maxMonthlyCount = computed(() => {
                                 </div>
                             </div>
                             <div class="flex items-center">
-                                <div
-                                    class="w-24 text-sm font-medium text-gray-700"
-                                >
-                                    Silver
-                                </div>
+                                <div class="w-24 text-sm font-medium text-gray-700">Silver</div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
@@ -282,15 +234,10 @@ const maxMonthlyCount = computed(() => {
                                             :style="`width: ${rankPercentages.Silver}%`"
                                         >
                                             <span
-                                                v-if="
-                                                    rankPercentages.Silver > 0
-                                                "
+                                                v-if="rankPercentages.Silver > 0"
                                                 class="text-xs text-white font-semibold"
                                             >
-                                                {{
-                                                    stats.rank_distribution
-                                                        .Silver
-                                                }}人 ({{
+                                                {{ stats.rank_distribution.Silver }}人 ({{
                                                     rankPercentages.Silver
                                                 }}%)
                                             </span>
@@ -299,11 +246,7 @@ const maxMonthlyCount = computed(() => {
                                 </div>
                             </div>
                             <div class="flex items-center">
-                                <div
-                                    class="w-24 text-sm font-medium text-gray-700"
-                                >
-                                    Bronze
-                                </div>
+                                <div class="w-24 text-sm font-medium text-gray-700">Bronze</div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
@@ -311,15 +254,10 @@ const maxMonthlyCount = computed(() => {
                                             :style="`width: ${rankPercentages.Bronze}%`"
                                         >
                                             <span
-                                                v-if="
-                                                    rankPercentages.Bronze > 0
-                                                "
+                                                v-if="rankPercentages.Bronze > 0"
                                                 class="text-xs text-white font-semibold"
                                             >
-                                                {{
-                                                    stats.rank_distribution
-                                                        .Bronze
-                                                }}人 ({{
+                                                {{ stats.rank_distribution.Bronze }}人 ({{
                                                     rankPercentages.Bronze
                                                 }}%)
                                             </span>
@@ -332,16 +270,10 @@ const maxMonthlyCount = computed(() => {
 
                     <!-- 得点分布 -->
                     <div class="bg-white rounded-lg shadow-lg p-6">
-                        <h2 class="text-xl font-bold text-gray-900 mb-4">
-                            得点分布 (95点満点)
-                        </h2>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">得点分布 (95点満点)</h2>
                         <div class="space-y-4">
                             <div class="flex items-center">
-                                <div
-                                    class="w-24 text-sm font-medium text-gray-700"
-                                >
-                                    90-95点
-                                </div>
+                                <div class="w-24 text-sm font-medium text-gray-700">90-95点</div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
@@ -349,17 +281,10 @@ const maxMonthlyCount = computed(() => {
                                             :style="`width: ${scorePercentages['90-95']}%`"
                                         >
                                             <span
-                                                v-if="
-                                                    scorePercentages['90-95'] >
-                                                    0
-                                                "
+                                                v-if="scorePercentages['90-95'] > 0"
                                                 class="text-xs text-white font-semibold"
                                             >
-                                                {{
-                                                    stats.score_distribution[
-                                                        "90-95"
-                                                    ]
-                                                }}人 ({{
+                                                {{ stats.score_distribution["90-95"] }}人 ({{
                                                     scorePercentages["90-95"]
                                                 }}%)
                                             </span>
@@ -368,11 +293,7 @@ const maxMonthlyCount = computed(() => {
                                 </div>
                             </div>
                             <div class="flex items-center">
-                                <div
-                                    class="w-24 text-sm font-medium text-gray-700"
-                                >
-                                    80-89点
-                                </div>
+                                <div class="w-24 text-sm font-medium text-gray-700">80-89点</div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
@@ -380,17 +301,10 @@ const maxMonthlyCount = computed(() => {
                                             :style="`width: ${scorePercentages['80-89']}%`"
                                         >
                                             <span
-                                                v-if="
-                                                    scorePercentages['80-89'] >
-                                                    0
-                                                "
+                                                v-if="scorePercentages['80-89'] > 0"
                                                 class="text-xs text-white font-semibold"
                                             >
-                                                {{
-                                                    stats.score_distribution[
-                                                        "80-89"
-                                                    ]
-                                                }}人 ({{
+                                                {{ stats.score_distribution["80-89"] }}人 ({{
                                                     scorePercentages["80-89"]
                                                 }}%)
                                             </span>
@@ -399,11 +313,7 @@ const maxMonthlyCount = computed(() => {
                                 </div>
                             </div>
                             <div class="flex items-center">
-                                <div
-                                    class="w-24 text-sm font-medium text-gray-700"
-                                >
-                                    70-79点
-                                </div>
+                                <div class="w-24 text-sm font-medium text-gray-700">70-79点</div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
@@ -411,17 +321,10 @@ const maxMonthlyCount = computed(() => {
                                             :style="`width: ${scorePercentages['70-79']}%`"
                                         >
                                             <span
-                                                v-if="
-                                                    scorePercentages['70-79'] >
-                                                    0
-                                                "
+                                                v-if="scorePercentages['70-79'] > 0"
                                                 class="text-xs text-white font-semibold"
                                             >
-                                                {{
-                                                    stats.score_distribution[
-                                                        "70-79"
-                                                    ]
-                                                }}人 ({{
+                                                {{ stats.score_distribution["70-79"] }}人 ({{
                                                     scorePercentages["70-79"]
                                                 }}%)
                                             </span>
@@ -430,11 +333,7 @@ const maxMonthlyCount = computed(() => {
                                 </div>
                             </div>
                             <div class="flex items-center">
-                                <div
-                                    class="w-24 text-sm font-medium text-gray-700"
-                                >
-                                    60-69点
-                                </div>
+                                <div class="w-24 text-sm font-medium text-gray-700">60-69点</div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
@@ -442,17 +341,10 @@ const maxMonthlyCount = computed(() => {
                                             :style="`width: ${scorePercentages['60-69']}%`"
                                         >
                                             <span
-                                                v-if="
-                                                    scorePercentages['60-69'] >
-                                                    0
-                                                "
+                                                v-if="scorePercentages['60-69'] > 0"
                                                 class="text-xs text-white font-semibold"
                                             >
-                                                {{
-                                                    stats.score_distribution[
-                                                        "60-69"
-                                                    ]
-                                                }}人 ({{
+                                                {{ stats.score_distribution["60-69"] }}人 ({{
                                                     scorePercentages["60-69"]
                                                 }}%)
                                             </span>
@@ -461,11 +353,7 @@ const maxMonthlyCount = computed(() => {
                                 </div>
                             </div>
                             <div class="flex items-center">
-                                <div
-                                    class="w-24 text-sm font-medium text-gray-700"
-                                >
-                                    0-59点
-                                </div>
+                                <div class="w-24 text-sm font-medium text-gray-700">0-59点</div>
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
@@ -473,16 +361,10 @@ const maxMonthlyCount = computed(() => {
                                             :style="`width: ${scorePercentages['0-59']}%`"
                                         >
                                             <span
-                                                v-if="
-                                                    scorePercentages['0-59'] > 0
-                                                "
+                                                v-if="scorePercentages['0-59'] > 0"
                                                 class="text-xs text-white font-semibold"
                                             >
-                                                {{
-                                                    stats.score_distribution[
-                                                        "0-59"
-                                                    ]
-                                                }}人 ({{
+                                                {{ stats.score_distribution["0-59"] }}人 ({{
                                                     scorePercentages["0-59"]
                                                 }}%)
                                             </span>
@@ -500,79 +382,55 @@ const maxMonthlyCount = computed(() => {
                         </h2>
                         <div class="space-y-6">
                             <div>
-                                <div
-                                    class="flex items-center justify-between mb-2"
-                                >
-                                    <span
-                                        class="text-sm font-medium text-gray-700"
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-gray-700"
                                         >Part 1 - 規則発見力</span
                                     >
-                                    <span
-                                        class="text-lg font-bold text-blue-600"
-                                        >{{
-                                            stats.part_averages[1] || 0
-                                        }}点</span
+                                    <span class="text-lg font-bold text-blue-600"
+                                        >{{ stats.part_averages[1] || 0 }}点</span
                                     >
                                 </div>
                                 <div class="bg-gray-200 rounded-full h-4">
                                     <div
                                         class="bg-blue-500 h-4 rounded-full"
                                         :style="`width: ${
-                                            ((stats.part_averages[1] || 0) /
-                                                40) *
-                                            100
+                                            ((stats.part_averages[1] || 0) / 40) * 100
                                         }%`"
                                     ></div>
                                 </div>
                             </div>
                             <div>
-                                <div
-                                    class="flex items-center justify-between mb-2"
-                                >
-                                    <span
-                                        class="text-sm font-medium text-gray-700"
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-gray-700"
                                         >Part 2 - 空間把握力</span
                                     >
-                                    <span
-                                        class="text-lg font-bold text-green-600"
-                                        >{{
-                                            stats.part_averages[2] || 0
-                                        }}点</span
+                                    <span class="text-lg font-bold text-green-600"
+                                        >{{ stats.part_averages[2] || 0 }}点</span
                                     >
                                 </div>
                                 <div class="bg-gray-200 rounded-full h-4">
                                     <div
                                         class="bg-green-500 h-4 rounded-full"
                                         :style="`width: ${
-                                            ((stats.part_averages[2] || 0) /
-                                                30) *
-                                            100
+                                            ((stats.part_averages[2] || 0) / 30) * 100
                                         }%`"
                                     ></div>
                                 </div>
                             </div>
                             <div>
-                                <div
-                                    class="flex items-center justify-between mb-2"
-                                >
-                                    <span
-                                        class="text-sm font-medium text-gray-700"
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-gray-700"
                                         >Part 3 - 問題解決力</span
                                     >
-                                    <span
-                                        class="text-lg font-bold text-purple-600"
-                                        >{{
-                                            stats.part_averages[3] || 0
-                                        }}点</span
+                                    <span class="text-lg font-bold text-purple-600"
+                                        >{{ stats.part_averages[3] || 0 }}点</span
                                     >
                                 </div>
                                 <div class="bg-gray-200 rounded-full h-4">
                                     <div
                                         class="bg-purple-500 h-4 rounded-full"
                                         :style="`width: ${
-                                            ((stats.part_averages[3] || 0) /
-                                                25) *
-                                            100
+                                            ((stats.part_averages[3] || 0) / 25) * 100
                                         }%`"
                                     ></div>
                                 </div>
@@ -582,20 +440,14 @@ const maxMonthlyCount = computed(() => {
 
                     <!-- 月別受験者数 -->
                     <div class="bg-white rounded-lg shadow-lg p-6">
-                        <h2 class="text-xl font-bold text-gray-900 mb-4">
-                            月別受験者数(2025年)
-                        </h2>
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">月別受験者数(2025年)</h2>
                         <div class="space-y-3">
                             <div
-                                v-for="month in [
-                                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-                                ]"
+                                v-for="month in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]"
                                 :key="month"
                                 class="flex items-center"
                             >
-                                <div
-                                    class="w-16 text-sm font-medium text-gray-700"
-                                >
+                                <div class="w-16 text-sm font-medium text-gray-700">
                                     {{ month }}月
                                 </div>
                                 <div class="flex-1">
@@ -603,21 +455,14 @@ const maxMonthlyCount = computed(() => {
                                         <div
                                             class="bg-indigo-500 h-5 rounded-full flex items-center justify-end pr-2"
                                             :style="`width: ${
-                                                (stats.monthly_data[month] /
-                                                    maxMonthlyCount) *
-                                                100
+                                                (stats.monthly_data[month] / maxMonthlyCount) * 100
                                             }%`"
                                         >
                                             <span
-                                                v-if="
-                                                    stats.monthly_data[month] >
-                                                    0
-                                                "
+                                                v-if="stats.monthly_data[month] > 0"
                                                 class="text-xs text-white font-semibold"
                                             >
-                                                {{
-                                                    stats.monthly_data[month]
-                                                }}人
+                                                {{ stats.monthly_data[month] }}人
                                             </span>
                                         </div>
                                     </div>
@@ -628,9 +473,7 @@ const maxMonthlyCount = computed(() => {
                 </div>
 
                 <!-- 補足情報 -->
-                <div
-                    class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6"
-                >
+                <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
                     <div class="flex items-start">
                         <svg
                             class="w-6 h-6 text-blue-600 mt-1 mr-3"
@@ -646,20 +489,16 @@ const maxMonthlyCount = computed(() => {
                             />
                         </svg>
                         <div>
-                            <h3
-                                class="text-lg font-semibold text-blue-900 mb-2"
-                            >
+                            <h3 class="text-lg font-semibold text-blue-900 mb-2">
                                 統計情報について
                             </h3>
                             <p class="text-sm text-blue-800 mb-2">
                                 上記のグラフは実際のデータベースから集計された情報です。
                             </p>
-                            <ul
-                                class="text-sm text-blue-800 list-disc list-inside space-y-1"
-                            >
+                            <ul class="text-sm text-blue-800 list-disc list-inside space-y-1">
                                 <li>
-                                    得点は95点満点で計算されています(Part1:
-                                    40点、Part2: 30点、Part3: 25点)
+                                    得点は95点満点で計算されています(Part1: 40点、Part2:
+                                    30点、Part3: 25点)
                                 </li>
                                 <li>正答: +1点、誤答: -0.25点、未回答: 0点</li>
                                 <li>

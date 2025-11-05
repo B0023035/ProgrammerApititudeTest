@@ -69,13 +69,12 @@ const generateGradesFromSessions = () => {
     const subjects = ["規則発見力", "空間把握力", "問題解決力"];
     const generatedGrades: GradeData[] = [];
 
-    props.sessions.forEach((session) => {
+    props.sessions.forEach(session => {
         if (!session.total_score || session.total_questions === 0) {
             return;
         }
 
-        const totalPercentage =
-            (session.total_score / session.total_questions) * 100;
+        const totalPercentage = (session.total_score / session.total_questions) * 100;
 
         generatedGrades.push({
             id: session.id * 10,
@@ -89,10 +88,7 @@ const generateGradesFromSessions = () => {
             const partWeights = [0.42, 0.32, 0.26];
             const baseScore = totalPercentage * partWeights[index];
             const variation = (Math.random() - 0.5) * 10;
-            const score = Math.max(
-                0,
-                Math.min(100, Math.round(baseScore + variation))
-            );
+            const score = Math.max(0, Math.min(100, Math.round(baseScore + variation)));
 
             generatedGrades.push({
                 id: session.id * 10 + index + 1,
@@ -111,16 +107,14 @@ const filteredGrades = computed(() => {
     let result = grades.value;
 
     if (selectedSubject.value !== "all") {
-        result = result.filter((g) => g.subject === selectedSubject.value);
+        result = result.filter(g => g.subject === selectedSubject.value);
     } else {
-        result = result.filter((g) => g.subject === "全科目合計");
+        result = result.filter(g => g.subject === "全科目合計");
     }
 
     if (selectedEvent.value !== "all") {
-        result = result.filter((g) => {
-            const session = props.sessions?.find(
-                (s) => s.id === g.exam_session_id
-            );
+        result = result.filter(g => {
+            const session = props.sessions?.find(s => s.id === g.exam_session_id);
             return session?.event?.name === selectedEvent.value;
         });
     }
@@ -128,9 +122,7 @@ const filteredGrades = computed(() => {
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         result = result.filter(
-            (g) =>
-                g.name.toLowerCase().includes(query) ||
-                g.subject.toLowerCase().includes(query)
+            g => g.name.toLowerCase().includes(query) || g.subject.toLowerCase().includes(query)
         );
     }
 
@@ -138,10 +130,8 @@ const filteredGrades = computed(() => {
 });
 
 const subjects = computed(() => {
-    const uniqueSubjects = [
-        ...new Set(grades.value.map((g) => g.subject)),
-    ].sort();
-    return ["all", ...uniqueSubjects.filter((s) => s !== "全科目合計")];
+    const uniqueSubjects = [...new Set(grades.value.map(g => g.subject))].sort();
+    return ["all", ...uniqueSubjects.filter(s => s !== "全科目合計")];
 });
 
 const events = computed(() => {
@@ -174,14 +164,12 @@ const calculateStats = () => {
 
     try {
         const sum = filteredGrades.value.reduce((acc, g) => acc + g.score, 0);
-        const average = parseFloat(
-            (sum / filteredGrades.value.length).toFixed(2)
-        );
-        const highest = Math.max(...filteredGrades.value.map((g) => g.score));
-        const lowest = Math.min(...filteredGrades.value.map((g) => g.score));
+        const average = parseFloat((sum / filteredGrades.value.length).toFixed(2));
+        const highest = Math.max(...filteredGrades.value.map(g => g.score));
+        const lowest = Math.min(...filteredGrades.value.map(g => g.score));
 
         const counts = { A: 0, B: 0, C: 0, D: 0, F: 0 };
-        filteredGrades.value.forEach((g) => {
+        filteredGrades.value.forEach(g => {
             const grade = calculateGrade(g.score);
             counts[grade as keyof GradeCounts]++;
         });
@@ -197,7 +185,7 @@ const calculateStats = () => {
 const exportToCSV = () => {
     loading.value = true;
 
-    const processedGrades = filteredGrades.value.map((g) => ({
+    const processedGrades = filteredGrades.value.map(g => ({
         ...g,
         grade: calculateGrade(g.score),
     }));
@@ -205,16 +193,9 @@ const exportToCSV = () => {
     loading.value = false;
 
     const headers = ["学生名", "科目", "点数"];
-    const rows = processedGrades.map((g: ProcessedGrade) => [
-        g.name,
-        g.subject,
-        g.score,
-    ]);
+    const rows = processedGrades.map((g: ProcessedGrade) => [g.name, g.subject, g.score]);
 
-    const csvContent = [
-        headers.join(","),
-        ...rows.map((row: any[]) => row.join(",")),
-    ].join("\n");
+    const csvContent = [headers.join(","), ...rows.map((row: any[]) => row.join(","))].join("\n");
 
     const blob = new Blob(["\uFEFF" + csvContent], {
         type: "text/csv;charset=utf-8;",
@@ -244,17 +225,11 @@ onMounted(() => {
         <div class="py-8">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="mb-6">
-                    <h1 class="text-3xl font-bold text-gray-900">
-                        📊 成績管理 (Comlink)
-                    </h1>
-                    <p class="mt-2 text-gray-600">
-                        Web Workerを活用した高速成績分析システム
-                    </p>
+                    <h1 class="text-3xl font-bold text-gray-900">📊 成績管理 (Comlink)</h1>
+                    <p class="mt-2 text-gray-600">Web Workerを活用した高速成績分析システム</p>
                 </div>
 
-                <div
-                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6"
-                >
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                     <div
                         class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white"
                     >
@@ -291,9 +266,7 @@ onMounted(() => {
 
                 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-bold text-gray-900">
-                            フィルター
-                        </h3>
+                        <h3 class="text-lg font-bold text-gray-900">フィルター</h3>
                         <button
                             @click="exportToCSV"
                             class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
@@ -303,9 +276,7 @@ onMounted(() => {
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label
-                                class="block text-sm font-medium text-gray-700 mb-2"
-                            >
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
                                 科目で絞り込み
                             </label>
                             <select
@@ -315,9 +286,7 @@ onMounted(() => {
                             >
                                 <option value="all">すべての科目</option>
                                 <option
-                                    v-for="subject in subjects.filter(
-                                        (s) => s !== 'all'
-                                    )"
+                                    v-for="subject in subjects.filter(s => s !== 'all')"
                                     :key="subject"
                                     :value="subject"
                                 >
@@ -326,9 +295,7 @@ onMounted(() => {
                             </select>
                         </div>
                         <div>
-                            <label
-                                class="block text-sm font-medium text-gray-700 mb-2"
-                            >
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
                                 イベントで絞り込み
                             </label>
                             <select
@@ -338,9 +305,7 @@ onMounted(() => {
                             >
                                 <option value="all">すべてのイベント</option>
                                 <option
-                                    v-for="event in events.filter(
-                                        (e) => e !== 'all'
-                                    )"
+                                    v-for="event in events.filter(e => e !== 'all')"
                                     :key="event"
                                     :value="event"
                                 >
@@ -349,9 +314,7 @@ onMounted(() => {
                             </select>
                         </div>
                         <div>
-                            <label
-                                class="block text-sm font-medium text-gray-700 mb-2"
-                            >
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
                                 検索
                             </label>
                             <input
@@ -398,23 +361,17 @@ onMounted(() => {
                                     v-for="grade in filteredGrades"
                                     :key="grade.id"
                                     class="hover:bg-gray-50 transition-colors cursor-pointer"
-                                    @click="
-                                        goToUserDetail(grade.exam_session_id)
-                                    "
+                                    @click="goToUserDetail(grade.exam_session_id)"
                                 >
                                     <td
                                         class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
                                     >
                                         {{ grade.name }}
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {{ grade.subject }}
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ grade.score }}点
                                     </td>
                                 </tr>

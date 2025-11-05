@@ -49,12 +49,8 @@ const deleteEvent = (id: number) => {
                 <!-- ヘッダー -->
                 <div class="mb-6 flex items-center justify-between">
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-900">
-                            🎫 イベント管理
-                        </h1>
-                        <p class="mt-2 text-gray-600">
-                            セッションコードとイベント期間を管理
-                        </p>
+                        <h1 class="text-3xl font-bold text-gray-900">🎫 イベント管理</h1>
+                        <p class="mt-2 text-gray-600">セッションコードとイベント期間を管理</p>
                     </div>
                     <Link
                         :href="route('admin.events.create')"
@@ -66,14 +62,9 @@ const deleteEvent = (id: number) => {
 
                 <!-- イベント一覧 -->
                 <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <div
-                        v-if="events.length === 0"
-                        class="text-center py-12 text-gray-500"
-                    >
+                    <div v-if="events.length === 0" class="text-center py-12 text-gray-500">
                         <p class="text-lg">イベントがありません</p>
-                        <p class="text-sm mt-2">
-                            新規イベントを作成してください
-                        </p>
+                        <p class="text-sm mt-2">新規イベントを作成してください</p>
                     </div>
 
                     <div v-else class="overflow-x-auto">
@@ -119,15 +110,11 @@ const deleteEvent = (id: number) => {
                                     class="hover:bg-gray-50"
                                 >
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div
-                                            class="text-sm font-medium text-gray-900"
-                                        >
+                                        <div class="text-sm font-medium text-gray-900">
                                             {{ event.name }}
                                         </div>
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap font-mono"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap font-mono">
                                         <div
                                             class="text-sm text-gray-900 bg-gray-100 px-3 py-1 rounded inline-block"
                                         >
@@ -137,30 +124,18 @@ const deleteEvent = (id: number) => {
                                     <td class="px-6 py-4">
                                         <div class="text-sm text-gray-900">
                                             開始:
-                                            {{
-                                                new Date(
-                                                    event.begin
-                                                ).toLocaleString("ja-JP")
-                                            }}
+                                            {{ new Date(event.begin).toLocaleString("ja-JP") }}
                                         </div>
                                         <div class="text-sm text-gray-500">
                                             終了:
-                                            {{
-                                                new Date(
-                                                    event.end
-                                                ).toLocaleString("ja-JP")
-                                            }}
+                                            {{ new Date(event.end).toLocaleString("ja-JP") }}
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span
                                             class="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs font-semibold"
                                         >
-                                            {{
-                                                getExamTypeLabel(
-                                                    event.exam_type
-                                                )
-                                            }}
+                                            {{ getExamTypeLabel(event.exam_type) }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
@@ -168,14 +143,11 @@ const deleteEvent = (id: number) => {
                                             class="px-3 py-1 rounded-full text-xs font-semibold"
                                             :class="{
                                                 'bg-blue-100 text-blue-800':
-                                                    event.status_color ===
-                                                    'blue',
+                                                    event.status_color === 'blue',
                                                 'bg-green-100 text-green-800':
-                                                    event.status_color ===
-                                                    'green',
+                                                    event.status_color === 'green',
                                                 'bg-gray-100 text-gray-800':
-                                                    event.status_color ===
-                                                    'gray',
+                                                    event.status_color === 'gray',
                                             }"
                                         >
                                             {{ event.status }}
@@ -195,9 +167,7 @@ const deleteEvent = (id: number) => {
                                             編集
                                         </Link>
                                         <button
-                                            v-if="
-                                                event.status_color === 'green'
-                                            "
+                                            v-if="event.status_color === 'green'"
                                             @click="terminateEvent(event.id)"
                                             class="text-orange-600 hover:text-orange-900"
                                         >

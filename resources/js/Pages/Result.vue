@@ -65,26 +65,17 @@ const calculateStars = (score: number, maxScore: number): number => {
 
 const part1Stars = computed(() => {
     if (!page.props.results || !page.props.results[1]) return 1;
-    return calculateStars(
-        page.props.results[1].score,
-        page.props.results[1].total
-    );
+    return calculateStars(page.props.results[1].score, page.props.results[1].total);
 });
 
 const part2Stars = computed(() => {
     if (!page.props.results || !page.props.results[2]) return 1;
-    return calculateStars(
-        page.props.results[2].score,
-        page.props.results[2].total
-    );
+    return calculateStars(page.props.results[2].score, page.props.results[2].total);
 });
 
 const part3Stars = computed(() => {
     if (!page.props.results || !page.props.results[3]) return 1;
-    return calculateStars(
-        page.props.results[3].score,
-        page.props.results[3].total
-    );
+    return calculateStars(page.props.results[3].score, page.props.results[3].total);
 });
 
 const rankName = computed(() => page.props.rankName || "Bronze");
@@ -142,9 +133,7 @@ const handleBackToHome = async () => {
 const downloadAsPDF = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-        alert(
-            "ポップアップがブロックされました。ポップアップを許可してください。"
-        );
+        alert("ポップアップがブロックされました。ポップアップを許可してください。");
         return;
     }
 
@@ -227,7 +216,7 @@ const downloadAsPDF = () => {
             printWindow.print();
         }, 300);
     } else {
-        images.forEach((img) => {
+        images.forEach(img => {
             img.addEventListener("load", () => {
                 loadedImages++;
                 if (loadedImages === totalImages) {
@@ -249,9 +238,7 @@ const downloadAsPDF = () => {
 
         setTimeout(() => {
             if (loadedImages < totalImages) {
-                console.warn(
-                    "一部の画像が読み込まれませんでしたが、印刷を実行します"
-                );
+                console.warn("一部の画像が読み込まれませんでしたが、印刷を実行します");
                 printWindow.print();
             }
         }, 3000);
@@ -282,12 +269,8 @@ onBeforeUnmount(() => {
     <component :is="isGuest ? 'div' : AuthenticatedLayout">
         <Head title="修了証書" />
 
-        <div
-            class="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8"
-        >
-            <div
-                class="bg-white rounded-lg shadow-2xl p-8 mb-6 print:p-0 print:shadow-none"
-            >
+        <div class="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
+            <div class="bg-white rounded-lg shadow-2xl p-8 mb-6 print:p-0 print:shadow-none">
                 <svg
                     ref="certificateRef"
                     width="595"
@@ -393,14 +376,7 @@ onBeforeUnmount(() => {
                     </text>
 
                     <!-- 区切り線 -->
-                    <line
-                        x1="100"
-                        y1="380"
-                        x2="495"
-                        y2="380"
-                        stroke="#CCCCCC"
-                        stroke-width="1"
-                    />
+                    <line x1="100" y1="380" x2="495" y2="380" stroke="#CCCCCC" stroke-width="1" />
 
                     <!-- 規則発見力 -->
                     <text
@@ -466,14 +442,7 @@ onBeforeUnmount(() => {
                     </text>
 
                     <!-- 区切り線 -->
-                    <line
-                        x1="100"
-                        y1="550"
-                        x2="495"
-                        y2="550"
-                        stroke="#CCCCCC"
-                        stroke-width="1"
-                    />
+                    <line x1="100" y1="550" x2="495" y2="550" stroke="#CCCCCC" stroke-width="1" />
 
                     <!-- 証明文 -->
                     <text
@@ -507,39 +476,13 @@ onBeforeUnmount(() => {
                     </text>
 
                     <!-- 学校ロゴ -->
-                    <image
-                        v-if="logoUrl"
-                        :href="logoUrl"
-                        x="50"
-                        y="730"
-                        width="180"
-                        height="50"
-                    />
+                    <image v-if="logoUrl" :href="logoUrl" x="50" y="730" width="180" height="50" />
                     <g v-else>
-                        <rect
-                            x="50"
-                            y="730"
-                            width="180"
-                            height="50"
-                            fill="#4A90E2"
-                            rx="3"
-                        />
-                        <text
-                            x="60"
-                            y="750"
-                            font-size="11"
-                            fill="white"
-                            font-weight="bold"
-                        >
+                        <rect x="50" y="730" width="180" height="50" fill="#4A90E2" rx="3" />
+                        <text x="60" y="750" font-size="11" fill="white" font-weight="bold">
                             学校法人 YIC学院
                         </text>
-                        <text
-                            x="60"
-                            y="770"
-                            font-size="13"
-                            fill="white"
-                            font-weight="bold"
-                        >
+                        <text x="60" y="770" font-size="13" fill="white" font-weight="bold">
                             YIC情報ビジネス専門学校
                         </text>
                     </g>
@@ -556,13 +499,7 @@ onBeforeUnmount(() => {
                     </text>
 
                     <!-- 印鑑 -->
-                    <image
-                        :href="stampUrl"
-                        x="473"
-                        y="738"
-                        width="44"
-                        height="44"
-                    />
+                    <image :href="stampUrl" x="473" y="738" width="44" height="44" />
                 </svg>
             </div>
 
@@ -571,12 +508,7 @@ onBeforeUnmount(() => {
                 @click="downloadAsPDF"
                 class="flex items-center gap-2 px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl mb-6 print:hidden"
             >
-                <svg
-                    class="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                         stroke-linecap="round"
                         stroke-linejoin="round"

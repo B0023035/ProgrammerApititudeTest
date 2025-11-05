@@ -11,7 +11,7 @@ const errorMessage = ref("");
 const submit = () => {
     errorMessage.value = "";
     form.post(route("session.verify"), {
-        onError: (errors) => {
+        onError: errors => {
             if (errors.session_code) {
                 errorMessage.value = errors.session_code;
             } else {
@@ -40,15 +40,14 @@ const submit = () => {
                     <h1
                         class="text-4xl font-bold text-gray-900 mb-2"
                         style="
-                            font-family: 'Yu Mincho Demibold', '游明朝 Demibold',
-                                'YuMincho', serif;
+                            font-family:
+                                &quot;Yu Mincho Demibold&quot;, &quot;游明朝 Demibold&quot;,
+                                &quot;YuMincho&quot;, serif;
                         "
                     >
                         プログラマー適性検査
                     </h1>
-                    <p class="text-gray-600 mt-4">
-                        セッションコードを入力してください
-                    </p>
+                    <p class="text-gray-600 mt-4">セッションコードを入力してください</p>
                 </div>
 
                 <!-- セッションコード入力フォーム -->
@@ -70,10 +69,7 @@ const submit = () => {
                                 placeholder="XXXX-XXXX-XXXX"
                                 maxlength="14"
                             />
-                            <p
-                                v-if="errorMessage"
-                                class="mt-2 text-sm text-red-600"
-                            >
+                            <p v-if="errorMessage" class="mt-2 text-sm text-red-600">
                                 {{ errorMessage }}
                             </p>
                         </div>

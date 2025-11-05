@@ -21,7 +21,7 @@ const handleSubmit = () => {
         onSuccess: () => {
             console.log("ゲスト情報登録完了");
         },
-        onError: (errors) => {
+        onError: errors => {
             console.error("エラー:", errors);
             alert("登録に失敗しました。もう一度お試しください。");
             isSubmitting.value = false;
@@ -44,20 +44,13 @@ const handleSubmit = () => {
         <!-- メインコンテンツ -->
         <div class="flex-1 flex flex-col items-center justify-center px-4">
             <!-- タイトル -->
-            <h1 class="custom-title" style="margin-bottom: 120px">
-                プログラマー適性検査
-            </h1>
+            <h1 class="custom-title" style="margin-bottom: 120px">プログラマー適性検査</h1>
 
             <!-- 入力フォーム -->
             <div class="w-full max-w-xl">
                 <!-- 所属入力 -->
                 <div class="flex items-center" style="margin-bottom: 40px">
-                    <label
-                        for="school_name"
-                        class="form-label w-24 text-right mr-6"
-                    >
-                        所属:
-                    </label>
+                    <label for="school_name" class="form-label w-24 text-right mr-6"> 所属: </label>
                     <input
                         id="school_name"
                         v-model="form.school_name"
@@ -72,12 +65,7 @@ const handleSubmit = () => {
 
                 <!-- 名前入力 -->
                 <div class="flex items-center" style="margin-bottom: 40px">
-                    <label
-                        for="guest_name"
-                        class="form-label w-24 text-right mr-6"
-                    >
-                        名前:
-                    </label>
+                    <label for="guest_name" class="form-label w-24 text-right mr-6"> 名前: </label>
                     <input
                         id="guest_name"
                         v-model="form.guest_name"
@@ -95,16 +83,12 @@ const handleSubmit = () => {
                     <button
                         @click="handleSubmit"
                         :disabled="
-                            isSubmitting ||
-                            !form.school_name.trim() ||
-                            !form.guest_name.trim()
+                            isSubmitting || !form.school_name.trim() || !form.guest_name.trim()
                         "
                         class="start-button"
                         :class="{
                             'opacity-50 cursor-not-allowed':
-                                isSubmitting ||
-                                !form.school_name.trim() ||
-                                !form.guest_name.trim(),
+                                isSubmitting || !form.school_name.trim() || !form.guest_name.trim(),
                         }"
                     >
                         {{ isSubmitting ? "処理中..." : "始める" }}
@@ -113,9 +97,7 @@ const handleSubmit = () => {
 
                 <!-- 注意書き -->
                 <div class="text-center mt-8">
-                    <p class="notice-text">
-                        指示があるまでボタンを押さないでください
-                    </p>
+                    <p class="notice-text">指示があるまでボタンを押さないでください</p>
                 </div>
             </div>
         </div>

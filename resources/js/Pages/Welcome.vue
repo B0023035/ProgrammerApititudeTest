@@ -41,22 +41,13 @@ onMounted(() => {
         <div
             class="bg-gray-100 flex flex-col sm:justify-center items-center pt-6 sm:pt-0 space-y-2"
         >
-            <Link
-                href="/login"
-                class="underline text-sm text-gray-600 hover:text-gray-900"
-            >
+            <Link href="/login" class="underline text-sm text-gray-600 hover:text-gray-900">
                 Log in
             </Link>
-            <Link
-                href="/register"
-                class="underline text-sm text-gray-600 hover:text-gray-900"
-            >
+            <Link href="/register" class="underline text-sm text-gray-600 hover:text-gray-900">
                 Register
             </Link>
-            <Link
-                href="/guest/info"
-                class="underline text-sm text-gray-600 hover:text-gray-900"
-            >
+            <Link href="/guest/info" class="underline text-sm text-gray-600 hover:text-gray-900">
                 Guest
             </Link>
         </div>
