@@ -7,6 +7,7 @@ use App\Models\ExamSession;
 use App\Models\Answer;
 use App\Models\Question;
 use App\Models\Choice;
+use App\Models\Event;  // ← これを追加
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -430,7 +431,8 @@ class ResultsManagementController extends Controller
         $partQuestionCounts = $this->getPartQuestionCounts();
         $totalQuestions = array_sum($partQuestionCounts);
         
-        $sessions = ExamSession::with('user')
+        // イベント情報も一緒に取得
+        $sessions = ExamSession::with(['user', 'event'])
             ->whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->latest('finished_at')
@@ -452,11 +454,19 @@ class ResultsManagementController extends Controller
                         'name' => $session->user->name,
                         'email' => $session->user->email,
                     ],
+                    'event' => $session->event ? [
+                        'id' => $session->event->id,
+                        'name' => $session->event->name,
+                    ] : null,
                 ];
             });
 
+        // イベント名のリストを取得
+        $events = Event::orderBy('begin', 'desc')->pluck('name')->toArray();
+
         return Inertia::render('Admin/ResultsComlink', [
             'sessions' => $sessions,
+            'events' => $events,
         ]);
     }
 }

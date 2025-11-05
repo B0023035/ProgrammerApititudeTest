@@ -15,6 +15,7 @@ class ExamSession extends Model
     protected $fillable = [
         'user_id',
         'session_uuid',  // 追加
+        'event_id', 
         'started_at',
         'finished_at',
         'disqualified_at',
@@ -54,6 +55,13 @@ class ExamSession extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+        // イベントとのリレーション（これを追加）
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
+
 
     /**
      * このセッションの違反記録

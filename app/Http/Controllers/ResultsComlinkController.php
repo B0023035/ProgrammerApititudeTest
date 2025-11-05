@@ -5,14 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ExamSession;
 use App\Models\Answer;
+use App\Models\Event;
 use Inertia\Inertia;
 
 class ResultsComlinkController extends Controller
 {
     public function index()
     {
-        // 完了したセッションを取得
-        $sessions = ExamSession::with('user')
+        // 完了したセッションを取得（イベント情報も含む）
+        $sessions = ExamSession::with(['user', 'event'])
             ->whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->latest('finished_at')
@@ -47,11 +48,19 @@ class ResultsComlinkController extends Controller
                         'name' => $session->user->name,
                         'email' => $session->user->email,
                     ],
+                    'event' => $session->event ? [
+                        'id' => $session->event->id,
+                        'name' => $session->event->name,
+                    ] : null,
                 ];
             });
 
+        // イベント名のリストを取得
+        $events = Event::orderBy('begin', 'desc')->pluck('name')->toArray();
+
         return Inertia::render('Admin/ResultsComlink', [
             'sessions' => $sessions,
+            'events' => $events,
         ]);
     }
 }

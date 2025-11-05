@@ -21,24 +21,23 @@ use Inertia\Inertia;
 */
 
 // ========================================
-// セッションコード入力（最初にアクセスするページ）
+// セッションコード入力(最初にアクセスするページ)
 // ※ これはセッションコード認証不要
 // ========================================
 Route::get('/', [SessionCodeController::class, 'entry'])->name('session.entry');
 Route::post('/session/verify', [SessionCodeController::class, 'verify'])->name('session.verify');
 
 // ========================================
-// 管理者ルート（セッションコード不要）
+// 管理者ルート(セッションコード不要)
 // ========================================
 Route::prefix('admin')->name('admin.')->group(function () {
 
-        // ゲストのみアクセス可能（未ログイン管理者）
+    // ゲストのみアクセス可能(未ログイン管理者)
     Route::middleware('guest:admin')->group(function () {
-        // 管理者ログインページ（認証不要）
-        // 注意: ルート名を 'admin.login' にして一般ユーザーのログインと区別
+        // 管理者ログインページ(認証不要)
         Route::get('/login', function () {
             return Inertia::render('Admin/Login');
-        })->name('login');  // すでに admin. プレフィックスがあるので admin.login になる
+        })->name('login');
         
         Route::post('/login', [AdminAuthController::class, 'login'])->name('login.post');
     });
@@ -114,11 +113,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
 });
 
 // ========================================
-// セッションコード検証が必要なルート（一般ユーザー用）
+// セッションコード検証が必要なルート(一般ユーザー用)
 // ========================================
 Route::middleware(['check.session.code'])->group(function () {
 
-    // Welcomeページ（セッションコード認証後、ログイン前）
+    // Welcomeページ(セッションコード認証後、ログイン前)
     Route::get('/welcome', function () {
         \Log::info('Welcome page accessed', [
             'session_code' => session('verified_session_code'),
@@ -128,7 +127,7 @@ Route::middleware(['check.session.code'])->group(function () {
         return Inertia::render('Welcome');
     })->name('welcome');
 
-    // テスト開始画面（ログイン後）
+    // テスト開始画面(ログイン後)
     Route::get('/test-start', function () {
         // 未認証の場合はログインページへ
         if (!Auth::check()) {
@@ -166,7 +165,14 @@ Route::middleware(['check.session.code'])->group(function () {
             Route::get('/{section}', [PracticeController::class, 'guestShow'])
                 ->name('show')
                 ->where('section', '[1-3]');
-            Route::post('/complete', [PracticeController::class, 'guestComplete'])->name('complete');
+            
+            // ★ 修正: POST と GET 両方を受け付ける
+            Route::match(['post', 'get'], '/complete', [PracticeController::class, 'guestComplete'])->name('complete');
+            
+            // ゲスト用解説ページ表示用のGETルート
+            Route::get('/explanation/{part}', [PracticeController::class, 'showGuestExplanation'])
+                ->name('explanation')
+                ->where('part', '[1-3]');
         });
         
         // ゲスト用本番試験
@@ -195,7 +201,14 @@ Route::middleware(['check.session.code'])->group(function () {
             Route::get('/{section}', [PracticeController::class, 'show'])
                 ->name('show')
                 ->where('section', '[1-3]');
-            Route::post('/complete', [PracticeController::class, 'complete'])->name('complete');
+            
+            // ★ 修正: POST と GET 両方を受け付ける
+            Route::match(['post', 'get'], '/complete', [PracticeController::class, 'complete'])->name('complete');
+            
+            // 解説ページ表示用のGETルート
+            Route::get('/explanation/{part}', [PracticeController::class, 'showExplanation'])
+                ->name('explanation')
+                ->where('part', '[1-3]');
         });
 
         // 本番試験
@@ -217,6 +230,6 @@ Route::middleware(['check.session.code'])->group(function () {
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });
 
-    // 認証ルート（ログイン・登録など）
+    // 認証ルート(ログイン・登録など)
     require __DIR__.'/auth.php';
 });

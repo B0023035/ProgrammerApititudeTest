@@ -98,7 +98,7 @@ class PracticeController extends Controller
     }
 
     /**
-     * 練習問題完了処理(共通)
+     * 練習問題完了処理(共通) - 修正版
      */
     public function complete(Request $request)
     {
@@ -136,11 +136,8 @@ class PracticeController extends Controller
                     'is_guest' => $isGuest
                 ]);
                 
-                // ★ 修正: Inertia::render() を使用してエラーページを表示
-                return Inertia::render('Error', [
-                    'status' => 400,
-                    'message' => 'セッションが無効です。練習を最初からやり直してください。'
-                ]);
+                return redirect()->route('practice.show', ['section' => $part])
+                    ->with('error', 'セッションが無効です。練習を最初からやり直してください。');
             }
 
             // 回答データのサニタイズ
@@ -180,32 +177,39 @@ class PracticeController extends Controller
             // セッションをクリア
             if ($isGuest) {
                 Cache::forget("guest_practice_session_{$guestId}_{$sessionId}");
+                $guestName = session('guest_name') ?? session('guest_info.name') ?? 'ゲスト';
+                $guestSchool = session('guest_school_name') ?? session('guest_info.school_name') ?? '学校名未入力';
             } else {
                 Cache::forget("practice_session_{$user->id}_{$sessionId}");
+                $guestName = null;
+                $guestSchool = null;
             }
 
-            // ★ 修正: Inertia::render() を使用して直接レンダリング
+            Log::info('練習問題完了', [
+                'user_id' => $userId,
+                'part' => $part,
+                'answers_count' => count($sanitizedAnswers),
+                'is_guest' => $isGuest,
+            ]);
+
+            // ★ 重要修正: redirect の代わりに Inertia::render() を直接返す
             return Inertia::render('PracticeExplanation', [
-                'practiceQuestions' => $questions,
+                'practiceQuestions' => $questions->toArray(),
                 'answers' => $sanitizedAnswers,
                 'currentPart' => $part,
                 'timeSpent' => $validated['timeSpent'],
                 'isGuest' => $isGuest,
-                'isLastPart' => $part == 3,
-                'nextAction' => $part == 3 ? 'exam' : 'next-part',
-                'clearOldSessions' => true,
+                'guestName' => $guestName,
+                'guestSchool' => $guestSchool,
             ]);
-            
+                
         } catch (\Exception $e) {
             Log::error('Practice completion error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
             
-            // ★ 修正: back() の代わりに Inertia::render() でエラー表示
-            return Inertia::render('Error', [
-                'status' => 500,
-                'message' => '処理中にエラーが発生しました。'
-            ]);
+            return redirect()->route('practice.show', ['section' => 1])
+                ->with('error', '処理中にエラーが発生しました。');
         }
     }
 
@@ -268,7 +272,7 @@ class PracticeController extends Controller
     }
 
     /**
-     * ★ 追加: ゲスト用練習問題完了処理
+     * ★ 追加: ゲスト用練習問題完了処理 - 修正版
      */
     public function guestComplete(Request $request)
     {
@@ -286,8 +290,7 @@ class PracticeController extends Controller
             $sessionId = $validated['practiceSessionId'];
             $part = $validated['part'];
             
-
-            // ★ セッション情報を取得して保持
+            // ゲスト情報を取得して保持
             $guestName = session('guest_name') ?? session('guest_info.name') ?? 'ゲスト';
             $guestSchool = session('guest_school_name') ?? session('guest_info.school_name') ?? '学校名未入力';
             
@@ -296,7 +299,6 @@ class PracticeController extends Controller
                 'part' => $part,
                 'guest_name' => $guestName,
                 'guest_school' => $guestSchool,
-                'session_all' => session()->all(),
             ]);
             
             // セッション検証
@@ -309,11 +311,8 @@ class PracticeController extends Controller
                     'ip' => $request->ip()
                 ]);
                 
-                // ★ 修正: Inertia::render() を使用してエラーページを表示
-                return Inertia::render('Error', [
-                    'status' => 400,
-                    'message' => 'セッションが無効です。練習を最初からやり直してください。'
-                ]);
+                return redirect()->route('guest.practice.show', ['section' => $part])
+                    ->with('error', 'セッションが無効です。練習を最初からやり直してください。');
             }
 
             // 回答データのサニタイズ
@@ -353,7 +352,7 @@ class PracticeController extends Controller
             // セッションをクリア
             Cache::forget("guest_practice_session_{$guestId}_{$sessionId}");
 
-            // ★ 重要: セッション情報を再保存(念のため)
+            // ★ 重要: Laravelセッションにゲスト情報を再保存(念のため)
             session([
                 'guest_name' => $guestName,
                 'guest_school_name' => $guestSchool,
@@ -372,9 +371,9 @@ class PracticeController extends Controller
                 'guest_school' => $guestSchool,
             ]);
 
-            // ★ 修正: Inertia::render() を使用して直接レンダリング
+            // ★ 重要修正: redirect の代わりに Inertia::render() を直接返す
             return Inertia::render('PracticeExplanation', [
-                'practiceQuestions' => $questions,
+                'practiceQuestions' => $questions->toArray(),
                 'answers' => $sanitizedAnswers,
                 'currentPart' => $part,
                 'timeSpent' => $validated['timeSpent'],
@@ -388,11 +387,8 @@ class PracticeController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            // ★ 修正: Inertia::render() を使用してエラーページを表示
-            return Inertia::render('Error', [
-                'status' => 500,
-                'message' => '処理中にエラーが発生しました。'
-            ]);
+            return redirect()->route('guest.practice.show', ['section' => 1])
+                ->with('error', '処理中にエラーが発生しました。');
         }
     }
 

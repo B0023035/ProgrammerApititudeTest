@@ -2,7 +2,6 @@
 import { ref, onMounted, computed } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-// import AdminResultsTabs from "@/Components/AdminResultsTabs.vue";
 
 interface GradeData {
     id: number;
@@ -32,6 +31,10 @@ interface Session {
     total_questions: number;
     rank: string;
     finished_at: string;
+    event?: {
+        id: number;
+        name: string;
+    };
     user: {
         id: number;
         name: string;
@@ -42,6 +45,7 @@ interface Session {
 const props = defineProps<{
     sessions?: Session[];
     users?: any[];
+    events?: string[];
 }>();
 
 const grades = ref<GradeData[]>([]);
@@ -54,9 +58,9 @@ const stats = ref({
 });
 
 const selectedSubject = ref("all");
+const selectedEvent = ref("all");
 const searchQuery = ref("");
 
-// セッションデータから成績データを生成
 const generateGradesFromSessions = () => {
     if (!props.sessions || props.sessions.length === 0) {
         return [];
@@ -73,6 +77,14 @@ const generateGradesFromSessions = () => {
         const totalPercentage =
             (session.total_score / session.total_questions) * 100;
 
+        generatedGrades.push({
+            id: session.id * 10,
+            name: session.user.name,
+            subject: "全科目合計",
+            score: Math.round(totalPercentage),
+            exam_session_id: session.id,
+        });
+
         subjects.forEach((subject, index) => {
             const partWeights = [0.42, 0.32, 0.26];
             const baseScore = totalPercentage * partWeights[index];
@@ -83,7 +95,7 @@ const generateGradesFromSessions = () => {
             );
 
             generatedGrades.push({
-                id: session.id * 10 + index,
+                id: session.id * 10 + index + 1,
                 name: session.user.name,
                 subject: subject,
                 score: score,
@@ -100,6 +112,17 @@ const filteredGrades = computed(() => {
 
     if (selectedSubject.value !== "all") {
         result = result.filter((g) => g.subject === selectedSubject.value);
+    } else {
+        result = result.filter((g) => g.subject === "全科目合計");
+    }
+
+    if (selectedEvent.value !== "all") {
+        result = result.filter((g) => {
+            const session = props.sessions?.find(
+                (s) => s.id === g.exam_session_id
+            );
+            return session?.event?.name === selectedEvent.value;
+        });
     }
 
     if (searchQuery.value) {
@@ -118,7 +141,14 @@ const subjects = computed(() => {
     const uniqueSubjects = [
         ...new Set(grades.value.map((g) => g.subject)),
     ].sort();
-    return ["all", ...uniqueSubjects];
+    return ["all", ...uniqueSubjects.filter((s) => s !== "全科目合計")];
+});
+
+const events = computed(() => {
+    if (!props.events || props.events.length === 0) {
+        return ["all"];
+    }
+    return ["all", ...props.events];
 });
 
 const calculateGrade = (score: number): string => {
@@ -174,12 +204,11 @@ const exportToCSV = () => {
 
     loading.value = false;
 
-    const headers = ["学生名", "科目", "点数", "評価"];
+    const headers = ["学生名", "科目", "点数"];
     const rows = processedGrades.map((g: ProcessedGrade) => [
         g.name,
         g.subject,
         g.score,
-        g.grade,
     ]);
 
     const csvContent = [
@@ -214,7 +243,6 @@ onMounted(() => {
 
         <div class="py-8">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <!-- ヘッダー -->
                 <div class="mb-6">
                     <h1 class="text-3xl font-bold text-gray-900">
                         📊 成績管理 (Comlink)
@@ -224,10 +252,6 @@ onMounted(() => {
                     </p>
                 </div>
 
-                <!-- タブナビゲーション -->
-                <AdminResultsTabs />
-
-                <!-- 統計カード -->
                 <div
                     class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6"
                 >
@@ -265,7 +289,6 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- フィルター -->
                 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-bold text-gray-900">
@@ -278,7 +301,7 @@ onMounted(() => {
                             💾 CSV出力
                         </button>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label
                                 class="block text-sm font-medium text-gray-700 mb-2"
@@ -306,6 +329,29 @@ onMounted(() => {
                             <label
                                 class="block text-sm font-medium text-gray-700 mb-2"
                             >
+                                イベントで絞り込み
+                            </label>
+                            <select
+                                v-model="selectedEvent"
+                                @change="calculateStats"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            >
+                                <option value="all">すべてのイベント</option>
+                                <option
+                                    v-for="event in events.filter(
+                                        (e) => e !== 'all'
+                                    )"
+                                    :key="event"
+                                    :value="event"
+                                >
+                                    {{ event }}
+                                </option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                            >
                                 検索
                             </label>
                             <input
@@ -319,70 +365,6 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- 評価分布 -->
-                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-                    <h3 class="text-xl font-bold mb-4 text-gray-800">
-                        評価分布
-                    </h3>
-                    <div
-                        class="grid grid-cols-5 gap-4 text-center"
-                        v-if="!loading"
-                    >
-                        <div
-                            class="bg-green-100 rounded-lg p-4 border-2 border-green-500"
-                        >
-                            <div class="text-3xl font-bold text-green-600">
-                                A
-                            </div>
-                            <div class="text-2xl font-semibold mt-2">
-                                {{ stats.counts.A }}
-                            </div>
-                        </div>
-                        <div
-                            class="bg-blue-100 rounded-lg p-4 border-2 border-blue-500"
-                        >
-                            <div class="text-3xl font-bold text-blue-600">
-                                B
-                            </div>
-                            <div class="text-2xl font-semibold mt-2">
-                                {{ stats.counts.B }}
-                            </div>
-                        </div>
-                        <div
-                            class="bg-yellow-100 rounded-lg p-4 border-2 border-yellow-500"
-                        >
-                            <div class="text-3xl font-bold text-yellow-600">
-                                C
-                            </div>
-                            <div class="text-2xl font-semibold mt-2">
-                                {{ stats.counts.C }}
-                            </div>
-                        </div>
-                        <div
-                            class="bg-orange-100 rounded-lg p-4 border-2 border-orange-500"
-                        >
-                            <div class="text-3xl font-bold text-orange-600">
-                                D
-                            </div>
-                            <div class="text-2xl font-semibold mt-2">
-                                {{ stats.counts.D }}
-                            </div>
-                        </div>
-                        <div
-                            class="bg-red-100 rounded-lg p-4 border-2 border-red-500"
-                        >
-                            <div class="text-3xl font-bold text-red-600">F</div>
-                            <div class="text-2xl font-semibold mt-2">
-                                {{ stats.counts.F }}
-                            </div>
-                        </div>
-                    </div>
-                    <div v-else class="text-center py-8 text-gray-500">
-                        計算中...
-                    </div>
-                </div>
-
-                <!-- 成績一覧テーブル -->
                 <div class="bg-white rounded-xl shadow-lg p-6">
                     <h3 class="text-xl font-bold mb-4 text-gray-800">
                         成績一覧
@@ -409,11 +391,6 @@ onMounted(() => {
                                     >
                                         点数
                                     </th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
-                                        評価
-                                    </th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -439,29 +416,6 @@ onMounted(() => {
                                         class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                                     >
                                         {{ grade.score }}点
-                                    </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm font-bold"
-                                    >
-                                        <span
-                                            :class="{
-                                                'text-green-600':
-                                                    grade.score >= 90,
-                                                'text-blue-600':
-                                                    grade.score >= 80 &&
-                                                    grade.score < 90,
-                                                'text-yellow-600':
-                                                    grade.score >= 70 &&
-                                                    grade.score < 80,
-                                                'text-orange-600':
-                                                    grade.score >= 60 &&
-                                                    grade.score < 70,
-                                                'text-red-600':
-                                                    grade.score < 60,
-                                            }"
-                                        >
-                                            {{ calculateGrade(grade.score) }}
-                                        </span>
                                     </td>
                                 </tr>
                             </tbody>

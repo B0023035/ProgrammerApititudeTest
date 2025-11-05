@@ -1038,6 +1038,8 @@ const showImagePlaceholder = (
 };
 
 // 練習完了処理
+// Practice.vue の completePractice 関数を以下のように修正
+
 const completePractice = () => {
     form.practiceSessionId =
         props.practiceSessionId || page.props.practiceSessionId || "";
@@ -1054,7 +1056,6 @@ const completePractice = () => {
     console.log("answersCount:", Object.keys(form.answers).length);
     console.log("timeSpent:", form.timeSpent);
     console.log("totalQuestions:", form.totalQuestions);
-    console.log("questions.length:", questions.value.length);
     console.log("========================");
 
     if (!form.practiceSessionId) {
@@ -1078,12 +1079,22 @@ const completePractice = () => {
         ? "guest.practice.complete"
         : "practice.complete";
 
-    // ★ 修正: preserveState と preserveScroll を追加
+    // ★ 重要修正: これらのオプションを削除または変更
     form.post(route(routeName), {
-        preserveState: false, // 状態をリセット
-        preserveScroll: false, // スクロール位置もリセット
-        onSuccess: () => {
+        preserveState: false,
+        preserveScroll: false,
+        replace: false, // ★ true → false に変更
+        forceFormData: false,
+        onBefore: () => {
+            console.log("=== POST送信直前 ===");
+            console.log("Route:", routeName);
+            console.log("Data:", form.data());
+        },
+        onSuccess: (response) => {
             console.log("練習完了データ送信完了");
+            console.log("Response:", response);
+            // ★ 削除: 手動でのページ遷移は不要
+            // Inertia.jsがサーバーからのredirect()を自動処理する
         },
         onError: (errors) => {
             showConfirm.value = false;

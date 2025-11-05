@@ -1,9 +1,261 @@
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import { usePage, router } from "@inertiajs/vue3";
+import { Head } from "@inertiajs/vue3";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import GuestLayout from "@/Layouts/GuestLayout.vue";
+
+// 型定義
+type ChoiceType = {
+    id: number;
+    label: string;
+    text: string;
+    image?: string | null;
+};
+
+type PracticeQuestionType = {
+    id: number;
+    number: number;
+    part: number;
+    text: string;
+    image?: string | null;
+    choices: ChoiceType[];
+    answer: string;
+    selected?: string | null;
+    explanation: string;
+};
+
+interface BasePageProps {
+    auth: any;
+    ziggy: any;
+    [key: string]: any;
+}
+
+interface CustomPageProps extends BasePageProps {
+    practiceQuestions: PracticeQuestionType[];
+    answers?: string | Record<number, string>;
+    isGuest?: boolean;
+    currentPart?: number;
+    timeSpent?: number;
+    guestName?: string;
+    guestSchool?: string;
+}
+
+const page = usePage<CustomPageProps>();
+const isNavigating = ref(false);
+
+// ゲスト判定
+const isGuest = computed(
+    () => !page.props.auth?.user || page.props.isGuest === true
+);
+
+function getAnswersData(): Record<number, string> {
+    let answersObj: Record<number, string> = {};
+
+    if (page.props.answers && typeof page.props.answers === "object") {
+        answersObj = page.props.answers;
+        return answersObj;
+    }
+
+    if (page.props.answers && typeof page.props.answers === "string") {
+        try {
+            answersObj = JSON.parse(page.props.answers);
+            return answersObj;
+        } catch (e) {
+            console.error("JSON文字列の解析に失敗:", e);
+        }
+    }
+
+    return {};
+}
+
+const processedQuestions = computed(() => {
+    const answersObj = getAnswersData();
+
+    return page.props.practiceQuestions.map((q: PracticeQuestionType) => {
+        let selectedAnswer = q.selected;
+
+        if (!selectedAnswer && answersObj[q.number]) {
+            selectedAnswer = String(answersObj[q.number]).trim();
+        }
+
+        return {
+            ...q,
+            selected: selectedAnswer || null,
+        };
+    });
+});
+
+const getImagePath = (
+    imageName: any,
+    imageType: "questions" | "choices"
+): string => {
+    const rawImageName = imageName ? String(imageName) : null;
+
+    if (
+        !rawImageName ||
+        rawImageName === "undefined" ||
+        rawImageName === "null" ||
+        rawImageName.trim() === ""
+    ) {
+        return "";
+    }
+
+    const trimmedName = rawImageName.trim();
+    const validExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+    const hasValidExtension = validExtensions.some((ext) =>
+        trimmedName.toLowerCase().endsWith(ext)
+    );
+
+    if (!hasValidExtension) {
+        return "";
+    }
+
+    try {
+        const imagePath = new URL(
+            `./images/${imageType}/${trimmedName}`,
+            import.meta.url
+        ).href;
+        return imagePath;
+    } catch (error) {
+        return `/images/${imageType}/${trimmedName}`;
+    }
+};
+
+const handleImageError = (event: Event): void => {
+    const target = event.target as HTMLImageElement;
+    const imageName = target.src.split("/").pop() || "unknown";
+    target.style.display = "none";
+
+    const parent = target.parentElement;
+    if (parent && !parent.querySelector(".image-error-msg")) {
+        const errorMsg = document.createElement("div");
+        errorMsg.className =
+            "image-error-msg text-red-500 text-xs mt-1 p-2 bg-red-50 border border-red-200 rounded";
+        errorMsg.innerHTML = `
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>画像が読み込めません: ${imageName}</span>
+            </div>
+        `;
+        parent.appendChild(errorMsg);
+    }
+};
+
+const handleImageLoad = (event: Event) => {
+    const target = event.target as HTMLImageElement;
+    console.log(`画像読み込み成功: ${target.src}`);
+};
+
+// 重要: GuestLayout と AuthenticatedLayout を使い分け
+const layoutComponent = computed(() => {
+    return isGuest.value ? GuestLayout : AuthenticatedLayout;
+});
+
+function getCurrentPart(): number {
+    if (
+        page.props.practiceQuestions &&
+        page.props.practiceQuestions.length > 0
+    ) {
+        return page.props.practiceQuestions[0].part;
+    }
+    return page.props.currentPart || 1;
+}
+
+function goToExam() {
+    const currentPart = getCurrentPart();
+    isNavigating.value = true;
+
+    console.log("=== goToExam 呼び出し ===");
+    console.log("currentPart:", currentPart);
+    console.log("isGuest:", isGuest.value);
+
+    if (isGuest.value) {
+        console.log("ゲストモード: 試験セッション作成中...");
+
+        // ★ 修正: ゲスト用 - 既存セッションがあるか確認してから適切な部に進む
+        router.visit(route("guest.exam.part", { part: currentPart }), {
+            method: "get",
+            preserveState: false,
+            preserveScroll: false,
+            replace: true,
+            onBefore: () => {
+                console.log("ゲスト本番試験ページへ遷移中...", {
+                    part: currentPart,
+                });
+            },
+            onFinish: () => {
+                isNavigating.value = false;
+                console.log("ゲスト試験開始処理完了");
+            },
+            onError: (errors) => {
+                console.error("ゲスト試験開始エラー:", errors);
+                isNavigating.value = false;
+                alert("試験の開始に失敗しました。もう一度お試しください。");
+            },
+        });
+    } else {
+        console.log("認証ユーザー: 試験セッション作成中...");
+
+        // ★ 修正: 認証ユーザー用 - 既存セッションがあるか確認してから適切な部に進む
+        router.visit(route("exam.part", { part: currentPart }), {
+            method: "get",
+            preserveState: false,
+            preserveScroll: false,
+            replace: true,
+            onBefore: () => {
+                console.log("本番試験ページへ遷移中...", { part: currentPart });
+            },
+            onFinish: () => {
+                isNavigating.value = false;
+                console.log("認証ユーザー試験開始処理完了");
+            },
+            onError: (errors) => {
+                console.error("本番試験開始エラー:", errors);
+                isNavigating.value = false;
+                alert("試験の開始に失敗しました。もう一度お試しください。");
+            },
+        });
+    }
+}
+
+function getChoiceClass(
+    choice: ChoiceType,
+    question: PracticeQuestionType
+): string {
+    const classes = ["border-gray-300"];
+
+    const choiceLabel = String(choice.label).trim();
+    const questionAnswer = String(question.answer).trim();
+    const selectedAnswer = question.selected
+        ? String(question.selected).trim()
+        : null;
+
+    if (choiceLabel === questionAnswer) {
+        classes.push("bg-green-100", "border-green-400");
+        if (selectedAnswer === questionAnswer) {
+            classes.push("bg-green-200", "border-green-500", "shadow-md");
+        }
+    } else if (
+        selectedAnswer === choiceLabel &&
+        choiceLabel !== questionAnswer
+    ) {
+        classes.push("bg-red-100", "border-red-400");
+    } else {
+        classes.push("bg-white", "hover:bg-gray-50");
+    }
+
+    return classes.join(" ");
+}
+</script>
+
 <template>
-    <!-- ★ 修正: GuestLayoutとAuthenticatedLayoutの使い分けを維持 -->
+    <!-- レイアウトコンポーネントの動的切り替え -->
     <component :is="layoutComponent">
         <Head title="解説ページ" />
 
-        <!-- ★ 修正: max-w-7xlで全幅使用 -->
         <div class="min-h-screen bg-gray-100">
             <!-- 上部ヘッダー -->
             <div
@@ -206,250 +458,6 @@
         </div>
     </component>
 </template>
-
-<script setup lang="ts">
-import { computed, ref } from "vue";
-import { usePage, router } from "@inertiajs/vue3";
-import { Head } from "@inertiajs/vue3";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import GuestLayout from "@/Layouts/GuestLayout.vue";
-
-type ChoiceType = {
-    id: number;
-    label: string;
-    text: string;
-    image?: string | null;
-};
-
-type PracticeQuestionType = {
-    id: number;
-    number: number;
-    part: number;
-    text: string;
-    image?: string | null;
-    choices: ChoiceType[];
-    answer: string;
-    selected?: string | null;
-    explanation: string;
-};
-
-interface BasePageProps {
-    auth: any;
-    ziggy: any;
-    [key: string]: any;
-}
-
-interface CustomPageProps extends BasePageProps {
-    practiceQuestions: PracticeQuestionType[];
-    answers?: string | Record<number, string>;
-    isGuest?: boolean;
-}
-
-const page = usePage<CustomPageProps>();
-const isNavigating = ref(false);
-
-// ★ ゲスト判定
-const isGuest = computed(
-    () => !page.props.auth?.user || page.props.isGuest === true
-);
-
-function getAnswersData(): Record<number, string> {
-    let answersObj: Record<number, string> = {};
-
-    if (page.props.answers && typeof page.props.answers === "object") {
-        answersObj = page.props.answers;
-        return answersObj;
-    }
-
-    if (page.props.answers && typeof page.props.answers === "string") {
-        try {
-            answersObj = JSON.parse(page.props.answers);
-            return answersObj;
-        } catch (e) {
-            console.error("JSON文字列の解析に失敗:", e);
-        }
-    }
-
-    return {};
-}
-
-const processedQuestions = computed(() => {
-    const answersObj = getAnswersData();
-
-    return page.props.practiceQuestions.map((q: PracticeQuestionType) => {
-        let selectedAnswer = q.selected;
-
-        if (!selectedAnswer && answersObj[q.number]) {
-            selectedAnswer = String(answersObj[q.number]).trim();
-        }
-
-        return {
-            ...q,
-            selected: selectedAnswer || null,
-        };
-    });
-});
-
-const getImagePath = (
-    imageName: any,
-    imageType: "questions" | "choices"
-): string => {
-    const rawImageName = imageName ? String(imageName) : null;
-
-    if (
-        !rawImageName ||
-        rawImageName === "undefined" ||
-        rawImageName === "null" ||
-        rawImageName.trim() === ""
-    ) {
-        return "";
-    }
-
-    const trimmedName = rawImageName.trim();
-    const validExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
-    const hasValidExtension = validExtensions.some((ext) =>
-        trimmedName.toLowerCase().endsWith(ext)
-    );
-
-    if (!hasValidExtension) {
-        return "";
-    }
-
-    try {
-        const imagePath = new URL(
-            `./images/${imageType}/${trimmedName}`,
-            import.meta.url
-        ).href;
-        return imagePath;
-    } catch (error) {
-        return `/images/${imageType}/${trimmedName}`;
-    }
-};
-
-const handleImageError = (event: Event): void => {
-    const target = event.target as HTMLImageElement;
-    const imageName = target.src.split("/").pop() || "unknown";
-    target.style.display = "none";
-
-    const parent = target.parentElement;
-    if (parent && !parent.querySelector(".image-error-msg")) {
-        const errorMsg = document.createElement("div");
-        errorMsg.className =
-            "image-error-msg text-red-500 text-xs mt-1 p-2 bg-red-50 border border-red-200 rounded";
-        errorMsg.innerHTML = `
-            <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span>画像が読み込めません: ${imageName}</span>
-            </div>
-        `;
-        parent.appendChild(errorMsg);
-    }
-};
-
-const handleImageLoad = (event: Event) => {
-    const target = event.target as HTMLImageElement;
-    console.log(`画像読み込み成功: ${target.src}`);
-};
-
-// ★ 重要: GuestLayout と AuthenticatedLayout を使い分け
-const layoutComponent = computed(() => {
-    return isGuest.value ? GuestLayout : AuthenticatedLayout;
-});
-
-function getCurrentPart(): number {
-    if (
-        page.props.practiceQuestions &&
-        page.props.practiceQuestions.length > 0
-    ) {
-        return page.props.practiceQuestions[0].part;
-    }
-    return 1;
-}
-
-function goToExam() {
-    const currentPart = getCurrentPart();
-    isNavigating.value = true;
-
-    console.log("=== goToExam 呼び出し ===");
-    console.log("currentPart:", currentPart);
-    console.log("isGuest:", isGuest.value);
-
-    if (isGuest.value) {
-        console.log("ゲストモード: 試験セッション作成中...");
-
-        // ゲスト用: POSTで試験開始
-        router.post(
-            route("guest.exam.start"),
-            {},
-            {
-                preserveState: false,
-                preserveScroll: false,
-                onFinish: () => {
-                    isNavigating.value = false;
-                    console.log("ゲスト試験開始処理完了");
-                },
-                onError: (errors) => {
-                    console.error("ゲスト試験開始エラー:", errors);
-                    isNavigating.value = false;
-                    alert("試験の開始に失敗しました。もう一度お試しください。");
-                },
-            }
-        );
-    } else {
-        console.log("認証ユーザー: 試験セッション作成中...");
-
-        // ★ 修正: 認証ユーザーもシンプルにPOSTのみ
-        router.post(
-            route("exam.start"),
-            {},
-            {
-                preserveState: false,
-                preserveScroll: false,
-                onFinish: () => {
-                    isNavigating.value = false;
-                    console.log("認証ユーザー試験開始処理完了");
-                },
-                onError: (errors) => {
-                    console.error("本番試験開始エラー:", errors);
-                    isNavigating.value = false;
-                    alert("試験の開始に失敗しました。もう一度お試しください。");
-                },
-            }
-        );
-    }
-}
-
-function getChoiceClass(
-    choice: ChoiceType,
-    question: PracticeQuestionType
-): string {
-    const classes = ["border-gray-300"];
-
-    const choiceLabel = String(choice.label).trim();
-    const questionAnswer = String(question.answer).trim();
-    const selectedAnswer = question.selected
-        ? String(question.selected).trim()
-        : null;
-
-    if (choiceLabel === questionAnswer) {
-        classes.push("bg-green-100", "border-green-400");
-        if (selectedAnswer === questionAnswer) {
-            classes.push("bg-green-200", "border-green-500", "shadow-md");
-        }
-    } else if (
-        selectedAnswer === choiceLabel &&
-        choiceLabel !== questionAnswer
-    ) {
-        classes.push("bg-red-100", "border-red-400");
-    } else {
-        classes.push("bg-white", "hover:bg-gray-50");
-    }
-
-    return classes.join(" ");
-}
-</script>
 
 <style scoped>
 .transition-all {
