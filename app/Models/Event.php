@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 
 class Event extends Model
 {
@@ -29,6 +29,7 @@ class Event extends Model
     public function isActive(): bool
     {
         $now = Carbon::now();
+
         return $now->between($this->begin, $this->end);
     }
 

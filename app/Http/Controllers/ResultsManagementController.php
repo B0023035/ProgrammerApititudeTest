@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\ExamSession;
 use App\Models\Answer;
+use App\Models\Event;
+use App\Models\ExamSession;
 use App\Models\Question;
-use App\Models\Choice;
-use App\Models\Event;  // ← これを追加
+use App\Models\User;  // ← これを追加
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ResultsManagementController extends Controller
@@ -32,13 +30,13 @@ class ResultsManagementController extends Controller
     private function calculateScore($examSessionId, $part = null)
     {
         $query = Answer::where('exam_session_id', $examSessionId);
-        
+
         if ($part !== null) {
             $query->where('part', $part);
         }
-        
+
         $answers = $query->get();
-        
+
         $score = 0;
         foreach ($answers as $answer) {
             if ($answer->choice === null) {
@@ -52,7 +50,7 @@ class ResultsManagementController extends Controller
                 $score -= 0.25;
             }
         }
-        
+
         return $score;
     }
 
@@ -65,9 +63,16 @@ class ResultsManagementController extends Controller
      */
     private function calculateRank($score)
     {
-        if ($score >= 61) return 'Platinum';
-        if ($score >= 51) return 'Gold';
-        if ($score >= 36) return 'Silver';
+        if ($score >= 61) {
+            return 'Platinum';
+        }
+        if ($score >= 51) {
+            return 'Gold';
+        }
+        if ($score >= 36) {
+            return 'Silver';
+        }
+
         return 'Bronze';
     }
 
@@ -128,7 +133,7 @@ class ResultsManagementController extends Controller
         $session = ExamSession::with('user')->findOrFail($sessionId);
         $partQuestionCounts = $this->getPartQuestionCounts();
         $totalQuestions = array_sum($partQuestionCounts);
-        
+
         $answers = Answer::where('exam_session_id', $sessionId)
             ->with(['question', 'question.choices'])
             ->orderBy('part')
@@ -144,10 +149,10 @@ class ResultsManagementController extends Controller
             $partAnswers = $answers->where('part', $part);
             $partScore = $this->calculateScore($sessionId, $part);
             $total = $partQuestionCounts[$part];
-            
+
             // 正答数をカウント(表示用)
             $correct = $partAnswers->where('is_correct', 1)->count();
-            
+
             $questions = [];
             foreach ($partAnswers as $answer) {
                 $correctChoice = null;
@@ -164,7 +169,7 @@ class ResultsManagementController extends Controller
                         'label' => $choice->label,
                         'text' => $choice->text,
                         'image' => $choice->image,
-                        'is_correct' => (bool)$choice->is_correct,
+                        'is_correct' => (bool) $choice->is_correct,
                     ];
                 }
 
@@ -185,13 +190,13 @@ class ResultsManagementController extends Controller
                     'question_image' => $answer->question->image,
                     'user_choice' => $answer->choice,
                     'correct_choice' => $correctChoice,
-                    'is_correct' => (bool)$answer->is_correct,
+                    'is_correct' => (bool) $answer->is_correct,
                     'score' => $questionScore,
                     'choices' => $choicesArray,
                 ];
             }
-            
-            $answersByPart[(string)$part] = [
+
+            $answersByPart[(string) $part] = [
                 'score' => [
                     'correct' => $correct,
                     'total' => $total,
@@ -215,8 +220,8 @@ class ResultsManagementController extends Controller
                 'finished_at' => $session->finished_at->toIso8601String(),
                 'total_score' => round($totalScore, 2),
                 'total_questions' => $totalQuestions,
-                'percentage' => $totalQuestions > 0 
-                    ? round(($totalScore / $totalQuestions) * 100, 1) 
+                'percentage' => $totalQuestions > 0
+                    ? round(($totalScore / $totalQuestions) * 100, 1)
                     : 0,
                 'rank' => $rank,
             ],
@@ -232,7 +237,7 @@ class ResultsManagementController extends Controller
         $user = User::findOrFail($userId);
         $partQuestionCounts = $this->getPartQuestionCounts();
         $totalQuestions = array_sum($partQuestionCounts);
-        
+
         $sessions = ExamSession::where('user_id', $userId)
             ->whereNotNull('finished_at')
             ->whereNull('disqualified_at')
@@ -244,7 +249,7 @@ class ResultsManagementController extends Controller
                 $partScores = [];
                 for ($part = 1; $part <= 3; $part++) {
                     $partScore = $this->calculateScore($session->id, $part);
-                    
+
                     // 正答数(表示用)
                     $partCorrect = Answer::where('exam_session_id', $session->id)
                         ->where('part', $part)
@@ -255,8 +260,8 @@ class ResultsManagementController extends Controller
                         'correct' => $partCorrect,
                         'total' => $partQuestionCounts[$part],
                         'points' => round($partScore, 2),
-                        'percentage' => $partQuestionCounts[$part] > 0 
-                            ? round(($partCorrect / $partQuestionCounts[$part]) * 100, 1) 
+                        'percentage' => $partQuestionCounts[$part] > 0
+                            ? round(($partCorrect / $partQuestionCounts[$part]) * 100, 1)
                             : 0,
                     ];
                 }
@@ -266,8 +271,8 @@ class ResultsManagementController extends Controller
                     'session_uuid' => $session->session_uuid,
                     'total_score' => round($totalScore, 2),
                     'total_questions' => $totalQuestions,
-                    'percentage' => $totalQuestions > 0 
-                        ? round(($totalScore / $totalQuestions) * 100, 1) 
+                    'percentage' => $totalQuestions > 0
+                        ? round(($totalScore / $totalQuestions) * 100, 1)
                         : 0,
                     'rank' => $this->calculateRank($totalScore),
                     'finished_at' => $session->finished_at->toIso8601String(),
@@ -295,7 +300,7 @@ class ResultsManagementController extends Controller
     {
         $users = User::with(['examSessions' => function ($query) {
             $query->whereNotNull('finished_at')
-                  ->whereNull('disqualified_at');
+                ->whereNull('disqualified_at');
         }])->get();
 
         $usersByGrade = $users->groupBy(function ($user) {
@@ -309,6 +314,7 @@ class ResultsManagementController extends Controller
                     'grade' => $user->grade ?? '未設定',
                     'exam_sessions' => $user->examSessions->map(function ($session) {
                         $score = $this->calculateScore($session->id);
+
                         return [
                             'total_score' => round($score, 2),
                         ];
@@ -330,13 +336,13 @@ class ResultsManagementController extends Controller
         $totalSessions = ExamSession::whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->count();
-        
+
         $totalUsers = User::count();
-        
+
         $sessions = ExamSession::whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->get();
-        
+
         // 全セッションのスコアを計算
         $scores = [];
         $rankCounts = [
@@ -345,28 +351,28 @@ class ResultsManagementController extends Controller
             'Silver' => 0,
             'Bronze' => 0,
         ];
-        
+
         $partScores = [1 => [], 2 => [], 3 => []];
-        
+
         foreach ($sessions as $session) {
             $totalScore = $this->calculateScore($session->id);
             $scores[] = $totalScore;
-            
+
             // ランク集計
             $rank = $this->calculateRank($totalScore);
             $rankCounts[$rank]++;
-            
+
             // パート別スコア集計
             for ($part = 1; $part <= 3; $part++) {
                 $partScore = $this->calculateScore($session->id, $part);
                 $partScores[$part][] = $partScore;
             }
         }
-        
-        $averageScore = count($scores) > 0 
-            ? round(array_sum($scores) / count($scores), 2) 
+
+        $averageScore = count($scores) > 0
+            ? round(array_sum($scores) / count($scores), 2)
             : 0;
-        
+
         // 得点分布を計算 (95点満点)
         $scoreDistribution = [
             '90-95' => 0,
@@ -375,7 +381,7 @@ class ResultsManagementController extends Controller
             '60-69' => 0,
             '0-59' => 0,
         ];
-        
+
         foreach ($scores as $score) {
             if ($score >= 90) {
                 $scoreDistribution['90-95']++;
@@ -389,7 +395,7 @@ class ResultsManagementController extends Controller
                 $scoreDistribution['0-59']++;
             }
         }
-        
+
         // パート別平均点を計算
         $partAverages = [];
         for ($part = 1; $part <= 3; $part++) {
@@ -397,7 +403,7 @@ class ResultsManagementController extends Controller
                 ? round(array_sum($partScores[$part]) / count($partScores[$part]), 2)
                 : 0;
         }
-        
+
         // 月別受験者数を計算 (2025年)
         $monthlyData = [];
         for ($month = 1; $month <= 12; $month++) {
@@ -406,7 +412,7 @@ class ResultsManagementController extends Controller
                 ->whereYear('finished_at', 2025)
                 ->whereMonth('finished_at', $month)
                 ->count();
-            
+
             $monthlyData[$month] = $count;
         }
 
@@ -430,7 +436,7 @@ class ResultsManagementController extends Controller
     {
         $partQuestionCounts = $this->getPartQuestionCounts();
         $totalQuestions = array_sum($partQuestionCounts);
-        
+
         // イベント情報も一緒に取得
         $sessions = ExamSession::with(['user', 'event'])
             ->whereNotNull('finished_at')

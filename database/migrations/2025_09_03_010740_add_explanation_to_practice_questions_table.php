@@ -12,7 +12,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('practice_questions', function (Blueprint $table) {
-            $table->text('explanation')->nullable()->after('text'); 
+            $table->text('explanation')->nullable()->after('text');
         });
     }
 
@@ -22,5 +22,4 @@ return new class extends Migration
             $table->dropColumn('explanation');
         });
     }
-
 };

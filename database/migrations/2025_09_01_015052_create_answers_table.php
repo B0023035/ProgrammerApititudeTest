@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->unsignedBigInteger('question_id');
             $table->tinyInteger('part'); // 1,2,3
-            $table->enum('choice', ['A','B','C','D','E'])->nullable();
+            $table->enum('choice', ['A', 'B', 'C', 'D', 'E'])->nullable();
             $table->boolean('is_correct')->nullable();
             $table->timestamps();
 

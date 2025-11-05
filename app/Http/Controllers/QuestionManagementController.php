@@ -11,12 +11,12 @@ class QuestionManagementController extends Controller
     public function index(Request $request)
     {
         $part = $request->get('part', 1);
-        
+
         $questions = Question::where('part', $part)
             ->with('choices')
             ->orderBy('number')
             ->paginate(20);
-        
+
         return Inertia::render('Admin/Questions/Index', [
             'questions' => $questions,
             'currentPart' => $part,
@@ -26,6 +26,7 @@ class QuestionManagementController extends Controller
     public function show($id)
     {
         $question = Question::with('choices')->findOrFail($id);
+
         return Inertia::render('Admin/Questions/Show', ['question' => $question]);
     }
 
@@ -43,6 +44,7 @@ class QuestionManagementController extends Controller
     public function edit($id)
     {
         $question = Question::with('choices')->findOrFail($id);
+
         return Inertia::render('Admin/Questions/Edit', ['question' => $question]);
     }
 
@@ -55,6 +57,7 @@ class QuestionManagementController extends Controller
     public function destroy($id)
     {
         Question::findOrFail($id)->delete();
+
         return redirect()->route('admin.questions.index');
     }
 }

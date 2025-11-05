@@ -17,7 +17,7 @@ return new class extends Migration
             $table->tinyInteger('current_question')->default(1);
             $table->integer('remaining_time')->default(0); // 秒数
             $table->timestamps();
-            
+
             // インデックス
             $table->index(['user_id', 'finished_at']);
         });

@@ -31,12 +31,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 'admin_check' => auth()->guard('admin')->check(),
                 'web_check' => auth()->guard('web')->check(),
             ]);
-            
+
             // 管理者エリア（admin/*）の場合のみ管理者ログインへ
             if ($request->is('admin') || $request->is('admin/*')) {
                 return route('admin.login');
             }
-            
+
             // それ以外（一般ユーザーエリア）は通常のログイン画面へ
             return route('login');
         });
@@ -47,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if (auth()->guard('admin')->check()) {
                 return route('admin.dashboard');
             }
+
             // 一般ユーザーとして認証されている場合
             return route('test.start');
         });

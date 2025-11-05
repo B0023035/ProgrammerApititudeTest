@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class EventManagementController extends Controller
 {
@@ -18,7 +18,7 @@ class EventManagementController extends Controller
     {
         $events = Event::orderBy('begin', 'desc')->get()->map(function ($event) {
             $now = Carbon::now();
-            
+
             // ステータス判定
             if ($now->lt($event->begin)) {
                 $status = '開始前';
@@ -117,7 +117,7 @@ class EventManagementController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'passphrase' => 'required|string|max:255|unique:events,passphrase,' . $id,
+            'passphrase' => 'required|string|max:255|unique:events,passphrase,'.$id,
             'begin' => 'required|date',
             'end' => 'required|date|after:begin',
             'exam_type' => 'required|in:30min,45min,full',
@@ -155,7 +155,7 @@ class EventManagementController extends Controller
     public function terminate($id)
     {
         $event = Event::findOrFail($id);
-        
+
         // 現在時刻に終了日時を設定
         $event->end = Carbon::now();
         $event->save();
@@ -183,7 +183,7 @@ class EventManagementController extends Controller
         $part1 = strtoupper(Str::random(4));
         $part2 = strtoupper(Str::random(4));
         $part3 = strtoupper(Str::random(4));
-        
+
         return "{$part1}-{$part2}-{$part3}";
     }
 }

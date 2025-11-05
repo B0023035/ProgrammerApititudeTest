@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Admin\AdminAuthController;  
+use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\EventManagementController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\PracticeController;
@@ -8,7 +8,6 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionManagementController;
 use App\Http\Controllers\ResultsManagementController;
 use App\Http\Controllers\SessionCodeController;
-use App\Http\Controllers\TestController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -38,7 +37,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/login', function () {
             return Inertia::render('Admin/Login');
         })->name('login');
-        
+
         Route::post('/login', [AdminAuthController::class, 'login'])->name('login.post');
     });
 
@@ -73,10 +72,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                     ->get(),
             ]);
         })->name('dashboard');
-        
+
         // ログアウト
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
-        
+
         // イベント管理
         Route::prefix('events')->name('events.')->group(function () {
             Route::get('/', [EventManagementController::class, 'index'])->name('index');
@@ -88,7 +87,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{event}/terminate', [EventManagementController::class, 'terminate'])->name('terminate');
             Route::get('/generate-passphrase', [EventManagementController::class, 'generateRandomPassphrase'])->name('generate-passphrase');
         });
-        
+
         // 成績管理
         Route::prefix('results')->name('results.')->group(function () {
             Route::get('/', [ResultsManagementController::class, 'index'])->name('index');
@@ -98,13 +97,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/session/{sessionId}', [ResultsManagementController::class, 'sessionDetail'])->name('session-detail');
             Route::get('/user/{userId}', [ResultsManagementController::class, 'userDetail'])->name('user-detail');
         });
-        
+
         // 問題管理
         Route::resource('questions', QuestionManagementController::class);
-        
+
         // ユーザー管理
         Route::resource('users', UserManagementController::class);
-        
+
         // プロフィール管理
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -124,22 +123,24 @@ Route::middleware(['check.session.code'])->group(function () {
             'is_authenticated' => auth()->check(),
             'is_admin' => auth()->guard('admin')->check(),
         ]);
+
         return Inertia::render('Welcome');
     })->name('welcome');
 
     // テスト開始画面(ログイン後)
     Route::get('/test-start', function () {
         // 未認証の場合はログインページへ
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->route('login');
         }
+
         return Inertia::render('TestStart');
     })->name('test.start');
 
     // 練習問題説明画面
     Route::get('/practice/instructions', function () {
         return Inertia::render('ExamInstructions', [
-            'isGuest' => false
+            'isGuest' => false,
         ]);
     })->name('practice.instructions')->middleware('auth');
 
@@ -149,32 +150,32 @@ Route::middleware(['check.session.code'])->group(function () {
         Route::get('/test-start', function () {
             return Inertia::render('GuestInfo');
         })->name('test.start');
-        
+
         // ゲスト情報入力
         Route::get('/info', function () {
             return Inertia::render('GuestInfo');
         })->name('info');
         Route::post('/info', [ExamController::class, 'storeGuestInfo'])->name('info.store');
-        
+
         // ゲスト用練習問題
         Route::prefix('practice')->name('practice.')->group(function () {
             Route::get('/', function () {
                 return redirect()->route('guest.practice.show', ['section' => 1]);
             })->name('index');
-            
+
             Route::get('/{section}', [PracticeController::class, 'guestShow'])
                 ->name('show')
                 ->where('section', '[1-3]');
-            
+
             // ★ 修正: POST と GET 両方を受け付ける
             Route::match(['post', 'get'], '/complete', [PracticeController::class, 'guestComplete'])->name('complete');
-            
+
             // ゲスト用解説ページ表示用のGETルート
             Route::get('/explanation/{part}', [PracticeController::class, 'showGuestExplanation'])
                 ->name('explanation')
                 ->where('part', '[1-3]');
         });
-        
+
         // ゲスト用本番試験
         Route::prefix('exam')->name('exam.')->group(function () {
             Route::post('/start', [ExamController::class, 'guestStart'])->name('start');
@@ -185,10 +186,10 @@ Route::middleware(['check.session.code'])->group(function () {
             Route::post('/report-violation', [ExamController::class, 'guestReportViolation'])->name('report-violation');
             Route::get('/disqualified', [ExamController::class, 'guestDisqualified'])->name('disqualified');
         });
-        
+
         // ゲスト用結果表示
         Route::get('/result', [ExamController::class, 'guestShowResult'])->name('result');
-        
+
         // ゲスト用クリーンアップ
         Route::post('/cleanup', [ExamController::class, 'guestCleanup'])->name('cleanup');
     });
@@ -201,10 +202,10 @@ Route::middleware(['check.session.code'])->group(function () {
             Route::get('/{section}', [PracticeController::class, 'show'])
                 ->name('show')
                 ->where('section', '[1-3]');
-            
+
             // ★ 修正: POST と GET 両方を受け付ける
             Route::match(['post', 'get'], '/complete', [PracticeController::class, 'complete'])->name('complete');
-            
+
             // 解説ページ表示用のGETルート
             Route::get('/explanation/{part}', [PracticeController::class, 'showExplanation'])
                 ->name('explanation')

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\ExamSession;
 use App\Models\Answer;
 use App\Models\Event;
+use App\Models\ExamSession;
 use Inertia\Inertia;
 
 class ResultsComlinkController extends Controller
@@ -23,17 +23,22 @@ class ResultsComlinkController extends Controller
                 $correctCount = Answer::where('exam_session_id', $session->id)
                     ->where('is_correct', 1)
                     ->count();
-                
+
                 $totalQuestions = Answer::where('exam_session_id', $session->id)
                     ->count();
 
                 // ランク判定
                 $percentage = $totalQuestions > 0 ? ($correctCount / $totalQuestions) * 100 : 0;
                 $rank = 'Unranked';
-                if ($percentage >= 90) $rank = 'Platinum';
-                elseif ($percentage >= 75) $rank = 'Gold';
-                elseif ($percentage >= 60) $rank = 'Silver';
-                elseif ($percentage >= 40) $rank = 'Bronze';
+                if ($percentage >= 90) {
+                    $rank = 'Platinum';
+                } elseif ($percentage >= 75) {
+                    $rank = 'Gold';
+                } elseif ($percentage >= 60) {
+                    $rank = 'Silver';
+                } elseif ($percentage >= 40) {
+                    $rank = 'Bronze';
+                }
 
                 return [
                     'id' => $session->id,

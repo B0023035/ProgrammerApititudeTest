@@ -15,7 +15,7 @@ class ExamSession extends Model
     protected $fillable = [
         'user_id',
         'session_uuid',  // 追加
-        'event_id', 
+        'event_id',
         'started_at',
         'finished_at',
         'disqualified_at',
@@ -56,12 +56,11 @@ class ExamSession extends Model
         return $this->belongsTo(User::class);
     }
 
-        // イベントとのリレーション（これを追加）
+    // イベントとのリレーション（これを追加）
     public function event()
     {
         return $this->belongsTo(Event::class);
     }
-
 
     /**
      * このセッションの違反記録
@@ -77,7 +76,7 @@ class ExamSession extends Model
     public function answers(): HasMany
     {
         return $this->hasMany(Answer::class, 'user_id', 'user_id')
-                   ->whereBetween('created_at', [$this->started_at, $this->finished_at ?? now()]);
+            ->whereBetween('created_at', [$this->started_at, $this->finished_at ?? now()]);
     }
 
     /**
@@ -85,7 +84,7 @@ class ExamSession extends Model
      */
     public function isDisqualified(): bool
     {
-        return !is_null($this->disqualified_at);
+        return ! is_null($this->disqualified_at);
     }
 
     /**
@@ -93,7 +92,7 @@ class ExamSession extends Model
      */
     public function isFinished(): bool
     {
-        return !is_null($this->finished_at);
+        return ! is_null($this->finished_at);
     }
 
     /**
@@ -103,7 +102,7 @@ class ExamSession extends Model
     {
         return is_null($this->finished_at) && is_null($this->disqualified_at);
     }
-    
+
     /**
      * 違反回数を取得
      */
@@ -111,7 +110,7 @@ class ExamSession extends Model
     {
         return $this->violations()->count();
     }
-    
+
     /**
      * 特定の違反タイプの回数を取得
      */

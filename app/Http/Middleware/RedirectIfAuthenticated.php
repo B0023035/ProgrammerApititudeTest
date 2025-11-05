@@ -22,7 +22,7 @@ class RedirectIfAuthenticated
                 if ($guard === 'admin') {
                     return redirect()->route('admin.dashboard');
                 }
-                
+
                 // 一般ユーザーの場合
                 return redirect('/test-start');
             }

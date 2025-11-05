@@ -38,7 +38,7 @@ class SessionCodeController extends Controller
         // イベントテーブルからpassphraseを検索
         $event = Event::where('passphrase', $sessionCode)->first();
 
-        if (!$event) {
+        if (! $event) {
             return back()->withErrors([
                 'session_code' => '無効なセッションコードです。正しいコードを入力してください。',
             ])->withInput();

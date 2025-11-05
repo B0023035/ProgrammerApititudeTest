@@ -13,11 +13,11 @@ return new class extends Migration
 
             // 外部キー：questions.id に紐付け、問題削除時に選択肢も削除
             $table->foreignId('question_id')
-                  ->constrained('questions')
-                  ->onDelete('cascade');
+                ->constrained('questions')
+                ->onDelete('cascade');
 
             // 選択肢ラベル
-            $table->enum('label', ['A','B','C','D','E']);
+            $table->enum('label', ['A', 'B', 'C', 'D', 'E']);
 
             // テキスト選択肢（第一部・第三部用）
             $table->text('text')->nullable();

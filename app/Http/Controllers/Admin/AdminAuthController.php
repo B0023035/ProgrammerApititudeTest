@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
-use App\Http\Requests\Auth\AdminLoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -13,7 +12,7 @@ use Inertia\Response;
 
 class AdminAuthController extends Controller
 {
-        /**
+    /**
      * ログイン画面を表示
      */
     public function create(): Response
@@ -55,7 +54,7 @@ class AdminAuthController extends Controller
         // 統計データを取得
         $totalUsers = User::count();
         $totalSessions = ExamSession::whereNotNull('finished_at')->count();
-        
+
         // 平均スコアを計算（answersテーブルから）
         $averageScore = DB::table('exam_sessions')
             ->join('answers', 'exam_sessions.id', '=', 'answers.exam_session_id')
@@ -67,7 +66,7 @@ class AdminAuthController extends Controller
             ->groupBy('exam_sessions.id')
             ->get()
             ->avg('correct_count');
-        
+
         // 最近のセッション
         $recentSessions = ExamSession::with(['user', 'answers'])
             ->whereNotNull('finished_at')
@@ -77,6 +76,7 @@ class AdminAuthController extends Controller
             ->map(function ($session) {
                 $correctCount = $session->answers->where('is_correct', 1)->count();
                 $session->score = $correctCount;
+
                 return $session;
             });
 
@@ -86,7 +86,7 @@ class AdminAuthController extends Controller
         // Dashboard.vueをレンダリング（管理者用データを渡す）
         return Inertia::render('Admin/Dashboard', [
             'auth' => [
-                'user' => auth('admin')->user()
+                'user' => auth('admin')->user(),
             ],
             'stats' => [
                 'total_users' => \App\Models\User::count(),
@@ -109,15 +109,15 @@ class AdminAuthController extends Controller
         $sessions = \App\Models\ExamSession::whereNotNull('finished_at')
             ->with('answers')
             ->get();
-        
+
         if ($sessions->isEmpty()) {
             return 0;
         }
-        
+
         $totalScore = $sessions->sum(function ($session) {
             return $session->answers->where('is_correct', 1)->count();
         });
-        
+
         return round($totalScore / $sessions->count(), 2);
     }
 

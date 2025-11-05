@@ -18,8 +18,8 @@ return new class extends Migration
             $table->dateTime('begin')->comment('パスフレーズ有効開始日時');
             $table->dateTime('end')->comment('パスフレーズ有効終了日時');
             $table->enum('exam_type', ['30min', '45min', 'full'])
-                  ->default('full')
-                  ->comment('出題形式（試験バージョン）');
+                ->default('full')
+                ->comment('出題形式（試験バージョン）');
             $table->timestamps();
         });
     }

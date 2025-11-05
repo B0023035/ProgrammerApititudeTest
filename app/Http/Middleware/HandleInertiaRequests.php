@@ -3,9 +3,9 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
-use Illuminate\Support\Facades\Auth;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -33,7 +33,7 @@ class HandleInertiaRequests extends Middleware
     {
         // 管理者エリアかどうかを判定（修正）
         $isAdminArea = $request->is('admin') || $request->is('admin/*');
-        
+
         // 適切なガードからユーザー情報を取得
         $user = null;
         if ($isAdminArea) {
