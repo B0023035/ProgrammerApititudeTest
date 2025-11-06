@@ -12,8 +12,17 @@ use Inertia\Inertia;
 
 class PracticeController extends Controller
 {
+    /**
+     * ★ 追加: 練習問題インデックス（第1部にリダイレクト）
+     */
     public function index()
     {
+        $isGuest = !Auth::check();
+        
+        if ($isGuest) {
+            return redirect()->route('guest.practice.show', ['section' => 1]);
+        }
+        
         return redirect()->route('practice.show', ['section' => 1]);
     }
 
@@ -25,6 +34,11 @@ class PracticeController extends Controller
         $user = Auth::user();
         $section = (int) $section;
 
+        Log::info('=== practice.show 呼び出し ===', [
+            'user_id' => $user->id,
+            'section' => $section,
+        ]);
+
         if (! in_array($section, [1, 2, 3])) {
             return redirect()->route('dashboard')
                 ->with('error', '無効なセクションです。');
@@ -34,6 +48,11 @@ class PracticeController extends Controller
         $sessionCode = session('exam_session_code');
         $event = $this->getEventBySessionCode($sessionCode);
         $examType = $event ? $event->exam_type : 'full';
+
+        Log::info('試験タイプ取得', [
+            'exam_type' => $examType,
+            'session_code' => $sessionCode,
+        ]);
 
         // 練習問題数を取得
         $practiceQuestionCount = $this->getPracticeQuestionCountByEvent($section, $examType);
@@ -67,6 +86,13 @@ class PracticeController extends Controller
                 ];
             });
 
+        Log::info('練習問題取得完了', [
+            'user_id' => $user->id,
+            'section' => $section,
+            'questions_count' => $practiceQuestions->count(),
+            'exam_type' => $examType,
+        ]);
+
         // 練習問題用のセッションIDを生成
         $practiceSessionId = (string) Str::uuid();
 
@@ -78,19 +104,11 @@ class PracticeController extends Controller
             'exam_type' => $examType,
         ], 60 * 60);
 
-        Log::info('練習問題セッション作成', [
-            'user_id' => $user->id,
-            'section' => $section,
-            'practice_session_id' => $practiceSessionId,
-            'exam_type' => $examType,
-            'question_count' => $practiceQuestions->count(),
-        ]);
-
         return Inertia::render('Practice', [
             'practiceSessionId' => $practiceSessionId,
             'practiceQuestions' => $practiceQuestions,
-            'currentSection' => $section,
-            'sectionTime' => $this->getPracticeTimeLimitByEvent($section, $examType),
+            'currentPart' => $section,
+            'partTime' => $this->getPracticeTimeLimitByEvent($section, $examType),
             'totalSections' => 3,
             'examType' => $examType,
         ]);
@@ -100,118 +118,124 @@ class PracticeController extends Controller
      * 練習問題完了処理(共通) - 修正版
      */
     public function complete(Request $request)
-{
-    try {
-        $isGuest = ! Auth::check();
+    {
+        try {
+            $isGuest = ! Auth::check();
 
-        $validated = $request->validate([
-            'practiceSessionId' => 'required|uuid',
-            'part' => 'required|integer|in:1,2,3',
-            'answers' => 'required|array',
-            'answers.*' => 'string|in:A,B,C,D,E',
-            'timeSpent' => 'required|integer|min:1',
-            'totalQuestions' => 'nullable|integer|min:1',
-        ]);
+            $validated = $request->validate([
+                'practiceSessionId' => 'required|uuid',
+                'part' => 'required|integer|in:1,2,3',
+                'answers' => 'required|array',
+                'answers.*' => 'string|in:A,B,C,D,E',
+                'timeSpent' => 'required|integer|min:1',
+                'totalQuestions' => 'nullable|integer|min:1',
+            ]);
 
-        $sessionId = $validated['practiceSessionId'];
-        $part = $validated['part'];
+            $sessionId = $validated['practiceSessionId'];
+            $part = $validated['part'];
 
-        // セッション検証
-        if ($isGuest) {
-            $guestId = session()->getId();
-            $sessionData = Cache::get("guest_practice_session_{$guestId}_{$sessionId}");
-            $userId = $guestId;
-        } else {
-            $user = Auth::user();
-            $sessionData = Cache::get("practice_session_{$user->id}_{$sessionId}");
-            $userId = $user->id;
-        }
+            Log::info('=== 練習問題完了処理開始 ===', [
+                'is_guest' => $isGuest,
+                'part' => $part,
+                'answers_count' => count($validated['answers']),
+            ]);
 
-        if (! $sessionData) {
-            Log::warning('不正な練習セッション', [
+            // セッション検証
+            if ($isGuest) {
+                $guestId = session()->getId();
+                $sessionData = Cache::get("guest_practice_session_{$guestId}_{$sessionId}");
+                $userId = $guestId;
+            } else {
+                $user = Auth::user();
+                $sessionData = Cache::get("practice_session_{$user->id}_{$sessionId}");
+                $userId = $user->id;
+            }
+
+            if (! $sessionData) {
+                Log::warning('無効な練習セッション', [
+                    'user_id' => $userId,
+                    'session_id' => $sessionId,
+                    'ip' => $request->ip(),
+                    'is_guest' => $isGuest,
+                ]);
+
+                $redirectRoute = $isGuest ? 'guest.practice.show' : 'practice.show';
+                return redirect()->route($redirectRoute, ['section' => $part])
+                    ->with('error', 'セッションが無効です。練習を最初からやり直してください。');
+            }
+
+            // 回答データのサニタイズ
+            $sanitizedAnswers = $this->sanitizeAnswers($validated['answers']);
+
+            // 該当パートの練習問題を取得
+            $questions = PracticeQuestion::where('part', $part)
+                ->with('choices')
+                ->orderBy('number')
+                ->get()
+                ->map(function ($q) use ($sanitizedAnswers) {
+                    $correctChoice = $q->choices->firstWhere('is_correct', true);
+                    $correctAnswer = $correctChoice ? $correctChoice->label : 'A';
+
+                    return [
+                        'id' => $q->id,
+                        'number' => $q->number,
+                        'part' => $q->part,
+                        'text' => $q->text,
+                        'image' => $q->image,
+                        'choices' => $q->choices->map(function ($c) {
+                            return [
+                                'id' => $c->id,
+                                'label' => $c->label,
+                                'text' => $c->text,
+                                'is_correct' => (bool) $c->is_correct,
+                                'image' => $c->image,
+                                'part' => $c->part,
+                            ];
+                        }),
+                        'explanation' => $q->explanation,
+                        'answer' => $correctAnswer,
+                        'selected' => $sanitizedAnswers[$q->id] ?? null,
+                    ];
+                });
+
+            // セッションをクリア
+            if ($isGuest) {
+                Cache::forget("guest_practice_session_{$guestId}_{$sessionId}");
+                $guestName = session('guest_name') ?? session('guest_info.name') ?? 'ゲスト';
+                $guestSchool = session('guest_school_name') ?? session('guest_info.school_name') ?? '学校名未入力';
+            } else {
+                Cache::forget("practice_session_{$user->id}_{$sessionId}");
+                $guestName = null;
+                $guestSchool = null;
+            }
+
+            Log::info('練習問題完了 - 解説ページへ遷移', [
                 'user_id' => $userId,
-                'session_id' => $sessionId,
-                'ip' => $request->ip(),
+                'part' => $part,
+                'answers_count' => count($sanitizedAnswers),
                 'is_guest' => $isGuest,
             ]);
 
-            return redirect()->route($isGuest ? 'guest.practice.show' : 'practice.show', ['section' => $part])
-                ->with('error', 'セッションが無効です。練習を最初からやり直してください。');
+            // PracticeExplanation を直接レンダリング
+            return Inertia::render('PracticeExplanation', [
+                'practiceQuestions' => $questions->toArray(),
+                'answers' => $sanitizedAnswers,
+                'currentPart' => $part,
+                'timeSpent' => $validated['timeSpent'],
+                'isGuest' => $isGuest,
+                'guestName' => $guestName,
+                'guestSchool' => $guestSchool,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Practice completion error: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->route('practice.show', ['section' => 1])
+                ->with('error', '処理中にエラーが発生しました。');
         }
-
-        // 回答データのサニタイズ
-        $sanitizedAnswers = $this->sanitizeAnswers($validated['answers']);
-
-        // 該当パートの練習問題を取得
-        $questions = PracticeQuestion::where('part', $part)
-            ->with('choices')
-            ->orderBy('number')
-            ->get()
-            ->map(function ($q) use ($sanitizedAnswers) {
-                $correctChoice = $q->choices->firstWhere('is_correct', true);
-                $correctAnswer = $correctChoice ? $correctChoice->label : 'A';
-
-                return [
-                    'id' => $q->id,
-                    'number' => $q->number,
-                    'part' => $q->part,
-                    'text' => $q->text,
-                    'image' => $q->image,
-                    'choices' => $q->choices->map(function ($c) {
-                        return [
-                            'id' => $c->id,
-                            'label' => $c->label,
-                            'text' => $c->text,
-                            'is_correct' => (bool) $c->is_correct,
-                            'image' => $c->image,
-                            'part' => $c->part,
-                        ];
-                    }),
-                    'explanation' => $q->explanation,
-                    'answer' => $correctAnswer,
-                    'selected' => $sanitizedAnswers[$q->id] ?? null,
-                ];
-            });
-
-        // セッションをクリア
-        if ($isGuest) {
-            Cache::forget("guest_practice_session_{$guestId}_{$sessionId}");
-            $guestName = session('guest_name') ?? session('guest_info.name') ?? 'ゲスト';
-            $guestSchool = session('guest_school_name') ?? session('guest_info.school_name') ?? '学校名未入力';
-        } else {
-            Cache::forget("practice_session_{$user->id}_{$sessionId}");
-            $guestName = null;
-            $guestSchool = null;
-        }
-
-        // ★★★ ここを変更: ログメッセージを修正 ★★★
-        Log::info('練習問題完了 - 解説ページへ遷移', [
-            'user_id' => $userId,
-            'part' => $part,
-            'answers_count' => count($sanitizedAnswers),
-            'is_guest' => $isGuest,
-        ]);
-
-        // ★★★ 変更なし: このままでOK ★★★
-        return Inertia::render('PracticeExplanation', [
-            'practiceQuestions' => $questions->toArray(),
-            'answers' => $sanitizedAnswers,
-            'currentPart' => $part,
-            'timeSpent' => $validated['timeSpent'],
-            'isGuest' => $isGuest,
-            'guestName' => $guestName,
-            'guestSchool' => $guestSchool,
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Practice completion error: '.$e->getMessage(), [
-            'trace' => $e->getTraceAsString(),
-        ]);
-
-        return redirect()->route('practice.show', ['section' => 1])
-            ->with('error', '処理中にエラーが発生しました。');
     }
-}
 
     /**
      * ★ 追加: ゲスト用パート別練習問題表示
@@ -224,6 +248,11 @@ class PracticeController extends Controller
 
         $guestId = session()->getId();
         $sessionId = (string) Str::uuid();
+
+        Log::info('=== guest.practice.show 呼び出し ===', [
+            'guest_id' => $guestId,
+            'section' => $section,
+        ]);
 
         Cache::put("guest_practice_session_{$guestId}_{$sessionId}", [
             'guest_id' => $guestId,
@@ -305,7 +334,7 @@ class PracticeController extends Controller
             $sessionData = Cache::get("guest_practice_session_{$guestId}_{$sessionId}");
 
             if (! $sessionData) {
-                Log::warning('不正なゲスト練習セッション', [
+                Log::warning('無効なゲスト練習セッション', [
                     'guest_id' => $guestId,
                     'session_id' => $sessionId,
                     'ip' => $request->ip(),
@@ -352,7 +381,7 @@ class PracticeController extends Controller
             // セッションをクリア
             Cache::forget("guest_practice_session_{$guestId}_{$sessionId}");
 
-            // ★ 重要: Laravelセッションにゲスト情報を再保存(念のため)
+            // ★ 重要: Laravelセッションにゲスト情報を再保存
             session([
                 'guest_name' => $guestName,
                 'guest_school_name' => $guestSchool,
@@ -371,7 +400,7 @@ class PracticeController extends Controller
                 'guest_school' => $guestSchool,
             ]);
 
-            // ★ 重要修正: redirect の代わりに Inertia::render() を直接返す
+            // 解説ページを直接表示
             return Inertia::render('PracticeExplanation', [
                 'practiceQuestions' => $questions->toArray(),
                 'answers' => $sanitizedAnswers,
@@ -451,18 +480,18 @@ class PracticeController extends Controller
      */
     private function getPracticeTimeLimitByEvent($part, $examType = 'full')
     {
-        // full版の練習時間設定
+        // fullバージョンの練習時間設定
         $fullPracticeTimeLimits = [
-            1 => 300,   // 5分(300秒) - 4問
-            2 => 180,   // 3分(180秒) - 2問
-            3 => 120,   // 2分(120秒) - 2問
+            1 => 300,
+            2 => 180,
+            3 => 120,
         ];
 
         // 45min版と30min版の練習時間設定(全パート2分固定)
         $shortPracticeTimeLimits = [
-            1 => 120,   // 2分(120秒) - 4問
-            2 => 120,   // 2分(120秒) - 2問
-            3 => 120,   // 2分(120秒) - 2問
+            1 => 120,
+            2 => 120,
+            3 => 120,
         ];
 
         switch ($examType) {
@@ -473,5 +502,25 @@ class PracticeController extends Controller
             default:
                 return $fullPracticeTimeLimits[$part] ?? 120;
         }
+    }
+
+    /**
+     * ★ 追加: 解説ページ表示用（念のため残す）
+     */
+    public function showExplanation(Request $request, $part)
+    {
+        // このメソッドは通常使用されませんが、
+        // 直接URLアクセスされた場合のフォールバックとして残します
+        return redirect()->route('practice.show', ['section' => $part]);
+    }
+
+    /**
+     * ★ 追加: ゲスト用解説ページ表示用（念のため残す）
+     */
+    public function showGuestExplanation(Request $request, $part)
+    {
+        // このメソッドは通常使用されませんが、
+        // 直接URLアクセスされた場合のフォールバックとして残します
+        return redirect()->route('guest.practice.show', ['section' => $part]);
     }
 }

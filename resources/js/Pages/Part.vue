@@ -1122,8 +1122,10 @@ async function handleAnswer(label: string) {
 }
 
 // 現在の解答をサーバーに保存する関数
+// Part.vue の saveCurrentAnswer 関数を修正
+
 const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
-    const MAX_RETRIES = 2; // 最大リトライ回数を2回に制限
+    const MAX_RETRIES = 2;
 
     if (showPracticeStartPopup.value) return;
 
@@ -1140,16 +1142,14 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
     const currentQuestionId = currentQuestion.value.id;
 
     try {
-        // CSRFトークンを取得(cookieから直接取得)
+        // CSRFトークンを取得
         const getCsrfToken = () => {
-            // まずmetaタグから試行
             const metaToken = document
                 .querySelector('meta[name="csrf-token"]')
                 ?.getAttribute("content");
 
             if (metaToken) return metaToken;
 
-            // cookieから取得
             const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
             if (cookieMatch) {
                 return decodeURIComponent(cookieMatch[1]);
@@ -1161,15 +1161,12 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
         let csrfToken = getCsrfToken();
 
         if (!csrfToken) {
-            console.error("CSRFトークンが見つかりません");
-            return;
+            console.warn("CSRFトークンが見つかりません - スキップ");
+            return; // ★ エラーにせずスキップ
         }
 
-        // デバッグ情報
         console.log("=== リクエスト送信 ===", {
             url: route("exam.save-answer"),
-            csrfToken: csrfToken?.substring(0, 10) + "...",
-            cookies: document.cookie,
             examSessionId: form.examSessionId,
             questionId: currentQuestionId,
             retryCount,
@@ -1183,7 +1180,7 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
             },
-            credentials: "same-origin", // cookieを含める
+            credentials: "same-origin",
             body: JSON.stringify({
                 examSessionId: form.examSessionId,
                 questionId: currentQuestionId,
@@ -1196,7 +1193,6 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
         console.log("=== レスポンス受信 ===", {
             status: response.status,
             statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries()),
         });
 
         // 419エラーの処理(リトライ回数制限付き)
@@ -1204,8 +1200,8 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
             console.error(`419 CSRF Token Mismatch (試行 ${retryCount + 1}/${MAX_RETRIES + 1})`);
 
             if (retryCount >= MAX_RETRIES) {
-                console.error("最大リトライ回数に達しました。解答は一時保存されています。");
-                alert("セッションが期限切れです。ページを再読み込みしてください。");
+                console.warn("最大リトライ回数に達しました。解答は一時保存されています。");
+                // ★ アラートを表示しない - サイレントに失敗
                 return;
             }
 
@@ -1218,11 +1214,7 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
 
                 if (refreshResponse.ok) {
                     console.log("CSRFトークンをリフレッシュしました");
-
-                    // metaタグを更新
                     await new Promise(resolve => setTimeout(resolve, 300));
-
-                    // 新しいトークンで再試行
                     return saveCurrentAnswer(choice, retryCount + 1);
                 } else {
                     console.error("CSRFトークンのリフレッシュに失敗");
@@ -1236,7 +1228,7 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
 
         if (!response.ok) {
             console.warn("解答保存に失敗:", response.status, response.statusText);
-            return;
+            return; // ★ エラーにせず続行
         }
 
         const data = await response.json();
@@ -1252,10 +1244,7 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
         }
     } catch (error) {
         console.error("解答保存エラー:", error);
-
-        if (error instanceof TypeError && error.message.includes("fetch")) {
-            console.error("ネットワークエラーまたはCORS問題の可能性があります");
-        }
+        // ★ アラートを表示せず、サイレントに失敗
     }
 };
 

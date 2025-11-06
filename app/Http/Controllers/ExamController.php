@@ -386,181 +386,202 @@ public function part(Request $request, $part)
     /**
      * パート完了処理(修正版) - 各部完了後は次の部の練習問題へ
      */
-    public function completePart(Request $request)
-    {
-        $validated = $request->validate([
-            'examSessionId' => 'required|uuid',
-            'part' => 'required|integer|in:1,2,3',
-            'answers' => 'required|array',
-            'timeSpent' => 'required|integer|min:1',
-            'startTime' => 'required|integer',
-            'endTime' => 'required|integer',
-            'totalQuestions' => 'required|integer|min:1',
+    /**
+ * パート完了処理(修正版) - 各部完了後は次の部の練習問題へ
+ */
+public function completePart(Request $request)
+{
+    $validated = $request->validate([
+        'examSessionId' => 'required|uuid',
+        'part' => 'required|integer|in:1,2,3',
+        'answers' => 'required|array',
+        'timeSpent' => 'required|integer|min:1',
+        'startTime' => 'required|integer',
+        'endTime' => 'required|integer',
+        'totalQuestions' => 'required|integer|min:1',
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $user = Auth::user();
+        $part = $validated['part'];
+        $cacheSessionId = $validated['examSessionId'];
+
+        Log::info("=== completePart 開始 ===", [
+            'user_id' => $user->id,
+            'part' => $part,
+            'cache_session_id' => $cacheSessionId,
         ]);
 
-        try {
-            DB::beginTransaction();
+        // キャッシュからセッション情報を取得
+        $cacheKey = "exam_part_session_{$user->id}_{$cacheSessionId}";
+        $cacheSession = Cache::get($cacheKey);
 
-            $user = Auth::user();
-            $part = $validated['part'];
-            $cacheSessionId = $validated['examSessionId'];
-
-            // キャッシュからセッション情報を取得
-            $cacheKey = "exam_part_session_{$user->id}_{$cacheSessionId}";
-            $cacheSession = Cache::get($cacheKey);
-
-            if (! $cacheSession) {
-                DB::rollBack();
-                return back()->withErrors(['examSessionId' => '無効なセッションです。']);
-            }
-
-            $examType = $cacheSession['exam_type'] ?? 'full';
-
-            // ExamSessionを取得
-            $examSession = ExamSession::where('user_id', $user->id)
-                ->where('id', $cacheSession['exam_session_id'])
-                ->whereNull('finished_at')
-                ->whereNull('disqualified_at')
-                ->first();
-
-            if (! $examSession) {
-                DB::rollBack();
-                return back()->withErrors(['examSessionId' => '試験セッションが見つかりません。']);
-            }
-
-            // このパートの解答をsecurity_logに保存
-            $securityLog = json_decode($examSession->security_log ?? '{}', true);
-            
-            if (!isset($securityLog['part_'.$part.'_answers'])) {
-                $securityLog['part_'.$part.'_answers'] = [];
-            }
-
-            // リクエストの解答をマージ
-            foreach ($validated['answers'] as $questionId => $choice) {
-                $securityLog['part_'.$part.'_answers'][$questionId] = $choice;
-            }
-
-            // security_logを更新
-            $examSession->update([
-                'security_log' => json_encode($securityLog),
-            ]);
-
-            Log::info("第{$part}部完了 - security_log更新", [
-                'user_id' => $user->id,
-                'part' => $part,
-                'answers_count' => count($securityLog['part_'.$part.'_answers']),
-            ]);
-
-            // ★ 重要修正: 次のアクションを決定
-            if ($part < 3) {
-                // 第一部・第二部完了後は次の部の練習問題へ
-                $examSession->update([
-                    'current_part' => max($examSession->current_part, $part + 1),
-                    'current_question' => 1,
-                    'remaining_time' => 0,
-                ]);
-
-                Cache::forget($cacheKey);
-                DB::commit();
-
-                Log::info("第{$part}部完了 - 第".($part + 1)."部練習問題へ", [
-                    'user_id' => $user->id,
-                    'completed_part' => $part,
-                    'next_part' => $part + 1,
-                    'updated_current_part' => $examSession->fresh()->current_part, // 更新確認
-                ]);
-
-                return redirect()->route('practice.show', ['section' => $part + 1])
-                    ->with('success', "第{$part}部が完了しました。第".($part + 1).'部の練習問題を開始してください。');
-            } else {
-                // ★ 第三部完了後は全パートの解答をanswersテーブルに保存して結果表示へ
-                Log::info('第三部完了 - 全パートの採点開始', [
-                    'user_id' => $user->id,
-                    'exam_session_id' => $examSession->id,
-                ]);
-
-                // 全パートの解答を統合
-                $allAnswers = [];
-                for ($p = 1; $p <= 3; $p++) {
-                    if (isset($securityLog['part_'.$p.'_answers'])) {
-                        $allAnswers = $allAnswers + $securityLog['part_'.$p.'_answers'];
-                    }
-                }
-
-                // answersテーブルに保存
-                $savedCount = 0;
-                foreach ($allAnswers as $questionId => $choice) {
-                    if (! is_numeric($questionId) || ! in_array($choice, ['A', 'B', 'C', 'D', 'E'])) {
-                        continue;
-                    }
-
-                    $question = Question::with('choices')->find($questionId);
-                    if (! $question) {
-                        continue;
-                    }
-
-                    $correctChoice = $question->choices()
-                        ->where('part', $question->part)
-                        ->where('is_correct', 1)
-                        ->first();
-
-                    $isCorrect = false;
-                    if ($correctChoice) {
-                        $isCorrect = (trim($correctChoice->label) === trim($choice));
-                    }
-
-                    Answer::updateOrCreate(
-                        [
-                            'user_id' => $user->id,
-                            'question_id' => $questionId,
-                        ],
-                        [
-                            'exam_session_id' => $examSession->id,
-                            'part' => $question->part,
-                            'choice' => $choice,
-                            'is_correct' => $isCorrect,
-                        ]
-                    );
-
-                    $savedCount++;
-                }
-
-                // すべてのキャッシュを削除
-                Cache::forget($cacheKey);
-                for ($p = 1; $p <= 3; $p++) {
-                    Cache::forget("exam_answers_{$user->id}_{$p}");
-                }
-
-                // セッション完了
-                $examSession->update([
-                    'finished_at' => now(),
-                    'current_part' => 3,
-                    'security_log' => null,
-                ]);
-
-                DB::commit();
-
-                Log::info('試験完了 - 全パート採点完了', [
-                    'user_id' => $user->id,
-                    'exam_session_id' => $examSession->id,
-                    'total_answers' => count($allAnswers),
-                    'saved_count' => $savedCount,
-                ]);
-
-                return redirect()->route('exam.result', ['sessionUuid' => $examSession->session_uuid])
-                    ->with('success', '試験が完了しました。');
-            }
-
-        } catch (\Exception $e) {
+        if (! $cacheSession) {
             DB::rollBack();
-            Log::error('Part completion failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+            Log::error('キャッシュセッション見つからず', [
+                'user_id' => $user->id,
+                'cache_key' => $cacheKey,
+            ]);
+            return back()->withErrors(['examSessionId' => '無効なセッションです。']);
+        }
+
+        $examType = $cacheSession['exam_type'] ?? 'full';
+
+        // ExamSessionを取得
+        $examSession = ExamSession::where('user_id', $user->id)
+            ->where('id', $cacheSession['exam_session_id'])
+            ->whereNull('finished_at')
+            ->whereNull('disqualified_at')
+            ->first();
+
+        if (! $examSession) {
+            DB::rollBack();
+            Log::error('ExamSession見つからず', [
+                'user_id' => $user->id,
+                'exam_session_id' => $cacheSession['exam_session_id'],
+            ]);
+            return back()->withErrors(['examSessionId' => '試験セッションが見つかりません。']);
+        }
+
+        // このパートの解答をsecurity_logに保存
+        $securityLog = json_decode($examSession->security_log ?? '{}', true);
+        
+        if (!isset($securityLog['part_'.$part.'_answers'])) {
+            $securityLog['part_'.$part.'_answers'] = [];
+        }
+
+        // リクエストの解答をマージ
+        foreach ($validated['answers'] as $questionId => $choice) {
+            $securityLog['part_'.$part.'_answers'][$questionId] = $choice;
+        }
+
+        // security_logを更新
+        $examSession->update([
+            'security_log' => json_encode($securityLog),
+        ]);
+
+        Log::info("第{$part}部完了 - security_log更新", [
+            'user_id' => $user->id,
+            'part' => $part,
+            'answers_count' => count($securityLog['part_'.$part.'_answers']),
+        ]);
+
+        // ★ 重要修正: 次のアクションを決定
+        if ($part < 3) {
+            // 第一部・第二部完了後は次の部の練習問題へ
+            $nextPart = $part + 1;
+            
+            $examSession->update([
+                'current_part' => $nextPart, // ★ current_part を更新
+                'current_question' => 1,
+                'remaining_time' => 0,
             ]);
 
-            return back()->withErrors(['general' => 'システムエラーが発生しました。']);
+            Cache::forget($cacheKey);
+            DB::commit();
+
+            Log::info("第{$part}部完了 - 第{$nextPart}部練習問題へ遷移", [
+                'user_id' => $user->id,
+                'completed_part' => $part,
+                'next_part' => $nextPart,
+                'updated_current_part' => $examSession->fresh()->current_part,
+            ]);
+
+            // ★ 練習問題ページへリダイレクト
+            return redirect()->route('practice.show', ['section' => $nextPart])
+                ->with('success', "第{$part}部が完了しました。第{$nextPart}部の練習問題を開始してください。");
+                
+        } else {
+            // ★ 第三部完了後は全パートの解答をanswersテーブルに保存して結果表示へ
+            Log::info('第三部完了 - 全パートの採点開始', [
+                'user_id' => $user->id,
+                'exam_session_id' => $examSession->id,
+            ]);
+
+            // 全パートの解答を統合
+            $allAnswers = [];
+            for ($p = 1; $p <= 3; $p++) {
+                if (isset($securityLog['part_'.$p.'_answers'])) {
+                    $allAnswers = $allAnswers + $securityLog['part_'.$p.'_answers'];
+                }
+            }
+
+            // answersテーブルに保存
+            $savedCount = 0;
+            foreach ($allAnswers as $questionId => $choice) {
+                if (! is_numeric($questionId) || ! in_array($choice, ['A', 'B', 'C', 'D', 'E'])) {
+                    continue;
+                }
+
+                $question = Question::with('choices')->find($questionId);
+                if (! $question) {
+                    continue;
+                }
+
+                $correctChoice = $question->choices()
+                    ->where('part', $question->part)
+                    ->where('is_correct', 1)
+                    ->first();
+
+                $isCorrect = false;
+                if ($correctChoice) {
+                    $isCorrect = (trim($correctChoice->label) === trim($choice));
+                }
+
+                Answer::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'question_id' => $questionId,
+                    ],
+                    [
+                        'exam_session_id' => $examSession->id,
+                        'part' => $question->part,
+                        'choice' => $choice,
+                        'is_correct' => $isCorrect,
+                    ]
+                );
+
+                $savedCount++;
+            }
+
+            // すべてのキャッシュを削除
+            Cache::forget($cacheKey);
+            for ($p = 1; $p <= 3; $p++) {
+                Cache::forget("exam_answers_{$user->id}_{$p}");
+            }
+
+            // セッション完了
+            $examSession->update([
+                'finished_at' => now(),
+                'current_part' => 3,
+                'security_log' => null,
+            ]);
+
+            DB::commit();
+
+            Log::info('試験完了 - 全パート採点完了', [
+                'user_id' => $user->id,
+                'exam_session_id' => $examSession->id,
+                'total_answers' => count($allAnswers),
+                'saved_count' => $savedCount,
+            ]);
+
+            return redirect()->route('exam.result', ['sessionUuid' => $examSession->session_uuid])
+                ->with('success', '試験が完了しました。');
         }
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Part completion failed', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+
+        return back()->withErrors(['general' => 'システムエラーが発生しました。']);
     }
+}
 
     /**
      * キャッシュクリーンアップ用のヘルパーメソッド

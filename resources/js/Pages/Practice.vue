@@ -655,33 +655,66 @@ const props = defineProps<{
 const page = usePage<PageProps>();
 
 // 現在のパート番号を取得
+// Practice.vue の getCurrentPartValue 関数を修正
+
 const getCurrentPartValue = (): number => {
+    // ★ 最優先: propsから直接取得
+    if (props.currentPart && /^[1-3]$/.test(props.currentPart.toString())) {
+        console.log("currentPart from props:", props.currentPart);
+        return parseInt(props.currentPart.toString());
+    }
+
+    // ★ 次優先: page.propsから取得
+    const partFromPage = page.props.currentPart;
+    if (partFromPage && /^[1-3]$/.test(partFromPage.toString())) {
+        console.log("currentPart from page.props:", partFromPage);
+        return parseInt(partFromPage.toString());
+    }
+
+    // URLパラメータから取得
     const urlParams = new URLSearchParams(window.location.search);
     const urlPart = urlParams.get("part");
 
     if (urlPart && /^[1-3]$/.test(urlPart)) {
+        console.log("currentPart from URL params:", urlPart);
         return parseInt(urlPart);
     }
 
-    const pathMatch = window.location.pathname.match(/\/part\/(\d+)/);
+    // パスから取得
+    const pathMatch = window.location.pathname.match(/\/practice\/(\d+)/);
     if (pathMatch && pathMatch[1] && /^[1-3]$/.test(pathMatch[1])) {
+        console.log("currentPart from path:", pathMatch[1]);
         return parseInt(pathMatch[1]);
     }
 
-    const partFromProps = props.part || props.currentPart;
+    // その他のpropsから取得
+    const partFromProps = props.part;
     if (partFromProps && /^[1-3]$/.test(partFromProps.toString())) {
+        console.log("currentPart from props.part:", partFromProps);
         return parseInt(partFromProps.toString());
     }
 
-    const partFromPage = page.props.currentPart;
-    if (partFromPage && /^[1-3]$/.test(partFromPage.toString())) {
-        return parseInt(partFromPage.toString());
-    }
-
+    console.warn("currentPart not found, defaulting to 1");
     return 1;
 };
 
 const currentPart = ref<number>(getCurrentPartValue());
+
+// ★ 追加: propsが変更されたら currentPart を更新
+watch(
+    () => props.currentPart,
+    newPart => {
+        if (newPart && /^[1-3]$/.test(newPart.toString())) {
+            const parsedPart = parseInt(newPart.toString());
+            if (parsedPart !== currentPart.value) {
+                console.log("currentPart updated from props:", parsedPart);
+                currentPart.value = parsedPart;
+                initializeQuestions();
+            }
+        }
+    },
+    { immediate: true }
+);
 const questions = ref<QuestionType[]>([]);
 const answerStatus = ref<AnswerStatus[]>([]);
 const showPracticeStartPopup = ref(true);
