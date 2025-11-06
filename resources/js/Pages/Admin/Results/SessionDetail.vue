@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from "@inertiajs/vue3";
+import { ref } from "vue";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 
 interface Choice {
@@ -56,10 +57,17 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// デバッグ用
-console.log("Session data:", props.session);
-console.log("AnswersByPart data:", props.answersByPart);
-console.log("AnswersByPart keys:", Object.keys(props.answersByPart || {}));
+// 各パートの開閉状態を管理
+const partExpanded = ref<{ [key: string]: boolean }>({
+    "1": false,
+    "2": false,
+    "3": false,
+});
+
+// パートの開閉を切り替え
+const togglePart = (part: string) => {
+    partExpanded.value[part] = !partExpanded.value[part];
+};
 
 const getRankColor = (rank: string) => {
     const colors: { [key: string]: string } = {
@@ -78,6 +86,66 @@ const getPartColor = (part: number) => {
         "from-orange-500 to-orange-600",
     ];
     return colors[part - 1] || "from-gray-500 to-gray-600";
+};
+
+// 実際の回答数を計算（未回答を除く）
+const getActualAnswerCount = () => {
+    let count = 0;
+    ["1", "2", "3"].forEach(part => {
+        const questions = props.answersByPart[part]?.questions || [];
+        count += questions.filter(q => q.user_choice !== null).length;
+    });
+    return count;
+};
+
+// 画像のパスを生成（Practice.vueと同じ方法）
+const getImagePath = (imageName: string | null, imageType: "questions" | "choices"): string => {
+    const rawImageName = imageName ? String(imageName) : null;
+
+    if (
+        !rawImageName ||
+        rawImageName === "undefined" ||
+        rawImageName === "null" ||
+        rawImageName.trim() === ""
+    ) {
+        return "";
+    }
+
+    const trimmedName = rawImageName.trim();
+    const validExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+    const hasValidExtension = validExtensions.some(ext => trimmedName.toLowerCase().endsWith(ext));
+
+    if (!hasValidExtension) {
+        return "";
+    }
+
+    try {
+        // Viteの画像インポート方法を使用
+        const modules = import.meta.glob("../images/**/*", {
+            eager: true,
+            as: "url",
+        });
+        const imagePath = `../images/${imageType}/${trimmedName}`;
+
+        if (modules[imagePath]) {
+            return modules[imagePath] as string;
+        }
+
+        // フォールバック: publicディレクトリから読み込む
+        return `/images/${imageType}/${trimmedName}`;
+    } catch (error) {
+        console.error(`Image load error for ${imageName}:`, error);
+        // エラー時はpublicディレクトリのパスを返す
+        return `/images/${imageType}/${trimmedName}`;
+    }
+};
+
+const getQuestionImagePath = (image: string | null) => {
+    return getImagePath(image, "questions");
+};
+
+const getChoiceImagePath = (image: string | null) => {
+    return getImagePath(image, "choices");
 };
 </script>
 
@@ -160,7 +228,9 @@ const getPartColor = (part: number) => {
                         </div>
                         <div class="border rounded-lg p-4">
                             <p class="text-sm text-gray-600 mb-1">回答数</p>
-                            <p class="text-sm font-medium">{{ session.total_questions }}問</p>
+                            <p class="text-sm font-medium">
+                                {{ getActualAnswerCount() }}問 / {{ session.total_questions }}問
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -175,7 +245,7 @@ const getPartColor = (part: number) => {
                             {{ session.total_score }}
                         </div>
                         <div class="text-sm opacity-75 mt-2">
-                            {{ session.total_questions }}問中 ({{ session.percentage }}%)
+                            {{ getActualAnswerCount() }}問中 ({{ session.percentage }}%)
                         </div>
                     </div>
 
@@ -203,17 +273,42 @@ const getPartColor = (part: number) => {
                     :key="part"
                     class="bg-white rounded-lg shadow-lg overflow-hidden mb-6"
                 >
-                    <div class="p-6 border-b border-gray-200 bg-gray-50">
-                        <h2 class="text-2xl font-bold text-gray-900">Part {{ part }} - 回答詳細</h2>
-                        <p class="text-sm text-gray-600 mt-1">
-                            {{ answersByPart[part]?.score?.correct || 0 }} /
-                            {{ answersByPart[part]?.score?.total || 0 }} 問正解 ({{
-                                answersByPart[part]?.score?.percentage || 0
-                            }}%)
-                        </p>
+                    <!-- パートヘッダー（クリック可能） -->
+                    <div
+                        @click="togglePart(part)"
+                        class="p-6 border-b border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900">
+                                    Part {{ part }} - 回答詳細
+                                </h2>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    {{ answersByPart[part]?.score?.correct || 0 }} /
+                                    {{ answersByPart[part]?.score?.total || 0 }} 問正解 ({{
+                                        answersByPart[part]?.score?.percentage || 0
+                                    }}%)
+                                </p>
+                            </div>
+                            <svg
+                                class="w-6 h-6 text-gray-600 transition-transform"
+                                :class="{ 'rotate-180': partExpanded[part] }"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 9l-7 7-7-7"
+                                />
+                            </svg>
+                        </div>
                     </div>
 
-                    <div class="p-6">
+                    <!-- パート内容（アコーディオン） -->
+                    <div v-show="partExpanded[part]" class="p-6">
                         <div class="space-y-4">
                             <div
                                 v-for="(question, index) in answersByPart[part]?.questions || []"
@@ -229,8 +324,7 @@ const getPartColor = (part: number) => {
                                     <div class="flex-1">
                                         <div class="flex items-center mb-2">
                                             <p class="font-medium text-gray-900">
-                                                問題
-                                                {{ question.question_number }}
+                                                問題 {{ question.question_number }}
                                             </p>
                                             <span
                                                 v-if="question.is_correct"
@@ -254,12 +348,41 @@ const getPartColor = (part: number) => {
                                             >
                                                 {{ question.question_text }}
                                             </p>
-                                            <img
-                                                v-if="question.question_image"
-                                                :src="`/storage/questions/${question.question_image}`"
-                                                :alt="`問題 ${question.question_number}`"
-                                                class="max-w-md rounded border"
-                                            />
+                                            <div v-if="question.question_image" class="mt-2">
+                                                <img
+                                                    v-if="
+                                                        getQuestionImagePath(
+                                                            question.question_image
+                                                        )
+                                                    "
+                                                    :src="
+                                                        getQuestionImagePath(
+                                                            question.question_image
+                                                        )
+                                                    "
+                                                    :alt="`問題 ${question.question_number}`"
+                                                    class="max-w-md rounded border"
+                                                    @error="
+                                                        e =>
+                                                            ((
+                                                                e.target as HTMLImageElement
+                                                            ).style.display = 'none')
+                                                    "
+                                                />
+                                                <div
+                                                    v-else
+                                                    class="flex items-center justify-center h-32 bg-gray-100 rounded border-2 border-dashed border-gray-300"
+                                                >
+                                                    <div class="text-center text-gray-500 text-xs">
+                                                        <div>
+                                                            画像: {{ question.question_image }}
+                                                        </div>
+                                                        <div class="mt-1">
+                                                            ファイルが見つかりません
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <!-- 選択肢 -->
@@ -287,7 +410,7 @@ const getPartColor = (part: number) => {
                                                 </span>
                                                 <img
                                                     v-if="choice.image"
-                                                    :src="`/storage/choices/${choice.image}`"
+                                                    :src="getChoiceImagePath(choice.image)"
                                                     :alt="`選択肢 ${choice.label}`"
                                                     class="max-w-xs"
                                                 />

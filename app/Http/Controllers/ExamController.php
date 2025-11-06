@@ -134,6 +134,9 @@ class ExamController extends Controller
 /**
  * パート画面表示(セキュリティ対応版)- 修正版
  */
+/**
+ * パート画面表示(セキュリティ対応版)- 修正版
+ */
 public function part(Request $request, $part)
 {
     $user = Auth::user();
@@ -242,7 +245,7 @@ public function part(Request $request, $part)
             ->with('info', "第{$part}部は既に完了しています。第{$session->current_part}部から続けてください。");
     }
 
-    // ★★★ 追加: current_part を更新（要求されたパートに進む） ★★★
+    // ★★★ 追加: current_part を更新(要求されたパートに進む) ★★★
     if ($part > $session->current_part) {
         $session->update([
             'current_part' => $part,
@@ -329,13 +332,14 @@ public function part(Request $request, $part)
     // 問題数を取得
     $questionCount = $this->getQuestionCountByEvent($part, $examType);
 
+    // ★★★ 修正: limit → take に変更 ★★★
     // 問題を取得(試験タイプに応じた数だけ)
     $questions = Question::with(['choices' => function ($query) use ($part) {
         $query->where('part', $part)->orderBy('label');
     }])
         ->where('part', $part)
         ->orderBy('number')
-        ->limit($questionCount)
+        ->take($questionCount)  // ★ limit → take に変更
         ->get()
         ->map(function ($q) use ($savedAnswers) {
             $questionData = [
@@ -359,12 +363,16 @@ public function part(Request $request, $part)
             return $questionData;
         });
 
+    // ★★★ 追加: デバッグログで問題IDを出力 ★★★
     Log::info('問題データの生成完了', [
         'user_id' => $user->id,
         'part' => $part,
         'questions_count' => $questions->count(),
         'exam_type' => $examType,
         'expected_count' => $questionCount,
+        'question_ids' => $questions->pluck('id')->toArray(),  // ★ 重要: 実際のIDリスト
+        'first_question_id' => $questions->first()->id ?? null,
+        'last_question_id' => $questions->last()->id ?? null,
     ]);
 
     return Inertia::render('Part', [

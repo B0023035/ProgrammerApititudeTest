@@ -1124,14 +1124,16 @@ async function handleAnswer(label: string) {
 // 現在の解答をサーバーに保存する関数
 // Part.vue の saveCurrentAnswer 関数を修正
 
+// Part.vue の saveCurrentAnswer 関数 - 完全版
+
 const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
     const MAX_RETRIES = 2;
 
     if (showPracticeStartPopup.value) return;
 
-    // ゲストモードの場合はサーバー保存をスキップ(メモリのみ)
+    // ★ ゲストはサーバー保存をスキップ(メモリのみ)
     if (isGuest.value) {
-        console.log("ゲストモード: メモリにのみ保存", {
+        console.log("ゲストモード: メモリのみ保存", {
             question: currentQuestion.value.id,
             choice: choice,
             part: currentPart.value,
@@ -1140,6 +1142,24 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
     }
 
     const currentQuestionId = currentQuestion.value.id;
+
+    // ★★★ 追加: 問題IDの基本検証 ★★★
+    if (!currentQuestionId || currentQuestionId <= 0) {
+        console.warn("無効な問題ID:", currentQuestionId);
+        return;
+    }
+
+    // ★★★ 追加: 問題が questions 配列に存在するか確認 ★★★
+    const questionExists = questions.value.some(q => q.id === currentQuestionId);
+    if (!questionExists) {
+        console.warn("この問題はクエリ対象外です:", {
+            questionId: currentQuestionId,
+            part: currentPart.value,
+            availableQuestions: questions.value.map(q => q.id),
+            questionsCount: questions.value.length,
+        });
+        return; // ★ 保存をスキップ
+    }
 
     try {
         // CSRFトークンを取得
@@ -1170,6 +1190,8 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
             examSessionId: form.examSessionId,
             questionId: currentQuestionId,
             retryCount,
+            part: currentPart.value,
+            availableQuestions: questions.value.map(q => q.id),
         });
 
         const response = await fetch(route("exam.save-answer"), {
@@ -1193,14 +1215,21 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
         console.log("=== レスポンス受信 ===", {
             status: response.status,
             statusText: response.statusText,
+            questionId: currentQuestionId,
         });
 
         // 419エラーの処理(リトライ回数制限付き)
         if (response.status === 419) {
-            console.error(`419 CSRF Token Mismatch (試行 ${retryCount + 1}/${MAX_RETRIES + 1})`);
+            console.error(`419 CSRF Token Mismatch (試行 ${retryCount + 1}/${MAX_RETRIES + 1})`, {
+                questionId: currentQuestionId,
+                part: currentPart.value,
+            });
 
             if (retryCount >= MAX_RETRIES) {
-                console.warn("最大リトライ回数に達しました。解答は一時保存されています。");
+                console.warn("最大リトライ回数に達しました。解答は一時保存されています。", {
+                    questionId: currentQuestionId,
+                    choice: choice,
+                });
                 // ★ アラートを表示しない - サイレントに失敗
                 return;
             }
@@ -1227,7 +1256,10 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
         }
 
         if (!response.ok) {
-            console.warn("解答保存に失敗:", response.status, response.statusText);
+            console.warn("解答保存に失敗:", response.status, response.statusText, {
+                questionId: currentQuestionId,
+                part: currentPart.value,
+            });
             return; // ★ エラーにせず続行
         }
 
@@ -1240,10 +1272,15 @@ const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
                 part: currentPart.value,
             });
         } else {
-            console.warn("解答保存に失敗:", data.message);
+            console.warn("解答保存に失敗:", data.message, {
+                questionId: currentQuestionId,
+            });
         }
     } catch (error) {
-        console.error("解答保存エラー:", error);
+        console.error("解答保存エラー:", error, {
+            questionId: currentQuestionId,
+            part: currentPart.value,
+        });
         // ★ アラートを表示せず、サイレントに失敗
     }
 };
