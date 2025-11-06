@@ -167,10 +167,10 @@ Route::middleware(['check.session.code'])->group(function () {
                 ->name('show')
                 ->where('section', '[1-3]');
 
-            // ★ 修正: POST と GET 両方を受け付ける
+            // 練習問題完了処理
             Route::match(['post', 'get'], '/complete', [PracticeController::class, 'guestComplete'])->name('complete');
 
-            // ゲスト用解説ページ表示用のGETルート
+            // ゲスト用解説ページ表示用のGETルート(念のため残す)
             Route::get('/explanation/{part}', [PracticeController::class, 'showGuestExplanation'])
                 ->name('explanation')
                 ->where('part', '[1-3]');
@@ -178,6 +178,11 @@ Route::middleware(['check.session.code'])->group(function () {
 
         // ゲスト用本番試験
         Route::prefix('exam')->name('exam.')->group(function () {
+            // ★ 追加: 本番試験説明ページ(練習問題完了後に表示)
+            Route::get('/explanation/{part}', [ExamController::class, 'guestExplanation'])
+                ->where('part', '[1-3]')
+                ->name('explanation');
+            
             Route::post('/start', [ExamController::class, 'guestStart'])->name('start');
             Route::get('/part/{part}', [ExamController::class, 'guestPart'])
                 ->where('part', '[1-3]')
@@ -203,10 +208,10 @@ Route::middleware(['check.session.code'])->group(function () {
                 ->name('show')
                 ->where('section', '[1-3]');
 
-            // ★ 修正: POST と GET 両方を受け付ける
+            // 練習問題完了処理
             Route::match(['post', 'get'], '/complete', [PracticeController::class, 'complete'])->name('complete');
 
-            // 解説ページ表示用のGETルート
+            // 解説ページ表示用のGETルート(念のため残す)
             Route::get('/explanation/{part}', [PracticeController::class, 'showExplanation'])
                 ->name('explanation')
                 ->where('part', '[1-3]');
@@ -214,6 +219,11 @@ Route::middleware(['check.session.code'])->group(function () {
 
         // 本番試験
         Route::prefix('exam')->name('exam.')->group(function () {
+            // ★ 追加: 本番試験説明ページ(練習問題完了後に表示)
+            Route::get('/explanation/{part}', [ExamController::class, 'explanation'])
+                ->where('part', '[1-3]')
+                ->name('explanation');
+            
             Route::post('/start', [ExamController::class, 'start'])->name('start');
             Route::get('/part/{part}', [ExamController::class, 'part'])
                 ->where('part', '[1-3]')

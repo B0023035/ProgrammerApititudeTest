@@ -155,54 +155,57 @@ function goToExam() {
     const currentPart = getCurrentPart();
     isNavigating.value = true;
 
-    console.log("=== goToExam 呼び出し ===");
+    console.log("=== goToExam呼び出し ===");
     console.log("currentPart:", currentPart);
     console.log("isGuest:", isGuest.value);
 
-    if (isGuest.value) {
-        console.log("ゲストモード: 試験セッション作成中...");
+    // ★★★ 重要: 練習問題完了後は常に exam.part へ直接遷移 ★★★
+    // exam.start は「テスト開始」ボタンからのみ呼ばれるべき
 
-        // ★ 修正: ゲスト用 - 既存セッションがあるか確認してから適切な部に進む
+    if (isGuest.value) {
+        // ゲスト用 - 常に直接 exam.part へ
+        console.log(`ゲスト第${currentPart}部: exam.part へ直接遷移`);
         router.visit(route("guest.exam.part", { part: currentPart }), {
-            method: "get",
             preserveState: false,
             preserveScroll: false,
             replace: true,
             onBefore: () => {
-                console.log("ゲスト本番試験ページへ遷移中...", {
-                    part: currentPart,
-                });
+                console.log(`guest.exam.part(${currentPart}) リクエスト送信前`);
+            },
+            onSuccess: page => {
+                console.log(`guest.exam.part(${currentPart}) 成功:`, page);
             },
             onFinish: () => {
                 isNavigating.value = false;
-                console.log("ゲスト試験開始処理完了");
             },
             onError: errors => {
-                console.error("ゲスト試験開始エラー:", errors);
+                console.error("本番試験への遷移エラー:", errors);
                 isNavigating.value = false;
-                alert("試験の開始に失敗しました。もう一度お試しください。");
+                alert("ページ遷移に失敗しました。もう一度お試しください。");
             },
         });
     } else {
-        console.log("認証ユーザー: 試験セッション作成中...");
-
-        // ★ 修正: 認証ユーザー用 - 既存セッションがあるか確認してから適切な部に進む
+        // 認証ユーザー用 - 常に直接 exam.part へ
+        console.log(`認証ユーザー第${currentPart}部: exam.part へ直接遷移`);
         router.visit(route("exam.part", { part: currentPart }), {
-            method: "get",
             preserveState: false,
             preserveScroll: false,
             replace: true,
             onBefore: () => {
-                console.log("本番試験ページへ遷移中...", { part: currentPart });
+                console.log(`exam.part(${currentPart}) リクエスト送信前`);
+            },
+            onSuccess: page => {
+                console.log(`exam.part(${currentPart}) 成功:`, page);
+                console.log("component:", page.component);
+                console.log("url:", page.url);
             },
             onFinish: () => {
                 isNavigating.value = false;
-                console.log("認証ユーザー試験開始処理完了");
             },
             onError: errors => {
-                console.error("本番試験開始エラー:", errors);
+                console.error("本番試験への遷移エラー:", errors);
                 isNavigating.value = false;
-                alert("試験の開始に失敗しました。もう一度お試しください。");
+                alert("ページ遷移に失敗しました。もう一度お試しください。");
             },
         });
     }
