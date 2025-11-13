@@ -321,7 +321,7 @@ public function part(Request $request, $part)
     }
 
     // 時間切れチェック(0=無制限の場合はスキップ)
-    if ($remainingTime > 0 && $remainingTime <= 0) {
+    if ($partTimeLimit > 0 && $remainingTime <= 0) {
         return $this->autoCompletePartDueToTimeout($session);
     }
 
@@ -852,7 +852,8 @@ public function completePart(Request $request)
         }
 
         // 時間切れチェック(0=無制限の場合はスキップ)
-        if ($remainingTime > 0 && $remainingTime <= 0) {
+        $partTimeLimit = $this->getPartTimeLimitByEvent($part, $examType, $event);
+        if ($partTimeLimit > 0 && $remainingTime <= 0) {
             return $this->guestAutoCompletePartDueToTimeout($session, $guestId);
         }
 

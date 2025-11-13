@@ -1359,8 +1359,18 @@ onMounted(async () => {
     // 問題フィルタリング後にanswerStatusを更新
     updateAnswerStatus();
 
+    // 無制限(partTime=0)の場合はタイマーを開始しない
+    const partTimeLimit = page.props.partTime || 0;
+
     const startTimer = () => {
         if (!showPracticeStartPopup.value) {
+            // 無制限の場合はタイマーをスキップ
+            if (partTimeLimit === 0) {
+                console.log("無制限時間モード: タイマーは動作しません");
+                return;
+            }
+
+            // 時間制限がある場合のみタイマーを開始
             timer = setInterval(() => {
                 if (remainingTime.value > 0) {
                     remainingTime.value--;
@@ -1368,8 +1378,6 @@ onMounted(async () => {
                     handleTimeUp();
                 }
             }, 1000);
-        } else {
-            setTimeout(startTimer, 100);
         }
     };
 
