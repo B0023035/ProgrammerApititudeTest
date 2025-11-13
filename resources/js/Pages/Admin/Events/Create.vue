@@ -1,24 +1,87 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { Head, Link, router } from "@inertiajs/vue3";
+import { ref, computed, watch, reactive } from "vue";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 
-const form = useForm({
+// 各試験タイプのデフォルト設定
+const examPresets = {
+    full: {
+        part1_questions: 40,
+        part1_time: 10, // 分単位
+        part2_questions: 30,
+        part2_time: 15,
+        part3_questions: 25,
+        part3_time: 30,
+    },
+    "45min": {
+        part1_questions: 30,
+        part1_time: 7.5,
+        part2_questions: 20,
+        part2_time: 10,
+        part3_questions: 15,
+        part3_time: 18,
+    },
+    "30min": {
+        part1_questions: 20,
+        part1_time: 5,
+        part2_questions: 13,
+        part2_time: 6.5,
+        part3_questions: 10,
+        part3_time: 12,
+    },
+    custom: {
+        part1_questions: 40,
+        part1_time: 0,
+        part2_questions: 30,
+        part2_time: 0,
+        part3_questions: 25,
+        part3_time: 0,
+    },
+};
+
+const form = reactive({
     name: "",
-    passphrase: "", // session_code から passphrase に変更
-    begin: "", // start_date から begin に変更
-    end: "", // end_date から end に変更
-    exam_type: "full",
+    passphrase: "",
+    begin: "",
+    end: "",
+    exam_type: "full" as "30min" | "45min" | "full" | "custom",
+    part1_questions: 40,
+    part1_time: 10,
+    part2_questions: 30,
+    part2_time: 15,
+    part3_questions: 25,
+    part3_time: 30,
 });
 
+const errors = reactive<Record<string, string>>({});
 const isGenerating = ref(false);
+const processing = ref(false);
+
+// カスタム形式が選択されているかどうか
+const isCustom = computed(() => form.exam_type === "custom");
+
+// 試験タイプが変更されたら自動で値を設定
+watch(
+    () => form.exam_type,
+    newType => {
+        const preset = examPresets[newType as keyof typeof examPresets];
+        if (preset) {
+            form.part1_questions = preset.part1_questions;
+            form.part1_time = preset.part1_time;
+            form.part2_questions = preset.part2_questions;
+            form.part2_time = preset.part2_time;
+            form.part3_questions = preset.part3_questions;
+            form.part3_time = preset.part3_time;
+        }
+    }
+);
 
 const generatePassphrase = async () => {
     isGenerating.value = true;
     try {
         const response = await fetch(route("admin.events.generate-passphrase"));
         const data = await response.json();
-        form.passphrase = data.passphrase; // session_code から passphrase に変更
+        form.passphrase = data.passphrase;
     } catch (error) {
         console.error("パスフレーズ生成エラー:", error);
         alert("パスフレーズの生成に失敗しました。");
@@ -28,12 +91,39 @@ const generatePassphrase = async () => {
 };
 
 const submit = () => {
-    form.post(route("admin.events.store"), {
+    // エラーをクリア
+    Object.keys(errors).forEach(key => delete errors[key]);
+
+    // フォームデータをコピーして時間を変換
+    const submitData = {
+        name: form.name,
+        passphrase: form.passphrase,
+        begin: form.begin,
+        end: form.end,
+        exam_type: form.exam_type,
+        part1_questions: form.part1_questions,
+        part1_time: Math.round(form.part1_time * 60),
+        part2_questions: form.part2_questions,
+        part2_time: Math.round(form.part2_time * 60),
+        part3_questions: form.part3_questions,
+        part3_time: Math.round(form.part3_time * 60),
+    };
+
+    console.log("送信するデータ:", submitData);
+
+    processing.value = true;
+
+    // router.postを使って送信
+    router.post(route("admin.events.store"), submitData, {
         onSuccess: () => {
             alert("イベントを作成しました。");
         },
-        onError: errors => {
-            console.error("エラー:", errors);
+        onError: (responseErrors: any) => {
+            console.error("エラー:", responseErrors);
+            Object.assign(errors, responseErrors);
+        },
+        onFinish: () => {
+            processing.value = false;
         },
     });
 };
@@ -87,8 +177,8 @@ const submit = () => {
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="例: 2025年度 春期 適性検査"
                             />
-                            <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.name }}
+                            <p v-if="errors.name" class="mt-1 text-sm text-red-600">
+                                {{ errors.name }}
                             </p>
                         </div>
 
@@ -107,8 +197,8 @@ const submit = () => {
                                     v-model="form.passphrase"
                                     type="text"
                                     required
-                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase font-mono"
-                                    placeholder="例: ABCD-EFGH-IJKL"
+                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                                    placeholder="例: abcd1234"
                                 />
                                 <button
                                     type="button"
@@ -123,8 +213,8 @@ const submit = () => {
                             <p class="mt-1 text-xs text-gray-500">
                                 受験者がアクセスする際に使用するコードです
                             </p>
-                            <p v-if="form.errors.passphrase" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.passphrase }}
+                            <p v-if="errors.passphrase" class="mt-1 text-sm text-red-600">
+                                {{ errors.passphrase }}
                             </p>
                         </div>
 
@@ -141,8 +231,8 @@ const submit = () => {
                                 required
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
-                            <p v-if="form.errors.begin" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.begin }}
+                            <p v-if="errors.begin" class="mt-1 text-sm text-red-600">
+                                {{ errors.begin }}
                             </p>
                         </div>
 
@@ -159,8 +249,8 @@ const submit = () => {
                                 required
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
-                            <p v-if="form.errors.end" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.end }}
+                            <p v-if="errors.end" class="mt-1 text-sm text-red-600">
+                                {{ errors.end }}
                             </p>
                         </div>
 
@@ -173,6 +263,9 @@ const submit = () => {
                             <div class="space-y-2">
                                 <label
                                     class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                                    :class="{
+                                        'border-blue-500 bg-blue-50': form.exam_type === 'full',
+                                    }"
                                 >
                                     <input
                                         v-model="form.exam_type"
@@ -183,12 +276,15 @@ const submit = () => {
                                     <div>
                                         <div class="font-medium text-gray-900">フル版(推奨)</div>
                                         <div class="text-sm text-gray-500">
-                                            Part1: 40問、Part2: 30問、Part3: 25問(合計95問)
+                                            Part1: 40問(10分)、Part2: 30問(15分)、Part3: 25問(30分)
                                         </div>
                                     </div>
                                 </label>
                                 <label
                                     class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                                    :class="{
+                                        'border-blue-500 bg-blue-50': form.exam_type === '45min',
+                                    }"
                                 >
                                     <input
                                         v-model="form.exam_type"
@@ -199,12 +295,15 @@ const submit = () => {
                                     <div>
                                         <div class="font-medium text-gray-900">45分版</div>
                                         <div class="text-sm text-gray-500">
-                                            問題数を調整した45分版(実装予定)
+                                            Part1: 30問(7.5分)、Part2: 20問(10分)、Part3: 15問(18分)
                                         </div>
                                     </div>
                                 </label>
                                 <label
                                     class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                                    :class="{
+                                        'border-blue-500 bg-blue-50': form.exam_type === '30min',
+                                    }"
                                 >
                                     <input
                                         v-model="form.exam_type"
@@ -215,14 +314,215 @@ const submit = () => {
                                     <div>
                                         <div class="font-medium text-gray-900">30分版</div>
                                         <div class="text-sm text-gray-500">
-                                            問題数を調整した30分版(実装予定)
+                                            Part1: 20問(5分)、Part2: 13問(6.5分)、Part3: 10問(12分)
+                                        </div>
+                                    </div>
+                                </label>
+                                <label
+                                    class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                                    :class="{
+                                        'border-blue-500 bg-blue-50': form.exam_type === 'custom',
+                                    }"
+                                >
+                                    <input
+                                        v-model="form.exam_type"
+                                        type="radio"
+                                        value="custom"
+                                        class="mr-3"
+                                    />
+                                    <div>
+                                        <div class="font-medium text-gray-900">カスタム</div>
+                                        <div class="text-sm text-gray-500">
+                                            問題数と制限時間を自由に設定
                                         </div>
                                     </div>
                                 </label>
                             </div>
-                            <p v-if="form.errors.exam_type" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.exam_type }}
+                            <p v-if="errors.exam_type" class="mt-1 text-sm text-red-600">
+                                {{ errors.exam_type }}
                             </p>
+                        </div>
+
+                        <!-- カスタム設定 -->
+                        <div
+                            v-if="isCustom"
+                            class="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-6"
+                        >
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">カスタム設定</h3>
+
+                            <!-- 第一部 -->
+                            <div class="space-y-3">
+                                <h4 class="font-medium text-gray-900">第一部 (最大40問)</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label
+                                            for="part1_questions"
+                                            class="block text-sm font-medium text-gray-700 mb-1"
+                                        >
+                                            問題数
+                                            <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            id="part1_questions"
+                                            v-model.number="form.part1_questions"
+                                            type="number"
+                                            min="1"
+                                            max="40"
+                                            required
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                        <p
+                                            v-if="errors.part1_questions"
+                                            class="mt-1 text-sm text-red-600"
+                                        >
+                                            {{ errors.part1_questions }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label
+                                            for="part1_time"
+                                            class="block text-sm font-medium text-gray-700 mb-1"
+                                        >
+                                            制限時間(分)
+                                            <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            id="part1_time"
+                                            v-model.number="form.part1_time"
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            required
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="0=無制限"
+                                        />
+                                        <p
+                                            v-if="errors.part1_time"
+                                            class="mt-1 text-sm text-red-600"
+                                        >
+                                            {{ errors.part1_time }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 第二部 -->
+                            <div class="space-y-3">
+                                <h4 class="font-medium text-gray-900">第二部 (最大30問)</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label
+                                            for="part2_questions"
+                                            class="block text-sm font-medium text-gray-700 mb-1"
+                                        >
+                                            問題数
+                                            <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            id="part2_questions"
+                                            v-model.number="form.part2_questions"
+                                            type="number"
+                                            min="1"
+                                            max="30"
+                                            required
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                        <p
+                                            v-if="errors.part2_questions"
+                                            class="mt-1 text-sm text-red-600"
+                                        >
+                                            {{ errors.part2_questions }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label
+                                            for="part2_time"
+                                            class="block text-sm font-medium text-gray-700 mb-1"
+                                        >
+                                            制限時間(分)
+                                            <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            id="part2_time"
+                                            v-model.number="form.part2_time"
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            required
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="0=無制限"
+                                        />
+                                        <p
+                                            v-if="errors.part2_time"
+                                            class="mt-1 text-sm text-red-600"
+                                        >
+                                            {{ errors.part2_time }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 第三部 -->
+                            <div class="space-y-3">
+                                <h4 class="font-medium text-gray-900">第三部 (最大25問)</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label
+                                            for="part3_questions"
+                                            class="block text-sm font-medium text-gray-700 mb-1"
+                                        >
+                                            問題数
+                                            <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            id="part3_questions"
+                                            v-model.number="form.part3_questions"
+                                            type="number"
+                                            min="1"
+                                            max="25"
+                                            required
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                        <p
+                                            v-if="errors.part3_questions"
+                                            class="mt-1 text-sm text-red-600"
+                                        >
+                                            {{ errors.part3_questions }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label
+                                            for="part3_time"
+                                            class="block text-sm font-medium text-gray-700 mb-1"
+                                        >
+                                            制限時間(分)
+                                            <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            id="part3_time"
+                                            v-model.number="form.part3_time"
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            required
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="0=無制限"
+                                        />
+                                        <p
+                                            v-if="errors.part3_time"
+                                            class="mt-1 text-sm text-red-600"
+                                        >
+                                            {{ errors.part3_time }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-blue-50 border border-blue-200 rounded p-3">
+                                <p class="text-sm text-blue-800">
+                                    💡 制限時間に0を設定すると無制限になります
+                                </p>
+                            </div>
                         </div>
 
                         <!-- ボタン -->
@@ -235,10 +535,10 @@ const submit = () => {
                             </Link>
                             <button
                                 type="submit"
-                                :disabled="form.processing"
+                                :disabled="processing"
                                 class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <span v-if="!form.processing">作成する</span>
+                                <span v-if="!processing">作成する</span>
                                 <span v-else>作成中...</span>
                             </button>
                         </div>

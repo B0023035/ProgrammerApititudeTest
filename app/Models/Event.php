@@ -10,17 +10,31 @@ class Event extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+        protected $fillable = [
         'name',
         'passphrase',
         'begin',
         'end',
         'exam_type',
+        // カスタム設定を追加
+        'part1_questions',
+        'part1_time',
+        'part2_questions',
+        'part2_time',
+        'part3_questions',
+        'part3_time',
     ];
 
     protected $casts = [
         'begin' => 'datetime',
         'end' => 'datetime',
+        // カスタム設定を整数型にキャスト
+        'part1_questions' => 'integer',
+        'part1_time' => 'integer',
+        'part2_questions' => 'integer',
+        'part2_time' => 'integer',
+        'part3_questions' => 'integer',
+        'part3_time' => 'integer',
     ];
 
     /**

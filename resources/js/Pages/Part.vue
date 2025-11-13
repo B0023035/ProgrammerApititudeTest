@@ -2,21 +2,20 @@
     <div class="min-h-screen bg-gray-100">
         <Head :title="`本番試験 第${currentPart}部`" />
 
-        <!-- 【修正】開始前ポップアップ - 赤色に変更 -->
+        <!-- 開始前ポップアップ - 赤色版 + 無制限対応 -->
         <div
             v-if="showPracticeStartPopup"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
         >
             <div class="bg-white rounded-lg p-8 shadow-xl max-w-lg w-full mx-4">
                 <div class="text-center mb-6">
-                    <!-- 【修正】赤色に変更 -->
                     <div class="text-2xl font-bold text-red-800 mb-2">
                         本番試験 第{{ currentPart }}部
                     </div>
                 </div>
 
                 <div class="space-y-4 mb-6">
-                    <!-- 【修正】赤色に変更 -->
+                    <!-- 問題数表示 -->
                     <div class="bg-red-50 border border-red-200 rounded-lg p-4">
                         <div class="flex items-center gap-2 mb-2">
                             <svg
@@ -40,7 +39,7 @@
                         </p>
                     </div>
 
-                    <!-- 【修正】赤色に変更 -->
+                    <!-- 制限時間表示(無制限対応) -->
                     <div class="bg-red-50 border border-red-200 rounded-lg p-4">
                         <div class="flex items-center gap-2 mb-2">
                             <svg
@@ -59,7 +58,11 @@
                             <span class="font-semibold text-red-800">制限時間</span>
                         </div>
                         <p class="text-red-700">
-                            <span class="font-bold text-xl">
+                            <!-- ★ 無制限の場合の表示 -->
+                            <span v-if="(page.props.partTime || 0) === 0" class="font-bold text-xl">
+                                ∞ (無制限)
+                            </span>
+                            <span v-else class="font-bold text-xl">
                                 {{ Math.floor((page.props.partTime || 300) / 60) }}分
                             </span>
                         </p>
@@ -67,7 +70,6 @@
                 </div>
 
                 <div class="text-center">
-                    <!-- 【修正】赤色に変更 -->
                     <button
                         @click="startPractice"
                         class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg shadow-md"
@@ -820,7 +822,13 @@ const remainingTime = ref<number>(
     page.props.remainingTime !== undefined ? page.props.remainingTime : page.props.partTime || 300
 );
 
+// タイマー表示の計算プロパティ(無制限対応版)
 const timerDisplay = computed(() => {
+    // ★ 無制限時間(0分)の場合は特別表示
+    if (remainingTime.value === 0) {
+        return "∞ (無制限)";
+    }
+
     const minutes = Math.floor(remainingTime.value / 60)
         .toString()
         .padStart(2, "0");

@@ -38,6 +38,12 @@ class EventManagementController extends Controller
                 'begin' => $event->begin->toIso8601String(),
                 'end' => $event->end->toIso8601String(),
                 'exam_type' => $event->exam_type,
+                'part1_questions' => $event->part1_questions,
+                'part1_time' => $event->part1_time,
+                'part2_questions' => $event->part2_questions,
+                'part2_time' => $event->part2_time,
+                'part3_questions' => $event->part3_questions,
+                'part3_time' => $event->part3_time,
                 'status' => $status,
                 'status_color' => $statusColor,
                 'created_at' => $event->created_at->toIso8601String(),
@@ -54,7 +60,6 @@ class EventManagementController extends Controller
      */
     public function create()
     {
-        // ランダムなパスフレーズを生成
         $randomPassphrase = $this->generatePassphrase();
 
         return Inertia::render('Admin/Events/Create', [
@@ -67,12 +72,22 @@ class EventManagementController extends Controller
      */
     public function store(Request $request)
     {
+        // デバッグ: 受け取ったデータを確認
+        \Log::info('Received data:', $request->all());
+        
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'passphrase' => 'required|string|max:255|unique:events,passphrase',
             'begin' => 'required|date',
             'end' => 'required|date|after:begin',
-            'exam_type' => 'required|in:30min,45min,full',
+            'exam_type' => 'required|in:30min,45min,full,custom',
+            // すべての試験タイプで必須
+            'part1_questions' => 'required|integer|min:1|max:40',
+            'part1_time' => 'required|integer|min:0',
+            'part2_questions' => 'required|integer|min:1|max:30',
+            'part2_time' => 'required|integer|min:0',
+            'part3_questions' => 'required|integer|min:1|max:25',
+            'part3_time' => 'required|integer|min:0',
         ], [
             'name.required' => 'イベント名を入力してください',
             'passphrase.required' => 'パスフレーズを入力してください',
@@ -81,7 +96,22 @@ class EventManagementController extends Controller
             'end.required' => '終了日時を入力してください',
             'end.after' => '終了日時は開始日時より後に設定してください',
             'exam_type.required' => '出題形式を選択してください',
+            'part1_questions.required' => '第一部の問題数を指定してください',
+            'part1_questions.max' => '第一部の問題数は最大40問です',
+            'part1_time.required' => '第一部の制限時間を指定してください',
+            'part2_questions.required' => '第二部の問題数を指定してください',
+            'part2_questions.max' => '第二部の問題数は最大30問です',
+            'part2_time.required' => '第二部の制限時間を指定してください',
+            'part3_questions.required' => '第三部の問題数を指定してください',
+            'part3_questions.max' => '第三部の問題数は最大25問です',
+            'part3_time.required' => '第三部の制限時間を指定してください',
         ]);
+
+        // フロントエンドから既に秒単位で送られてくるので、変換不要
+        // ただし整数型に変換
+        $validated['part1_time'] = (int)$validated['part1_time'];
+        $validated['part2_time'] = (int)$validated['part2_time'];
+        $validated['part3_time'] = (int)$validated['part3_time'];
 
         Event::create($validated);
 
@@ -104,6 +134,12 @@ class EventManagementController extends Controller
                 'begin' => $event->begin->format('Y-m-d\TH:i'),
                 'end' => $event->end->format('Y-m-d\TH:i'),
                 'exam_type' => $event->exam_type,
+                'part1_questions' => $event->part1_questions,
+                'part1_time' => $event->part1_time, // 秒単位のまま渡す（Vueで分に変換）
+                'part2_questions' => $event->part2_questions,
+                'part2_time' => $event->part2_time,
+                'part3_questions' => $event->part3_questions,
+                'part3_time' => $event->part3_time,
             ],
         ]);
     }
@@ -120,7 +156,13 @@ class EventManagementController extends Controller
             'passphrase' => 'required|string|max:255|unique:events,passphrase,'.$id,
             'begin' => 'required|date',
             'end' => 'required|date|after:begin',
-            'exam_type' => 'required|in:30min,45min,full',
+            'exam_type' => 'required|in:30min,45min,full,custom',
+            'part1_questions' => 'required|integer|min:1|max:40',
+            'part1_time' => 'required|integer|min:0',
+            'part2_questions' => 'required|integer|min:1|max:30',
+            'part2_time' => 'required|integer|min:0',
+            'part3_questions' => 'required|integer|min:1|max:25',
+            'part3_time' => 'required|integer|min:0',
         ], [
             'name.required' => 'イベント名を入力してください',
             'passphrase.required' => 'パスフレーズを入力してください',
@@ -130,6 +172,12 @@ class EventManagementController extends Controller
             'end.after' => '終了日時は開始日時より後に設定してください',
             'exam_type.required' => '出題形式を選択してください',
         ]);
+
+        // フロントエンドから既に秒単位で送られてくるので、変換不要
+        // ただし整数型に変換
+        $validated['part1_time'] = (int)$validated['part1_time'];
+        $validated['part2_time'] = (int)$validated['part2_time'];
+        $validated['part3_time'] = (int)$validated['part3_time'];
 
         $event->update($validated);
 
@@ -155,8 +203,6 @@ class EventManagementController extends Controller
     public function terminate($id)
     {
         $event = Event::findOrFail($id);
-
-        // 現在時刻に終了日時を設定
         $event->end = Carbon::now();
         $event->save();
 
@@ -165,7 +211,7 @@ class EventManagementController extends Controller
     }
 
     /**
-     * ランダムなパスフレーズを生成（API）
+     * ランダムなパスフレーズを生成(API)
      */
     public function generateRandomPassphrase()
     {
@@ -179,11 +225,10 @@ class EventManagementController extends Controller
      */
     private function generatePassphrase()
     {
-        // 形式: XXXX-XXXX-XXXX (英数字)
-        $part1 = strtoupper(Str::random(4));
-        $part2 = strtoupper(Str::random(4));
-        $part3 = strtoupper(Str::random(4));
+        do {
+            $passphrase = strtolower(Str::random(8));
+        } while (Event::where('passphrase', $passphrase)->exists());
 
-        return "{$part1}-{$part2}-{$part3}";
+        return $passphrase;
     }
 }
