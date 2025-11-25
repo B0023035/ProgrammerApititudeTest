@@ -16,6 +16,7 @@ class ExamSession extends Model
         'user_id',
         'session_uuid',  // 追加
         'event_id',
+        'grade',
         'started_at',
         'finished_at',
         'disqualified_at',

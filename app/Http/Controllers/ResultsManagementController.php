@@ -6,8 +6,9 @@ use App\Models\Answer;
 use App\Models\Event;
 use App\Models\ExamSession;
 use App\Models\Question;
-use App\Models\User;  // ← これを追加
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ResultsManagementController extends Controller
@@ -331,17 +332,36 @@ class ResultsManagementController extends Controller
     /**
      * 統計ページ
      */
-    public function statistics()
+    public function statistics(Request $request)
     {
-        $totalSessions = ExamSession::whereNotNull('finished_at')
-            ->whereNull('disqualified_at')
-            ->count();
+        // フィルターパラメータ
+        $grade = $request->input('grade'); // 例: 1,2,3 または 'all'
+        $eventId = $request->input('event_id'); // イベントを直接選択する場合のID
+
+        Log::info('Statistics filter inputs', [
+            'grade' => $grade,
+            'event_id' => $eventId,
+        ]);
+
+        $baseQuery = ExamSession::whereNotNull('finished_at')
+            ->whereNull('disqualified_at');
+
+        if ($grade !== null && $grade !== '' && $grade !== 'all') {
+            Log::info('Applying grade filter', ['grade' => (int) $grade]);
+            $baseQuery = $baseQuery->where('grade', (int) $grade);
+        }
+
+        if ($eventId) {
+            Log::info('Applying event_id filter', ['event_id' => (int) $eventId]);
+            $baseQuery = $baseQuery->where('event_id', (int) $eventId);
+        }
+
+        $totalSessions = (clone $baseQuery)->count();
+        Log::info('Total sessions after filter', ['count' => $totalSessions]);
 
         $totalUsers = User::count();
 
-        $sessions = ExamSession::whereNotNull('finished_at')
-            ->whereNull('disqualified_at')
-            ->get();
+        $sessions = (clone $baseQuery)->get();
 
         // 全セッションのスコアを計算
         $scores = [];
@@ -404,16 +424,60 @@ class ResultsManagementController extends Controller
                 : 0;
         }
 
-        // 月別受験者数を計算 (2025年)
+        // 月別受験者数を計算（フィルター後の $sessions を基にグルーピング）
         $monthlyData = [];
-        for ($month = 1; $month <= 12; $month++) {
-            $count = ExamSession::whereNotNull('finished_at')
-                ->whereNull('disqualified_at')
-                ->whereYear('finished_at', 2025)
-                ->whereMonth('finished_at', $month)
-                ->count();
+        foreach ($sessions as $s) {
+            if (! $s->finished_at) continue;
+            $m = (int) $s->finished_at->format('n');
+            if (! isset($monthlyData[$m])) $monthlyData[$m] = 0;
+            $monthlyData[$m]++;
+        }
 
-            $monthlyData[$month] = $count;
+        // 月が抜けている場合は 0 を設定（1〜12）
+        for ($month = 1; $month <= 12; $month++) {
+            if (! isset($monthlyData[$month])) $monthlyData[$month] = 0;
+        }
+
+        ksort($monthlyData);
+
+        // イベント選択用リスト（最近のイベントを取得）
+        $eventList = Event::orderBy('begin', 'desc')
+            ->take(100)
+            ->get()
+            ->map(function ($e) {
+                return [
+                    'id' => $e->id,
+                    'label' => $e->name . ' — ' . ($e->begin ? $e->begin->format('Y-m-d') : ''),
+                ];
+            });
+        // grade ごとのセッション数を取得
+        $gradeCountsRaw = ExamSession::whereNotNull('finished_at')
+            ->whereNull('disqualified_at')
+            ->whereNotNull('grade')
+            ->selectRaw('grade, COUNT(*) as count')
+            ->groupBy('grade')
+            ->orderBy('grade')
+            ->pluck('count', 'grade')
+            ->toArray();
+
+        $currentYear = (int) date('Y');
+        $gradeCounts = [];
+        // 常に1〜3年は表示（データがなくても count=0）し、4年以上はデータがある場合のみ表示
+        for ($grade = 1; $grade <= 10; $grade++) {
+            $count = isset($gradeCountsRaw[$grade]) ? (int) $gradeCountsRaw[$grade] : 0;
+            if ($count === 0 && $grade > 3) {
+                continue; // データがない卒業年度は表示しない
+            }
+
+            $label = $grade <= 3
+                ? ($grade . '年')
+                : (($currentYear - $grade + 1) . '年卒');
+
+            $gradeCounts[] = [
+                'grade' => $grade,
+                'label' => $label,
+                'count' => $count,
+            ];
         }
 
         return Inertia::render('Admin/Results/Statistics', [
@@ -426,6 +490,12 @@ class ResultsManagementController extends Controller
                 'part_averages' => $partAverages,
                 'monthly_data' => $monthlyData,
             ],
+            'filters' => [
+                'grade' => $grade,
+                'event_id' => $eventId,
+            ],
+            'events' => $eventList,
+                    'gradeCounts' => $gradeCounts,
         ]);
     }
 

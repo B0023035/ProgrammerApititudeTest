@@ -1,12 +1,25 @@
 <script setup lang="ts">
 import { Link } from "@inertiajs/vue3";
 
-const isActive = (routeName: string) => {
-    // 現在のルート名を取得
-    const currentRoute = route().current();
+// 安全に現在のルート名を取得するヘルパー
+const getCurrentRoute = () => {
+    try {
+        if (typeof route === "function" && route().current) {
+            const r = route().current();
+            return typeof r === "string" ? r : String(r || "");
+        }
+    } catch (e) {
+        console.debug && console.debug("route() access error in AdminResultsTabs:", e);
+    }
+    return "";
+};
 
-    // 完全一致でチェック
-    return currentRoute === routeName;
+const isActive = (routeName: string) => {
+    try {
+        return getCurrentRoute() === routeName;
+    } catch (e) {
+        return false;
+    }
 };
 </script>
 
@@ -24,17 +37,7 @@ const isActive = (routeName: string) => {
             >
                 📊 Comlink
             </Link>
-            <Link
-                :href="route('admin.results.index')"
-                :class="[
-                    'flex-1 px-6 py-4 text-center font-medium transition-colors',
-                    isActive('admin.results.index')
-                        ? 'border-b-2 border-blue-500 text-blue-600 bg-blue-50'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
-                ]"
-            >
-                📈 成績管理
-            </Link>
+            <!-- 成績管理は Comlink に統一 -->
             <Link
                 :href="route('admin.results.statistics')"
                 :class="[

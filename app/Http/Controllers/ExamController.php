@@ -89,10 +89,16 @@ class ExamController extends Controller
             return Inertia::location(route('exam.part', ['part' => $existingSession->current_part]));
         }
 
+        // セッション実施時の学年を計算してスナップショット保存
+        $currentYear = (int) date('Y');
+        $admissionYear = (int) ($user->admission_year ?? 0);
+        $grade = $admissionYear > 0 ? max(1, min(($currentYear - $admissionYear + 1), 10)) : null;
+
         // ★ 重要: 新規セッション作成時にイベント情報を保存
         $session = ExamSession::create([
             'user_id' => $user->id,
             'event_id' => $event->id,  // ★ event_idを保存
+            'grade' => $grade,
             'started_at' => now(),
             'current_part' => 1,
             'current_question' => 1,
@@ -227,7 +233,7 @@ public function part(Request $request, $part)
     ]);
 
     // セッションがない場合は新規作成
-    if (! $session) {
+        if (! $session) {
         Log::info('セッションが存在しないため新規作成', [
             'user_id' => $user->id,
             'requested_part' => $part,
@@ -235,17 +241,23 @@ public function part(Request $request, $part)
         ]);
 
         // 新規セッション作成
-        $session = ExamSession::create([
-            'user_id' => $user->id,
-            'started_at' => now(),
-            'current_part' => $part,
-            'current_question' => 1,
-            'remaining_time' => 0,
-            'security_log' => json_encode([
-                'exam_type' => $examType,
-                'event_id' => $event->id ?? null,
-            ]),
-        ]);
+            // セッション実施時の学年を計算して保存
+            $currentYear = (int) date('Y');
+            $admissionYear = (int) ($user->admission_year ?? 0);
+            $grade = $admissionYear > 0 ? max(1, min(($currentYear - $admissionYear + 1), 10)) : null;
+
+            $session = ExamSession::create([
+                'user_id' => $user->id,
+                'grade' => $grade,
+                'started_at' => now(),
+                'current_part' => $part,
+                'current_question' => 1,
+                'remaining_time' => 0,
+                'security_log' => json_encode([
+                    'exam_type' => $examType,
+                    'event_id' => $event->id ?? null,
+                ]),
+            ]);
 
         Log::info('新規セッション作成完了', [
             'user_id' => $user->id,
@@ -306,12 +318,14 @@ public function part(Request $request, $part)
         return redirect()->route('exam.disqualified');
     }
 
+    // パート時間制限を取得
+    $partTimeLimit = $this->getPartTimeLimitByEvent($part, $examType, $event);
+
     // 残り時間の処理
     if ($session->remaining_time > 0) {
         $remainingTime = $session->remaining_time;
     } else {
-        // ★ 修正: イベント情報を渡す
-        $partTimeLimit = $this->getPartTimeLimitByEvent($part, $examType, $event);
+        // 初回アクセス時：パート時間制限を設定
         $remainingTime = $partTimeLimit;
 
         $session->update([

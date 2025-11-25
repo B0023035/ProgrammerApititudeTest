@@ -40,43 +40,75 @@ interface Props {
     stats: Stats;
 }
 
-const props = defineProps<Props>();
+interface Filters {
+    grade?: string | null;
+    event_id?: number | string | null;
+}
 
-// ランク分布のパーセンテージを計算
+interface PropsWithFilters {
+    stats: Stats;
+    filters?: Filters;
+    events?: Array<{ id: number; label: string }>;
+}
+
+interface GradeCount {
+    grade: number;
+    label: string;
+    count: number;
+}
+
+interface PropsWithFilters {
+    stats: Stats;
+    filters?: Filters;
+    events?: Array<{ id: number; label: string }>;
+    gradeCounts?: GradeCount[];
+}
+
+const { stats, filters, events, gradeCounts } = defineProps<PropsWithFilters>();
+
+// 学年選択肢を生成（データが存在する grade のみを表示）
+const gradeOptions = computed(() => {
+    const options = (gradeCounts || []).map(gc => ({
+        value: String(gc.grade),
+        label: gc.label,
+    }));
+    return options;
+});
+
 const rankPercentages = computed(() => {
-    const total = props.stats.total_sessions;
-    if (total === 0 || !props.stats.rank_distribution) {
+    const total = stats.total_sessions;
+    if (total === 0 || !stats.rank_distribution) {
         return { Platinum: 0, Gold: 0, Silver: 0, Bronze: 0 };
     }
 
     return {
-        Platinum: Math.round((props.stats.rank_distribution.Platinum / total) * 100),
-        Gold: Math.round((props.stats.rank_distribution.Gold / total) * 100),
-        Silver: Math.round((props.stats.rank_distribution.Silver / total) * 100),
-        Bronze: Math.round((props.stats.rank_distribution.Bronze / total) * 100),
+        Platinum: Math.round((stats.rank_distribution.Platinum / total) * 100),
+        Gold: Math.round((stats.rank_distribution.Gold / total) * 100),
+        Silver: Math.round((stats.rank_distribution.Silver / total) * 100),
+        Bronze: Math.round((stats.rank_distribution.Bronze / total) * 100),
     };
 });
 
 // 得点分布のパーセンテージを計算
 const scorePercentages = computed(() => {
-    const total = props.stats.total_sessions;
-    if (total === 0 || !props.stats.score_distribution) {
+    const total = stats.total_sessions;
+    if (total === 0 || !stats.score_distribution) {
         return { "90-95": 0, "80-89": 0, "70-79": 0, "60-69": 0, "0-59": 0 };
     }
 
     return {
-        "90-95": Math.round((props.stats.score_distribution["90-95"] / total) * 100),
-        "80-89": Math.round((props.stats.score_distribution["80-89"] / total) * 100),
-        "70-79": Math.round((props.stats.score_distribution["70-79"] / total) * 100),
-        "60-69": Math.round((props.stats.score_distribution["60-69"] / total) * 100),
-        "0-59": Math.round((props.stats.score_distribution["0-59"] / total) * 100),
+        "90-95": Math.round((stats.score_distribution["90-95"] / total) * 100),
+        "80-89": Math.round((stats.score_distribution["80-89"] / total) * 100),
+        "70-79": Math.round((stats.score_distribution["70-79"] / total) * 100),
+        "60-69": Math.round((stats.score_distribution["60-69"] / total) * 100),
+        "0-59": Math.round((stats.score_distribution["0-59"] / total) * 100),
     };
 });
 
 // 月別データの最大値を取得(グラフのスケール用)
 const maxMonthlyCount = computed(() => {
-    if (!props.stats.monthly_data) return 1;
-    return Math.max(...Object.values(props.stats.monthly_data), 1);
+    if (!stats.monthly_data) return 1;
+    return Math.max(...(Object.values(stats.monthly_data) as number[]), 1);
 });
 </script>
 
@@ -94,6 +126,29 @@ const maxMonthlyCount = computed(() => {
 
                 <!-- タブナビゲーション -->
                 <AdminResultsTabs />
+
+                <!-- フィルター（学年は1-3年に制限、セッション選択で絞り込み） -->
+                <form method="get" class="mt-4 mb-6 flex flex-wrap gap-3 items-end">
+                    <div class="w-36">
+                        <label class="block text-sm font-medium text-gray-700">学年</label>
+                        <select name="grade" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" :value="filters?.grade ?? 'all'">
+                            <option value="all">すべて</option>
+                            <option v-for="opt in gradeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                        </select>
+                    </div>
+
+                    <div class="w-96">
+                        <label class="block text-sm font-medium text-gray-700">イベント</label>
+                        <select name="event_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" :value="filters?.event_id ?? ''">
+                            <option value="">（指定なし）</option>
+                            <option v-for="e in events ?? []" :key="e.id" :value="e.id">{{ e.label }}</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">絞り込む</button>
+                    </div>
+                </form>
 
                 <!-- 主要統計カード -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

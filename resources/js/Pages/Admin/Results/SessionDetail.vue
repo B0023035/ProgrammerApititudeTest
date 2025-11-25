@@ -121,11 +121,11 @@ const getImagePath = (imageName: string | null, imageType: "questions" | "choice
 
     try {
         // Viteの画像インポート方法を使用
-        const modules = import.meta.glob("../images/**/*", {
+        const modules = import.meta.glob("../../images/**/*", {
             eager: true,
             as: "url",
         });
-        const imagePath = `../images/${imageType}/${trimmedName}`;
+        const imagePath = `../../images/${imageType}/${trimmedName}`;
 
         if (modules[imagePath]) {
             return modules[imagePath] as string;
@@ -158,7 +158,7 @@ const getChoiceImagePath = (image: string | null) => {
                 <!-- 戻るボタン -->
                 <div class="mb-6">
                     <Link
-                        :href="route('admin.results.index')"
+                        :href="route('admin.results.comlink')"
                         class="inline-flex items-center text-blue-600 hover:text-blue-800"
                     >
                         <svg
@@ -323,18 +323,18 @@ const getChoiceImagePath = (image: string | null) => {
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1">
                                         <div class="flex items-center mb-2">
-                                            <p class="font-medium text-gray-900">
+                                            <p class="font-bold text-lg text-gray-900">
                                                 問題 {{ question.question_number }}
                                             </p>
                                             <span
                                                 v-if="question.is_correct"
-                                                class="ml-3 inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800"
+                                                class="ml-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-200 text-green-900"
                                             >
                                                 ✓ 正解
                                             </span>
                                             <span
                                                 v-else
-                                                class="ml-3 inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800"
+                                                class="ml-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-200 text-red-900"
                                             >
                                                 ✗ 不正解
                                             </span>
@@ -344,7 +344,7 @@ const getChoiceImagePath = (image: string | null) => {
                                         <div class="mb-4">
                                             <p
                                                 v-if="question.question_text"
-                                                class="text-sm text-gray-700 mb-2"
+                                                class="text-base font-medium text-gray-800 mb-2"
                                             >
                                                 {{ question.question_text }}
                                             </p>
@@ -386,11 +386,12 @@ const getChoiceImagePath = (image: string | null) => {
                                         </div>
 
                                         <!-- 選択肢 -->
-                                        <div class="space-y-2 mb-3">
+                                        <div class="flex flex-nowrap gap-2 mb-3 overflow-x-auto pb-2">
                                             <div
                                                 v-for="choice in question.choices"
                                                 :key="choice.label"
-                                                class="flex items-start p-2 rounded"
+                                                class="flex flex-col items-center p-2 rounded flex-shrink-0 w-20"
+                                                style="min-width: 80px;"
                                                 :class="{
                                                     'bg-green-100 border border-green-300':
                                                         choice.is_correct,
@@ -432,11 +433,11 @@ const getChoiceImagePath = (image: string | null) => {
                                         <!-- 回答情報 -->
                                         <div class="grid grid-cols-2 gap-4 pt-3 border-t">
                                             <div>
-                                                <p class="text-xs text-gray-600 mb-1">
+                                                <p class="text-sm font-semibold text-gray-700 mb-1">
                                                     受験者の回答
                                                 </p>
                                                 <p
-                                                    class="text-sm font-medium"
+                                                    class="text-base font-bold"
                                                     :class="
                                                         question.is_correct
                                                             ? 'text-green-700'
@@ -447,8 +448,8 @@ const getChoiceImagePath = (image: string | null) => {
                                                 </p>
                                             </div>
                                             <div>
-                                                <p class="text-xs text-gray-600 mb-1">正解</p>
-                                                <p class="text-sm font-medium text-green-700">
+                                                <p class="text-sm font-semibold text-gray-700 mb-1">正解</p>
+                                                <p class="text-base font-bold text-purple-700">
                                                     {{ question.correct_choice }}
                                                 </p>
                                             </div>

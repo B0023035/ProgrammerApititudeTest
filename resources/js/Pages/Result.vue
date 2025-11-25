@@ -487,7 +487,7 @@ onBeforeUnmount(() => {
                         </text>
                     </g>
 
-                    <!-- 副校長サイン -->
+                    <!-- 校長サイン -->
                     <text
                         x="350"
                         y="765"
@@ -495,7 +495,7 @@ onBeforeUnmount(() => {
                         fill="#2C2C2C"
                         font-family="'HGP行書体', 'MS PGothic', serif"
                     >
-                        副校長　河津　道正
+                        校長　河津　道正
                     </text>
 
                     <!-- 印鑑 -->

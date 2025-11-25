@@ -48,173 +48,44 @@ const props = defineProps<{
     events?: string[];
 }>();
 
-const grades = ref<GradeData[]>([]);
 const loading = ref(false);
-const stats = ref({
-    average: 0,
-    highest: 0,
-    lowest: 0,
-    counts: { A: 0, B: 0, C: 0, D: 0, F: 0 },
-});
-
-const selectedSubject = ref("all");
-const selectedEvent = ref("all");
 const searchQuery = ref("");
 
-const generateGradesFromSessions = () => {
-    if (!props.sessions || props.sessions.length === 0) {
-        return [];
-    }
-
-    const subjects = ["規則発見力", "空間把握力", "問題解決力"];
-    const generatedGrades: GradeData[] = [];
-
-    props.sessions.forEach(session => {
-        if (!session.total_score || session.total_questions === 0) {
-            return;
-        }
-
-        const totalPercentage = (session.total_score / session.total_questions) * 100;
-
-        generatedGrades.push({
-            id: session.id * 10,
-            name: session.user.name,
-            subject: "全科目合計",
-            score: Math.round(totalPercentage),
-            exam_session_id: session.id,
-        });
-
-        subjects.forEach((subject, index) => {
-            const partWeights = [0.42, 0.32, 0.26];
-            const baseScore = totalPercentage * partWeights[index];
-            const variation = (Math.random() - 0.5) * 10;
-            const score = Math.max(0, Math.min(100, Math.round(baseScore + variation)));
-
-            generatedGrades.push({
-                id: session.id * 10 + index + 1,
-                name: session.user.name,
-                subject: subject,
-                score: score,
-                exam_session_id: session.id,
-            });
-        });
-    });
-
-    return generatedGrades;
-};
-
-const filteredGrades = computed(() => {
-    let result = grades.value;
-
-    if (selectedSubject.value !== "all") {
-        result = result.filter(g => g.subject === selectedSubject.value);
-    } else {
-        result = result.filter(g => g.subject === "全科目合計");
-    }
-
-    if (selectedEvent.value !== "all") {
-        result = result.filter(g => {
-            const session = props.sessions?.find(s => s.id === g.exam_session_id);
-            return session?.event?.name === selectedEvent.value;
-        });
-    }
-
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase();
-        result = result.filter(
-            g => g.name.toLowerCase().includes(query) || g.subject.toLowerCase().includes(query)
-        );
-    }
-
-    return result;
+const sessionsList = computed(() => {
+    return props.sessions ?? [];
 });
 
-const subjects = computed(() => {
-    const uniqueSubjects = [...new Set(grades.value.map(g => g.subject))].sort();
-    return ["all", ...uniqueSubjects.filter(s => s !== "全科目合計")];
+const filteredSessions = computed(() => {
+    if (!searchQuery.value) return sessionsList.value;
+
+    const q = searchQuery.value.toLowerCase();
+    return sessionsList.value.filter((s: any) =>
+        s.user.name.toLowerCase().includes(q) ||
+        s.user.email.toLowerCase().includes(q) ||
+        (s.rank && s.rank.toLowerCase().includes(q))
+    );
 });
 
-const events = computed(() => {
-    if (!props.events || props.events.length === 0) {
-        return ["all"];
-    }
-    return ["all", ...props.events];
-});
-
-const calculateGrade = (score: number): string => {
-    if (score >= 90) return "A";
-    if (score >= 80) return "B";
-    if (score >= 70) return "C";
-    if (score >= 60) return "D";
-    return "F";
+const getRankColor = (rank: string) => {
+    const colors: { [key: string]: string } = {
+        Platinum: "text-purple-600 bg-purple-100",
+        Gold: "text-yellow-600 bg-yellow-100",
+        Silver: "text-gray-600 bg-gray-100",
+        Bronze: "text-orange-600 bg-orange-100",
+    };
+    return colors[rank] || "text-gray-600 bg-gray-100";
 };
 
-const calculateStats = () => {
-    if (filteredGrades.value.length === 0) {
-        stats.value = {
-            average: 0,
-            highest: 0,
-            lowest: 0,
-            counts: { A: 0, B: 0, C: 0, D: 0, F: 0 },
-        };
-        return;
-    }
-
-    loading.value = true;
-
-    try {
-        const sum = filteredGrades.value.reduce((acc, g) => acc + g.score, 0);
-        const average = parseFloat((sum / filteredGrades.value.length).toFixed(2));
-        const highest = Math.max(...filteredGrades.value.map(g => g.score));
-        const lowest = Math.min(...filteredGrades.value.map(g => g.score));
-
-        const counts = { A: 0, B: 0, C: 0, D: 0, F: 0 };
-        filteredGrades.value.forEach(g => {
-            const grade = calculateGrade(g.score);
-            counts[grade as keyof GradeCounts]++;
-        });
-
-        stats.value = { average, highest, lowest, counts };
-    } catch (error) {
-        console.error("統計計算エラー:", error);
-    } finally {
-        loading.value = false;
-    }
-};
-
-const exportToCSV = () => {
-    loading.value = true;
-
-    const processedGrades = filteredGrades.value.map(g => ({
-        ...g,
-        grade: calculateGrade(g.score),
-    }));
-
-    loading.value = false;
-
-    const headers = ["学生名", "科目", "点数"];
-    const rows = processedGrades.map((g: ProcessedGrade) => [g.name, g.subject, g.score]);
-
-    const csvContent = [headers.join(","), ...rows.map((row: any[]) => row.join(","))].join("\n");
-
-    const blob = new Blob(["\uFEFF" + csvContent], {
-        type: "text/csv;charset=utf-8;",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `成績データ_${new Date().toISOString().split("T")[0]}.csv`;
-    link.click();
-};
-
-const goToUserDetail = (sessionId: number) => {
+const viewSessionDetail = (sessionId: number) => {
     router.visit(route("admin.results.session-detail", { sessionId }));
 };
 
+const viewUserDetail = (userId: number) => {
+    router.visit(route("admin.results.user-detail", { userId }));
+};
+
 onMounted(() => {
-    grades.value = generateGradesFromSessions();
-    setTimeout(() => {
-        calculateStats();
-    }, 100);
+    // nothing special for now
 });
 </script>
 
@@ -229,160 +100,94 @@ onMounted(() => {
                     <p class="mt-2 text-gray-600">Web Workerを活用した高速成績分析システム</p>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                    <div
-                        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white"
-                    >
-                        <div class="text-sm opacity-90 mb-2">平均点</div>
-                        <div class="text-4xl font-bold">
-                            {{ loading ? "..." : stats.average }}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">総セッション数</p>
+                                <p class="text-3xl font-bold text-gray-900">
+                                    {{ sessionsList.length }}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                    <div
-                        class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white"
-                    >
-                        <div class="text-sm opacity-90 mb-2">最高点</div>
-                        <div class="text-4xl font-bold">
-                            {{ loading ? "..." : stats.highest }}
+
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">表示中</p>
+                                <p class="text-3xl font-bold text-gray-900">
+                                    {{ filteredSessions.length }}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                    <div
-                        class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white"
-                    >
-                        <div class="text-sm opacity-90 mb-2">最低点</div>
-                        <div class="text-4xl font-bold">
-                            {{ loading ? "..." : stats.lowest }}
-                        </div>
-                    </div>
-                    <div
-                        class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white"
-                    >
-                        <div class="text-sm opacity-90 mb-2">データ数</div>
-                        <div class="text-4xl font-bold">
-                            {{ filteredGrades.length }}
+
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">（Comlink 表示）</p>
+                                <p class="text-3xl font-bold text-gray-900"> </p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-bold text-gray-900">フィルター</h3>
-                        <button
-                            @click="exportToCSV"
-                            class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                        >
-                            💾 CSV出力
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                科目で絞り込み
-                            </label>
-                            <select
-                                v-model="selectedSubject"
-                                @change="calculateStats"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            >
-                                <option value="all">すべての科目</option>
-                                <option
-                                    v-for="subject in subjects.filter(s => s !== 'all')"
-                                    :key="subject"
-                                    :value="subject"
-                                >
-                                    {{ subject }}
-                                </option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                イベントで絞り込み
-                            </label>
-                            <select
-                                v-model="selectedEvent"
-                                @change="calculateStats"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            >
-                                <option value="all">すべてのイベント</option>
-                                <option
-                                    v-for="event in events.filter(e => e !== 'all')"
-                                    :key="event"
-                                    :value="event"
-                                >
-                                    {{ event }}
-                                </option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                検索
-                            </label>
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-1">
+                            <label for="search" class="block text-sm font-medium text-gray-700 mb-2">検索</label>
                             <input
+                                id="search"
                                 v-model="searchQuery"
-                                @input="calculateStats"
                                 type="text"
-                                placeholder="学生名または科目で検索..."
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                placeholder="ユーザー名、メールアドレス、ランクで検索..."
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                         </div>
+                        <div class="pt-7">
+                            <button @click="searchQuery = ''" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">クリア</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h3 class="text-xl font-bold mb-4 text-gray-800">
-                        成績一覧
-                        <span class="text-sm font-normal text-gray-500"
-                            >({{ filteredGrades.length }}件)</span
-                        >
-                    </h3>
+                <div class="bg-white rounded-lg shadow overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
-                                        学生名
-                                    </th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
-                                        科目
-                                    </th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
-                                        点数
-                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">総合得点</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ランク</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">完了日時</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                <tr
-                                    v-for="grade in filteredGrades"
-                                    :key="grade.id"
-                                    class="hover:bg-gray-50 transition-colors cursor-pointer"
-                                    @click="goToUserDetail(grade.exam_session_id)"
-                                >
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-                                    >
-                                        {{ grade.name }}
+                                <tr v-for="session in filteredSessions" :key="session.id" class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800" @click="viewUserDetail(session.user_id)">
+                                            {{ session.user.name }}
+                                        </div>
+                                        <div class="text-sm text-gray-500">{{ session.user.email }}</div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ grade.subject }}
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-lg font-bold text-gray-900">{{ session.total_score }}点</div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ grade.score }}点
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span :class="getRankColor(session.rank)" class="px-3 py-1 rounded-full text-sm font-semibold">{{ session.rank }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">{{ new Date(session.finished_at).toLocaleString('ja-JP') }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <button @click="viewSessionDetail(session.id)" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm">詳細を見る</button>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
-                        <div
-                            v-if="filteredGrades.length === 0"
-                            class="text-center py-12 text-gray-500"
-                        >
-                            データがありません
-                        </div>
+
+                        <div v-if="filteredSessions.length === 0" class="text-center py-12 text-gray-500">データがありません</div>
                     </div>
                 </div>
             </div>

@@ -6,14 +6,27 @@ const page = usePage();
 
 const admin = computed(() => page.props.auth?.admin || page.props.admin);
 
-// 現在のルート名を取得
+// 現在のルート名を取得（安全に呼び出す）
 const currentRoute = computed(() => {
-    return route().current() as string;
+    try {
+        if (typeof route === "function" && route().current) {
+            const r = route().current();
+            return typeof r === "string" ? r : String(r || "");
+        }
+    } catch (e) {
+        // route() が未定義やエラーの場合は空文字を返す
+        console.debug && console.debug("route() access error in AdminLayout:", e);
+    }
+    return "";
 });
 
 // 各タブのアクティブ状態を判定
 const isActive = (routeName: string) => {
-    return currentRoute.value === routeName;
+    try {
+        return currentRoute.value === routeName;
+    } catch (e) {
+        return false;
+    }
 };
 
 const logout = () => {
@@ -68,6 +81,17 @@ const logout = () => {
                         🏠 ダッシュボード
                     </Link>
                     <Link
+                        :href="route('admin.events.index')"
+                        class="px-3 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+                        :class="
+                            isActive('admin.events.index')
+                                ? 'border-pink-500 text-pink-600'
+                                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                        "
+                    >
+                        🎫 イベント管理
+                    </Link>
+                    <Link
                         :href="route('admin.results.comlink')"
                         class="px-3 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
                         :class="
@@ -76,18 +100,7 @@ const logout = () => {
                                 : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                         "
                     >
-                        📊 成績管理(Comlink)
-                    </Link>
-                    <Link
-                        :href="route('admin.results.index')"
-                        class="px-3 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
-                        :class="
-                            isActive('admin.results.index')
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                        "
-                    >
-                        📈 成績管理
+                        📊 成績管理
                     </Link>
                     <Link
                         :href="route('admin.results.statistics')"

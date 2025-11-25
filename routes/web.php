@@ -7,6 +7,7 @@ use App\Http\Controllers\PracticeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionManagementController;
 use App\Http\Controllers\ResultsManagementController;
+use App\Http\Controllers\Admin\ResultsComlinkController;
 use App\Http\Controllers\SessionCodeController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Auth;
@@ -91,7 +92,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // 成績管理
         Route::prefix('results')->name('results.')->group(function () {
             Route::get('/', [ResultsManagementController::class, 'index'])->name('index');
-            Route::get('/comlink', [ResultsManagementController::class, 'comlink'])->name('comlink');
+            Route::get('/comlink', [ResultsComlinkController::class, 'index'])->name('comlink');
             Route::get('/statistics', [ResultsManagementController::class, 'statistics'])->name('statistics');
             Route::get('/grade-list', [ResultsManagementController::class, 'gradeList'])->name('grade-list');
             Route::get('/session/{sessionId}', [ResultsManagementController::class, 'sessionDetail'])->name('session-detail');

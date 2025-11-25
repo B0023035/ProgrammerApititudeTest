@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'admission_year',
     ];
 
     /**
@@ -84,5 +85,18 @@ class User extends Authenticatable
     public function latestCompletedExam()
     {
         return $this->examSessions()->whereNotNull('finished_at')->latest('finished_at');
+    }
+
+    /**
+     * 現在の学年を計算
+     * @return int|null
+     */
+    public function getCurrentGrade()
+    {
+        if (!$this->admission_year) {
+            return null;
+        }
+        $currentYear = (int) date('Y');
+        return $currentYear - $this->admission_year + 1;
     }
 }

@@ -284,7 +284,7 @@
                 </div>
                 
                 <div class="signature-area">
-                    <div class="vice-principal">副校長　河津　道正</div>
+                    <div class="vice-principal">校長　河津　道正</div>
                     @if(!empty($stampData))
                         <img src="data:image/gif;base64,{{ $stampData }}" alt="印鑑" class="stamp-image">
                     @else

@@ -59,7 +59,7 @@ const getRankColor = (rank: string) => {
                 <!-- 戻るボタン -->
                 <div class="mb-6">
                     <Link
-                        :href="route('admin.results.index')"
+                        :href="route('admin.results.comlink')"
                         class="inline-flex items-center text-blue-600 hover:text-blue-800"
                     >
                         <svg
