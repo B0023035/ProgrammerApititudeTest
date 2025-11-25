@@ -424,7 +424,7 @@ class ResultsManagementController extends Controller
                 : 0;
         }
 
-        // 月別受験者数を計算（フィルター後の $sessions を基にグルーピング）
+        // 月別受験者数を計算(フィルター後の $sessions を基にグルーピング)
         $monthlyData = [];
         foreach ($sessions as $s) {
             if (! $s->finished_at) continue;
@@ -433,14 +433,14 @@ class ResultsManagementController extends Controller
             $monthlyData[$m]++;
         }
 
-        // 月が抜けている場合は 0 を設定（1〜12）
+        // 月が抜けている場合は 0 を設定(1〜12)
         for ($month = 1; $month <= 12; $month++) {
             if (! isset($monthlyData[$month])) $monthlyData[$month] = 0;
         }
 
         ksort($monthlyData);
 
-        // イベント選択用リスト（最近のイベントを取得）
+        // イベント選択用リスト(最近のイベントを取得)
         $eventList = Event::orderBy('begin', 'desc')
             ->take(100)
             ->get()
@@ -450,7 +450,12 @@ class ResultsManagementController extends Controller
                     'label' => $e->name . ' — ' . ($e->begin ? $e->begin->format('Y-m-d') : ''),
                 ];
             });
-        // grade ごとのセッション数を取得
+
+        // ===== 修正部分: gradeCounts の生成ロジック =====
+        // 現在年を取得
+        $currentYear = (int) date('Y');
+        
+        // exam_sessions.grade ごとのセッション数を集計
         $gradeCountsRaw = ExamSession::whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->whereNotNull('grade')
@@ -460,25 +465,39 @@ class ResultsManagementController extends Controller
             ->pluck('count', 'grade')
             ->toArray();
 
-        $currentYear = (int) date('Y');
+        Log::info('Grade counts raw data', ['gradeCountsRaw' => $gradeCountsRaw]);
+
         $gradeCounts = [];
-        // 常に1〜3年は表示（データがなくても count=0）し、4年以上はデータがある場合のみ表示
-        for ($grade = 1; $grade <= 10; $grade++) {
+
+        // 1〜3年生は常に表示(データがなくても表示)
+        for ($grade = 1; $grade <= 3; $grade++) {
             $count = isset($gradeCountsRaw[$grade]) ? (int) $gradeCountsRaw[$grade] : 0;
-            if ($count === 0 && $grade > 3) {
-                continue; // データがない卒業年度は表示しない
-            }
-
-            $label = $grade <= 3
-                ? ($grade . '年')
-                : (($currentYear - $grade + 1) . '年卒');
-
+            
             $gradeCounts[] = [
                 'grade' => $grade,
-                'label' => $label,
+                'label' => $grade . '年',
                 'count' => $count,
             ];
         }
+
+        // 4年生以上(卒業年度表示)はデータがある場合のみ表示
+        foreach ($gradeCountsRaw as $grade => $count) {
+            if ($grade <= 3) {
+                continue; // 1-3年生は既に追加済み
+            }
+
+            // 卒業年度 = 現在年 - grade + 1
+            // 例: 2025年で grade=10 → 2025 - 10 + 1 = 2016年卒
+            $graduationYear = $currentYear - $grade + 1;
+            
+            $gradeCounts[] = [
+                'grade' => $grade,
+                'label' => $graduationYear . '年卒',
+                'count' => (int) $count,
+            ];
+        }
+
+        Log::info('Final grade counts', ['gradeCounts' => $gradeCounts]);
 
         return Inertia::render('Admin/Results/Statistics', [
             'stats' => [
@@ -495,7 +514,7 @@ class ResultsManagementController extends Controller
                 'event_id' => $eventId,
             ],
             'events' => $eventList,
-                    'gradeCounts' => $gradeCounts,
+            'gradeCounts' => $gradeCounts,
         ]);
     }
 

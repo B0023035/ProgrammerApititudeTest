@@ -36,19 +36,9 @@ interface Stats {
     monthly_data: MonthlyData;
 }
 
-interface Props {
-    stats: Stats;
-}
-
 interface Filters {
-    grade?: string | null;
+    grade?: string | number | null;
     event_id?: number | string | null;
-}
-
-interface PropsWithFilters {
-    stats: Stats;
-    filters?: Filters;
-    events?: Array<{ id: number; label: string }>;
 }
 
 interface GradeCount {
@@ -66,13 +56,17 @@ interface PropsWithFilters {
 
 const { stats, filters, events, gradeCounts } = defineProps<PropsWithFilters>();
 
-// 学年選択肢を生成（データが存在する grade のみを表示）
+// 学年選択肢を生成(データが存在する grade のみを表示)
 const gradeOptions = computed(() => {
-    const options = (gradeCounts || []).map(gc => ({
+    if (!gradeCounts || gradeCounts.length === 0) {
+        console.warn("gradeCounts is empty or undefined");
+        return [];
+    }
+
+    return gradeCounts.map(gc => ({
         value: String(gc.grade),
         label: gc.label,
     }));
-    return options;
 });
 
 const rankPercentages = computed(() => {
@@ -110,6 +104,13 @@ const maxMonthlyCount = computed(() => {
     if (!stats.monthly_data) return 1;
     return Math.max(...(Object.values(stats.monthly_data) as number[]), 1);
 });
+
+// デバッグ用ログ
+console.log("Statistics component props:", {
+    gradeCounts,
+    gradeOptions: gradeOptions.value,
+    filters,
+});
 </script>
 
 <template>
@@ -127,13 +128,13 @@ const maxMonthlyCount = computed(() => {
                 <!-- タブナビゲーション -->
                 <AdminResultsTabs />
 
-                <!-- フィルター（学年は1-3年に制限、セッション選択で絞り込み） -->
+                <!-- フィルター(学年は1-3年に制限、セッション選択で絞り込み) -->
                 <form method="get" class="mt-4 mb-6 flex flex-wrap gap-3 items-end">
                     <div class="w-36">
                         <label class="block text-sm font-medium text-gray-700">学年</label>
                         <select
                             name="grade"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                             :value="filters?.grade ?? 'all'"
                         >
                             <option value="all">すべて</option>
@@ -147,10 +148,10 @@ const maxMonthlyCount = computed(() => {
                         <label class="block text-sm font-medium text-gray-700">イベント</label>
                         <select
                             name="event_id"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                             :value="filters?.event_id ?? ''"
                         >
-                            <option value="">（指定なし）</option>
+                            <option value="">(指定なし)</option>
                             <option v-for="e in events ?? []" :key="e.id" :value="e.id">
                                 {{ e.label }}
                             </option>
@@ -160,17 +161,27 @@ const maxMonthlyCount = computed(() => {
                     <div>
                         <button
                             type="submit"
-                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
                         >
                             絞り込む
                         </button>
                     </div>
                 </form>
 
+                <!-- デバッグ情報(開発時のみ表示 - 本番環境では削除またはコメントアウト) -->
+                <!-- 
+                <div class="mb-4 p-4 bg-gray-100 rounded text-xs">
+                    <p><strong>Debug Info:</strong></p>
+                    <p>gradeCounts: {{ gradeCounts }}</p>
+                    <p>gradeOptions: {{ gradeOptions }}</p>
+                    <p>filters: {{ filters }}</p>
+                </div>
+                -->
+
                 <!-- 主要統計カード -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div
-                        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-8 text-white"
+                        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-8 text-white transform hover:scale-105 transition-transform"
                     >
                         <div class="flex items-center justify-between">
                             <div>
@@ -197,7 +208,7 @@ const maxMonthlyCount = computed(() => {
                     </div>
 
                     <div
-                        class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-8 text-white"
+                        class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-8 text-white transform hover:scale-105 transition-transform"
                     >
                         <div class="flex items-center justify-between">
                             <div>
@@ -224,7 +235,7 @@ const maxMonthlyCount = computed(() => {
                     </div>
 
                     <div
-                        class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-8 text-white"
+                        class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-8 text-white transform hover:scale-105 transition-transform"
                     >
                         <div class="flex items-center justify-between">
                             <div>
@@ -262,7 +273,7 @@ const maxMonthlyCount = computed(() => {
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
-                                            class="bg-purple-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                            class="bg-purple-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
                                             :style="`width: ${rankPercentages.Platinum}%`"
                                         >
                                             <span
@@ -282,7 +293,7 @@ const maxMonthlyCount = computed(() => {
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
-                                            class="bg-yellow-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                            class="bg-yellow-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
                                             :style="`width: ${rankPercentages.Gold}%`"
                                         >
                                             <span
@@ -302,7 +313,7 @@ const maxMonthlyCount = computed(() => {
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
-                                            class="bg-gray-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                            class="bg-gray-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
                                             :style="`width: ${rankPercentages.Silver}%`"
                                         >
                                             <span
@@ -322,7 +333,7 @@ const maxMonthlyCount = computed(() => {
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
-                                            class="bg-orange-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                            class="bg-orange-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
                                             :style="`width: ${rankPercentages.Bronze}%`"
                                         >
                                             <span
@@ -349,7 +360,7 @@ const maxMonthlyCount = computed(() => {
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
-                                            class="bg-green-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                            class="bg-green-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
                                             :style="`width: ${scorePercentages['90-95']}%`"
                                         >
                                             <span
@@ -369,7 +380,7 @@ const maxMonthlyCount = computed(() => {
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
-                                            class="bg-blue-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                            class="bg-blue-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
                                             :style="`width: ${scorePercentages['80-89']}%`"
                                         >
                                             <span
@@ -389,7 +400,7 @@ const maxMonthlyCount = computed(() => {
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
-                                            class="bg-yellow-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                            class="bg-yellow-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
                                             :style="`width: ${scorePercentages['70-79']}%`"
                                         >
                                             <span
@@ -409,7 +420,7 @@ const maxMonthlyCount = computed(() => {
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
-                                            class="bg-orange-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                            class="bg-orange-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
                                             :style="`width: ${scorePercentages['60-69']}%`"
                                         >
                                             <span
@@ -429,7 +440,7 @@ const maxMonthlyCount = computed(() => {
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-6">
                                         <div
-                                            class="bg-red-500 h-6 rounded-full flex items-center justify-end pr-2"
+                                            class="bg-red-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
                                             :style="`width: ${scorePercentages['0-59']}%`"
                                         >
                                             <span
@@ -464,7 +475,7 @@ const maxMonthlyCount = computed(() => {
                                 </div>
                                 <div class="bg-gray-200 rounded-full h-4">
                                     <div
-                                        class="bg-blue-500 h-4 rounded-full"
+                                        class="bg-blue-500 h-4 rounded-full transition-all"
                                         :style="`width: ${
                                             ((stats.part_averages[1] || 0) / 40) * 100
                                         }%`"
@@ -482,7 +493,7 @@ const maxMonthlyCount = computed(() => {
                                 </div>
                                 <div class="bg-gray-200 rounded-full h-4">
                                     <div
-                                        class="bg-green-500 h-4 rounded-full"
+                                        class="bg-green-500 h-4 rounded-full transition-all"
                                         :style="`width: ${
                                             ((stats.part_averages[2] || 0) / 30) * 100
                                         }%`"
@@ -500,7 +511,7 @@ const maxMonthlyCount = computed(() => {
                                 </div>
                                 <div class="bg-gray-200 rounded-full h-4">
                                     <div
-                                        class="bg-purple-500 h-4 rounded-full"
+                                        class="bg-purple-500 h-4 rounded-full transition-all"
                                         :style="`width: ${
                                             ((stats.part_averages[3] || 0) / 25) * 100
                                         }%`"
@@ -525,7 +536,7 @@ const maxMonthlyCount = computed(() => {
                                 <div class="flex-1">
                                     <div class="bg-gray-200 rounded-full h-5">
                                         <div
-                                            class="bg-indigo-500 h-5 rounded-full flex items-center justify-end pr-2"
+                                            class="bg-indigo-500 h-5 rounded-full flex items-center justify-end pr-2 transition-all"
                                             :style="`width: ${
                                                 (stats.monthly_data[month] / maxMonthlyCount) * 100
                                             }%`"
@@ -548,7 +559,7 @@ const maxMonthlyCount = computed(() => {
                 <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
                     <div class="flex items-start">
                         <svg
-                            class="w-6 h-6 text-blue-600 mt-1 mr-3"
+                            class="w-6 h-6 text-blue-600 mt-1 mr-3 flex-shrink-0"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
