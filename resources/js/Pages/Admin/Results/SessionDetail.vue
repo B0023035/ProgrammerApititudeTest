@@ -386,12 +386,14 @@ const getChoiceImagePath = (image: string | null) => {
                                         </div>
 
                                         <!-- 選択肢 -->
-                                        <div class="flex flex-nowrap gap-2 mb-3 overflow-x-auto pb-2">
+                                        <div
+                                            class="flex flex-nowrap gap-2 mb-3 overflow-x-auto pb-2"
+                                        >
                                             <div
                                                 v-for="choice in question.choices"
                                                 :key="choice.label"
                                                 class="flex flex-col items-center p-2 rounded flex-shrink-0 w-20"
-                                                style="min-width: 80px;"
+                                                style="min-width: 80px"
                                                 :class="{
                                                     'bg-green-100 border border-green-300':
                                                         choice.is_correct,
@@ -448,7 +450,9 @@ const getChoiceImagePath = (image: string | null) => {
                                                 </p>
                                             </div>
                                             <div>
-                                                <p class="text-sm font-semibold text-gray-700 mb-1">正解</p>
+                                                <p class="text-sm font-semibold text-gray-700 mb-1">
+                                                    正解
+                                                </p>
                                                 <p class="text-base font-bold text-purple-700">
                                                     {{ question.correct_choice }}
                                                 </p>

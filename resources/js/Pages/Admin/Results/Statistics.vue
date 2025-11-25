@@ -131,22 +131,39 @@ const maxMonthlyCount = computed(() => {
                 <form method="get" class="mt-4 mb-6 flex flex-wrap gap-3 items-end">
                     <div class="w-36">
                         <label class="block text-sm font-medium text-gray-700">学年</label>
-                        <select name="grade" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" :value="filters?.grade ?? 'all'">
+                        <select
+                            name="grade"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                            :value="filters?.grade ?? 'all'"
+                        >
                             <option value="all">すべて</option>
-                            <option v-for="opt in gradeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                            <option v-for="opt in gradeOptions" :key="opt.value" :value="opt.value">
+                                {{ opt.label }}
+                            </option>
                         </select>
                     </div>
 
                     <div class="w-96">
                         <label class="block text-sm font-medium text-gray-700">イベント</label>
-                        <select name="event_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" :value="filters?.event_id ?? ''">
+                        <select
+                            name="event_id"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                            :value="filters?.event_id ?? ''"
+                        >
                             <option value="">（指定なし）</option>
-                            <option v-for="e in events ?? []" :key="e.id" :value="e.id">{{ e.label }}</option>
+                            <option v-for="e in events ?? []" :key="e.id" :value="e.id">
+                                {{ e.label }}
+                            </option>
                         </select>
                     </div>
 
                     <div>
-                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">絞り込む</button>
+                        <button
+                            type="submit"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                        >
+                            絞り込む
+                        </button>
                     </div>
                 </form>
 
