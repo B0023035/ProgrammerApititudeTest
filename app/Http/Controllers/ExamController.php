@@ -19,122 +19,102 @@ class ExamController extends Controller
 {
     
     /**
-     * 本番テスト開始処理(セキュリティ対応版) - カスタム対応修正版
-     */
-    public function start()
-    {
-        $user = Auth::user();
+ * 本番テスト開始処理(セッションコード必須版)
+ */
+public function start()
+{
+    $user = Auth::user();
 
-        Log::info('=== exam.start 呼び出し ===', [
+    Log::info('=== exam.start 呼び出し ===', [
+        'user_id' => $user->id,
+    ]);
+
+    // ★ セッションコードの確認(最重要)
+    $sessionCode = session('exam_session_code') ?? session('verified_session_code');
+    
+    if (!$sessionCode) {
+        Log::error('セッションコードが未入力', [
             'user_id' => $user->id,
         ]);
+        return redirect()->route('test.start')
+            ->with('error', 'セッションコードを入力してください。');
+    }
 
-        // セッションコードを取得
-        $sessionCode = session('exam_session_code');
-        $event = $this->getEventBySessionCode($sessionCode);
+    // イベント情報を取得
+    $event = $this->getEventBySessionCode($sessionCode);
 
-        // イベントが見つからない場合はエラー
-        if (! $event) {
-            Log::error('セッションコードが無効', [
-                'user_id' => $user->id,
-                'session_code' => $sessionCode,
-            ]);
-            return back()->with('error', 'セッションコードが無効または期限切れです。');
-        }
-
-        $examType = $event->exam_type;
-
-        Log::info('試験タイプ確認', [
+    if (!$event) {
+        Log::error('セッションコードが無効', [
             'user_id' => $user->id,
+            'session_code' => $sessionCode,
+        ]);
+        
+        // セッションコードをクリア
+        session()->forget(['exam_session_code', 'verified_session_code']);
+        
+        return redirect()->route('test.start')
+            ->with('error', 'セッションコードが無効または期限切れです。');
+    }
+
+    $examType = $event->exam_type;
+
+    Log::info('試験タイプ確認', [
+        'user_id' => $user->id,
+        'exam_type' => $examType,
+        'event_id' => $event->id,
+        'event_name' => $event->name,
+    ]);
+
+    // 未完了セッションがあるかチェック
+    $existingSession = ExamSession::where('user_id', $user->id)
+        ->where('event_id', $event->id)
+        ->whereNull('finished_at')
+        ->whereNull('disqualified_at')
+        ->first();
+
+    if ($existingSession) {
+        Log::info('既存セッションに復帰', [
+            'user_id' => $user->id,
+            'exam_session_id' => $existingSession->id,
+            'current_part' => $existingSession->current_part,
+            'event_id' => $event->id,
+        ]);
+
+        return Inertia::location(route('exam.part', ['part' => $existingSession->current_part]));
+    }
+
+    // セッション実施時の学年を計算して保存
+    $currentYear = (int) date('Y');
+    $admissionYear = (int) ($user->admission_year ?? 0);
+    $grade = $admissionYear > 0 ? max(1, min(($currentYear - $admissionYear + 1), 10)) : null;
+
+    // 新規セッション作成
+    $session = ExamSession::create([
+        'user_id' => $user->id,
+        'event_id' => $event->id,
+        'grade' => $grade,
+        'started_at' => now(),
+        'current_part' => 1,
+        'current_question' => 1,
+        'remaining_time' => 0,
+        'security_log' => json_encode([
             'exam_type' => $examType,
             'event_id' => $event->id,
             'event_name' => $event->name,
-        ]);
+        ]),
+    ]);
 
-        // 未完了・未失格セッションがあるかチェック
-        $existingSession = ExamSession::where('user_id', $user->id)
-            ->whereNull('finished_at')
-            ->whereNull('disqualified_at')
-            ->first();
+    Log::info('新しい試験セッション作成', [
+        'user_id' => $user->id,
+        'exam_session_id' => $session->id,
+        'session_uuid' => $session->session_uuid,
+        'exam_type' => $examType,
+        'event_id' => $event->id,
+        'starting_part' => 1,
+    ]);
 
-        if ($existingSession) {
-            // 失格チェック
-            $violationCount = ExamViolation::where('exam_session_id', $existingSession->id)->count();
-            if ($violationCount >= 3 && ! $existingSession->disqualified_at) {
-                $this->disqualifySession($existingSession, 'Multiple security violations');
-                return Inertia::location(route('exam.disqualified'));
-            }
-
-            if ($existingSession->disqualified_at) {
-                return Inertia::location(route('exam.disqualified'));
-            }
-
-            // ★ 重要: 既存セッションのsecurity_logにイベント情報を更新
-            $securityLog = json_decode($existingSession->security_log ?? '{}', true);
-            $securityLog['exam_type'] = $examType;
-            $securityLog['event_id'] = $event->id;
-            
-            $existingSession->update([
-                'security_log' => json_encode($securityLog),
-            ]);
-
-            Log::info('既存セッションに復帰(イベント情報更新)', [
-                'user_id' => $user->id,
-                'exam_session_id' => $existingSession->id,
-                'current_part' => $existingSession->current_part,
-                'exam_type' => $examType,
-                'event_id' => $event->id,
-            ]);
-
-            return Inertia::location(route('exam.part', ['part' => $existingSession->current_part]));
-        }
-
-        // セッション実施時の学年を計算してスナップショット保存
-        $currentYear = (int) date('Y');
-        $admissionYear = (int) ($user->admission_year ?? 0);
-        $grade = $admissionYear > 0 ? max(1, min(($currentYear - $admissionYear + 1), 10)) : null;
-
-        // ★ 重要: 新規セッション作成時にイベント情報を保存
-        $session = ExamSession::create([
-            'user_id' => $user->id,
-            'event_id' => $event->id,  // ★ event_idを保存
-            'grade' => $grade,
-            'started_at' => now(),
-            'current_part' => 1,
-            'current_question' => 1,
-            'remaining_time' => 0,
-            'security_log' => json_encode([
-                'exam_type' => $examType,
-                'event_id' => $event->id,
-                'event_name' => $event->name,
-                // ★ カスタム設定も保存
-                'custom_settings' => $examType === 'custom' ? [
-                    'part1_questions' => $event->custom_part1_questions,
-                    'part1_time' => $event->custom_part1_time,
-                    'part2_questions' => $event->custom_part2_questions,
-                    'part2_time' => $event->custom_part2_time,
-                    'part3_questions' => $event->custom_part3_questions,
-                    'part3_time' => $event->custom_part3_time,
-                ] : null,
-            ]),
-        ]);
-
-        Log::info('新しい試験セッション作成', [
-            'user_id' => $user->id,
-            'exam_session_id' => $session->id,
-            'session_uuid' => $session->session_uuid,
-            'exam_type' => $examType,
-            'event_id' => $event->id,
-            'starting_part' => 1,
-            'custom_settings' => $examType === 'custom' ? [
-                'part1' => "{$event->custom_part1_questions}問 / {$event->custom_part1_time}分",
-                'part2' => "{$event->custom_part2_questions}問 / {$event->custom_part2_time}分",
-                'part3' => "{$event->custom_part3_questions}問 / {$event->custom_part3_time}分",
-            ] : 'N/A',
-        ]);
-
-        return Inertia::location(route('exam.part', ['part' => 1]));
-    }
+    return Inertia::location(route('exam.part', ['part' => 1]));
+}
 
 
     /**
@@ -172,7 +152,7 @@ class ExamController extends Controller
     }
 
 /**
- * パート画面表示(セキュリティ対応版)- カスタム対応修正版
+ * パート画面表示(セッションコード必須版)
  */
 public function part(Request $request, $part)
 {
@@ -182,12 +162,10 @@ public function part(Request $request, $part)
     Log::info('=== exam.part 呼び出し ===', [
         'user_id' => $user->id,
         'requested_part' => $part,
-        'session_code' => session('exam_session_code'),
-        'verified_session_code' => session('verified_session_code'),
     ]);
 
     // パート番号の検証
-    if (! in_array($part, [1, 2, 3])) {
+    if (!in_array($part, [1, 2, 3])) {
         Log::warning('無効なパート番号でリダイレクト', [
             'user_id' => $user->id,
             'part' => $part,
@@ -196,8 +174,45 @@ public function part(Request $request, $part)
             ->with('error', '無効なパート番号です。');
     }
 
+    // ★ セッションコードの確認(最重要)
+    $sessionCode = session('exam_session_code') ?? session('verified_session_code');
+    
+    if (!$sessionCode) {
+        Log::error('セッションコードが未設定', [
+            'user_id' => $user->id,
+            'part' => $part,
+        ]);
+        return redirect()->route('test.start')
+            ->with('error', 'セッションコードを入力してください。');
+    }
+
+    // イベント情報を取得
+    $event = $this->getEventBySessionCode($sessionCode);
+
+    if (!$event) {
+        Log::error('セッションコードが無効', [
+            'user_id' => $user->id,
+            'session_code' => $sessionCode,
+        ]);
+        
+        session()->forget(['exam_session_code', 'verified_session_code']);
+        
+        return redirect()->route('test.start')
+            ->with('error', 'セッションコードが無効または期限切れです。');
+    }
+
+    $examType = $event->exam_type;
+
+    Log::info('イベント情報取得成功', [
+        'user_id' => $user->id,
+        'event_id' => $event->id,
+        'exam_type' => $examType,
+        'event_name' => $event->name,
+    ]);
+
     // セッション取得
     $session = ExamSession::where('user_id', $user->id)
+        ->where('event_id', $event->id)
         ->whereNull('finished_at')
         ->whereNull('disqualified_at')
         ->first();
@@ -208,56 +223,31 @@ public function part(Request $request, $part)
         'session_id' => $session ? $session->id : null,
     ]);
 
-    // ★ 修正: セッションが存在する場合、そこからイベント情報を取得
-    $event = null;
-    $examType = 'full';
-    
-    if ($session && $session->event_id) {
-        // セッションにevent_idがある場合はそこから取得
-        $event = \App\Models\Event::find($session->event_id);
-        if ($event) {
-            $examType = $event->exam_type;
-        }
-    } else {
-        // セッションコードから取得
-        $sessionCode = session('exam_session_code') ?? session('verified_session_code');
-        $event = $sessionCode ? $this->getEventBySessionCode($sessionCode) : null;
-        $examType = $event ? $event->exam_type : 'full';
-    }
-
-    Log::info('イベント情報取得', [
-        'user_id' => $user->id,
-        'event_id' => $event ? $event->id : null,
-        'exam_type' => $examType,
-        'has_session' => $session ? 'yes' : 'no',
-    ]);
-
     // セッションがない場合は新規作成
-        if (! $session) {
+    if (!$session) {
         Log::info('セッションが存在しないため新規作成', [
             'user_id' => $user->id,
             'requested_part' => $part,
             'exam_type' => $examType,
         ]);
 
-        // 新規セッション作成
-            // セッション実施時の学年を計算して保存
-            $currentYear = (int) date('Y');
-            $admissionYear = (int) ($user->admission_year ?? 0);
-            $grade = $admissionYear > 0 ? max(1, min(($currentYear - $admissionYear + 1), 10)) : null;
+        $currentYear = (int) date('Y');
+        $admissionYear = (int) ($user->admission_year ?? 0);
+        $grade = $admissionYear > 0 ? max(1, min(($currentYear - $admissionYear + 1), 10)) : null;
 
-            $session = ExamSession::create([
-                'user_id' => $user->id,
-                'grade' => $grade,
-                'started_at' => now(),
-                'current_part' => $part,
-                'current_question' => 1,
-                'remaining_time' => 0,
-                'security_log' => json_encode([
-                    'exam_type' => $examType,
-                    'event_id' => $event->id ?? null,
-                ]),
-            ]);
+        $session = ExamSession::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'grade' => $grade,
+            'started_at' => now(),
+            'current_part' => $part,
+            'current_question' => 1,
+            'remaining_time' => 0,
+            'security_log' => json_encode([
+                'exam_type' => $examType,
+                'event_id' => $event->id,
+            ]),
+        ]);
 
         Log::info('新規セッション作成完了', [
             'user_id' => $user->id,
@@ -304,33 +294,37 @@ public function part(Request $request, $part)
             ->with('error', '試験は既に完了しています。新しい試験を開始してください。');
     }
 
-    // 試験タイプを取得
-    $securityLog = json_decode($session->security_log ?? '{}', true);
-    $examType = $securityLog['exam_type'] ?? 'full';
-
-    // 違反回数をチェック
-    $violationCount = ExamViolation::where('exam_session_id', $session->id)->count();
-    if ($violationCount >= 3) {
-        if (! $session->disqualified_at) {
-            $this->disqualifySession($session, 'Multiple security violations');
-        }
-
-        return redirect()->route('exam.disqualified');
-    }
-
     // パート時間制限を取得
     $partTimeLimit = $this->getPartTimeLimitByEvent($part, $examType, $event);
+
+    Log::info('パート時間制限取得', [
+        'part' => $part,
+        'exam_type' => $examType,
+        'event_id' => $event->id,
+        'time_limit_seconds' => $partTimeLimit,
+        'time_limit_minutes' => $partTimeLimit > 0 ? round($partTimeLimit / 60, 2) : 'unlimited',
+    ]);
 
     // 残り時間の処理
     if ($session->remaining_time > 0) {
         $remainingTime = $session->remaining_time;
+        Log::info('既存の残り時間を使用', [
+            'remaining_time' => $remainingTime,
+            'remaining_minutes' => round($remainingTime / 60, 2),
+        ]);
     } else {
-        // 初回アクセス時：パート時間制限を設定
+        // 初回アクセス時:パート時間制限を設定
         $remainingTime = $partTimeLimit;
 
         $session->update([
             'remaining_time' => $remainingTime,
             'started_at' => $session->started_at ?? now(),
+        ]);
+        
+        Log::info('新規に残り時間を設定', [
+            'remaining_time' => $remainingTime,
+            'part_time_limit' => $partTimeLimit,
+            'remaining_minutes' => $remainingTime > 0 ? round($remainingTime / 60, 2) : 'unlimited',
         ]);
     }
 
@@ -354,9 +348,11 @@ public function part(Request $request, $part)
         'part' => $part,
         'started_at' => now(),
         'exam_type' => $examType,
+        'event_id' => $event->id,
     ], 30 * 60);
 
     // security_log から保存済みの解答を取得
+    $securityLog = json_decode($session->security_log ?? '{}', true);
     $savedAnswers = $securityLog['part_'.$part.'_answers'] ?? [];
 
     Log::info('保存済み解答の読み込み', [
@@ -366,8 +362,14 @@ public function part(Request $request, $part)
         'exam_type' => $examType,
     ]);
 
-    // ★ 修正: イベント情報を渡す
+    // 問題数を取得
     $questionCount = $this->getQuestionCountByEvent($part, $examType, $event);
+
+    Log::info('問題数取得', [
+        'part' => $part,
+        'exam_type' => $examType,
+        'question_count' => $questionCount,
+    ]);
 
     // 問題を取得
     $questions = Question::with(['choices' => function ($query) use ($part) {
@@ -403,12 +405,8 @@ public function part(Request $request, $part)
         'questions_count' => $questions->count(),
         'exam_type' => $examType,
         'expected_count' => $questionCount,
-        'question_ids' => $questions->pluck('id')->toArray(),
-        'first_question_id' => $questions->first()->id ?? null,
-        'last_question_id' => $questions->last()->id ?? null,
     ]);
 
-    // ★ 修正: イベント情報を渡す
     return Inertia::render('Part', [
         'examSessionId' => $sessionId,
         'practiceSessionId' => $sessionId,
@@ -416,11 +414,11 @@ public function part(Request $request, $part)
         'part' => $part,
         'questions' => $questions,
         'currentPart' => $part,
-        'partTime' => $this->getPartTimeLimitByEvent($part, $examType, $event),
+        'partTime' => $partTimeLimit,
         'remainingTime' => $remainingTime,
         'currentQuestion' => $session->current_question,
         'totalParts' => 3,
-        'violationCount' => $violationCount,
+        'violationCount' => 0,
         'examType' => $examType,
     ]);
 }
@@ -1701,8 +1699,8 @@ public function completePart(Request $request)
         }
     }
 
-    /**
- * イベント情報から試験時間を取得(統一版)
+   /**
+ * イベント情報からパート時間制限を取得
  */
 private function getPartTimeLimitByEvent($part, $examType = 'full', $event = null)
 {
@@ -1713,7 +1711,7 @@ private function getPartTimeLimitByEvent($part, $examType = 'full', $event = nul
         'event_id' => $event ? $event->id : null,
     ]);
 
-    // ★ 重要修正: イベントデータが存在する場合は必ずイベントから取得
+    // イベントデータが存在する場合は必ずイベントから取得
     if ($event) {
         $timeKey = "part{$part}_time";
         $eventTime = $event->$timeKey ?? null;
@@ -1722,21 +1720,20 @@ private function getPartTimeLimitByEvent($part, $examType = 'full', $event = nul
             'part' => $part,
             'time_key' => $timeKey,
             'event_time' => $eventTime,
-            'event_data' => [
+            'all_times' => [
                 'part1_time' => $event->part1_time ?? 'null',
                 'part2_time' => $event->part2_time ?? 'null',
                 'part3_time' => $event->part3_time ?? 'null',
             ],
         ]);
         
-        // イベントに時間設定がある場合はそれを使用
         if ($eventTime !== null) {
             Log::info('イベント設定の時間を返します', [
                 'part' => $part,
                 'seconds' => $eventTime,
                 'minutes' => $eventTime > 0 ? round($eventTime / 60, 2) : '無制限',
             ]);
-            return $eventTime; // 既に秒単位で保存されている
+            return $eventTime;
         }
     }
 
@@ -1761,7 +1758,7 @@ private function getPartTimeLimitByEvent($part, $examType = 'full', $event = nul
 }
 
 /**
- * イベント情報から問題数を取得(統一版)
+ * イベント情報から問題数を取得
  */
 private function getQuestionCountByEvent($part, $examType = 'full', $event = null)
 {
@@ -1771,7 +1768,6 @@ private function getQuestionCountByEvent($part, $examType = 'full', $event = nul
         'has_event' => $event ? 'yes' : 'no',
     ]);
 
-    // ★ 重要修正: イベントデータが存在する場合は必ずイベントから取得
     if ($event) {
         $questionKey = "part{$part}_questions";
         $eventQuestions = $event->$questionKey ?? null;
@@ -1810,12 +1806,13 @@ private function getQuestionCountByEvent($part, $examType = 'full', $event = nul
     return $result;
 }
 
+
     /**
      * セッションコードからイベント情報を取得
      */
     private function getEventBySessionCode($sessionCode)
     {
-        if (! $sessionCode) {
+        if (!$sessionCode) {
             return null;
         }
 
@@ -1823,6 +1820,12 @@ private function getQuestionCountByEvent($part, $examType = 'full', $event = nul
             ->where('begin', '<=', now())
             ->where('end', '>=', now())
             ->first();
+
+        Log::info('セッションコードからイベント検索', [
+            'session_code' => $sessionCode,
+            'event_found' => $event ? 'yes' : 'no',
+            'event_id' => $event ? $event->id : null,
+        ]);
 
         return $event;
     }

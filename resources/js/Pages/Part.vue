@@ -736,9 +736,30 @@ const currentQuestion = computed(() => questions.value[currentIndex.value] || {}
 function startPractice() {
     showPracticeStartPopup.value = false;
     form.startTime = Date.now();
+
+    // ★ 追加: ポップアップを閉じたタイミングでタイマー開始
+    const partTimeLimit = page.props.partTime || 0;
+
+    if (partTimeLimit > 0) {
+        // 時間制限がある場合のみタイマーを開始
+        timer = setInterval(() => {
+            if (remainingTime.value > 0) {
+                remainingTime.value--;
+            } else {
+                handleTimeUp();
+            }
+        }, 1000);
+
+        console.log("タイマー開始", {
+            partTimeLimit,
+            remainingTime: remainingTime.value,
+        });
+    } else {
+        console.log("無制限時間モード: タイマーは動作しません");
+    }
 }
 
-// 選択肢のバリデーションと重複排除（Part.vueと同じロジック）
+// 選択肢のバリデーションと重複排除(Part.vueと同じロジック)
 const validatedChoices = computed(() => {
     if (!currentQuestion.value.choices) {
         console.log("No choices found for current question");
@@ -769,7 +790,7 @@ const validatedChoices = computed(() => {
         return [];
     }
 
-    // 重複除去（IDベース）
+    // 重複除去(IDベース)
     const uniqueChoiceIds = new Set<number>();
     const uniqueChoices = validPartChoices.filter(choice => {
         if (!choice || !choice.id) {
@@ -799,7 +820,7 @@ const validatedChoices = computed(() => {
         return true;
     });
 
-    // ラベル順でソート（A, B, C, D, E）
+    // ラベル順でソート(A, B, C, D, E)
     finalChoices.sort((a, b) => a.label.localeCompare(b.label));
 
     console.log("Final choices:", finalChoices);
@@ -825,7 +846,9 @@ const remainingTime = ref<number>(
 // タイマー表示の計算プロパティ(無制限対応版)
 const timerDisplay = computed(() => {
     // ★ 無制限時間(0分)の場合は特別表示
-    if (remainingTime.value === 0) {
+    const partTimeLimit = page.props.partTime || 0;
+
+    if (partTimeLimit === 0) {
         return "∞ (無制限)";
     }
 

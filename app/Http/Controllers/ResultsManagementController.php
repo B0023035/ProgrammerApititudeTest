@@ -452,8 +452,30 @@ class ResultsManagementController extends Controller
             });
 
         // ===== 修正部分: gradeCounts の生成ロジック =====
-        // 現在年を取得
+        // 現在年を取得して、在学生の卒業年度を計算
         $currentYear = (int) date('Y');
+        $currentMonth = (int) date('n'); // 1-12
+        
+        // 4月以降なら次年度扱い（例: 2025年4月 = 2025年度）
+        // 1-3月なら前年度扱い（例: 2025年3月 = 2024年度）
+        $academicYear = $currentMonth >= 4 ? $currentYear : $currentYear - 1;
+        
+        // 各学年の卒業予定年度を計算
+        // 3年生: 今年度末 (academicYear + 1)
+        // 2年生: 来年度末 (academicYear + 2)
+        // 1年生: 再来年度末 (academicYear + 3)
+        $gradeGraduationYears = [
+            3 => $academicYear + 1,  // 3年生の卒業年
+            2 => $academicYear + 2,  // 2年生の卒業年
+            1 => $academicYear + 3,  // 1年生の卒業年
+        ];
+        
+        Log::info('Academic year calculation', [
+            'currentYear' => $currentYear,
+            'currentMonth' => $currentMonth,
+            'academicYear' => $academicYear,
+            'gradeGraduationYears' => $gradeGraduationYears
+        ]);
         
         // exam_sessions.grade ごとのセッション数を集計
         $gradeCountsRaw = ExamSession::whereNotNull('finished_at')
@@ -469,35 +491,165 @@ class ResultsManagementController extends Controller
 
         $gradeCounts = [];
 
-        // 1〜3年生は常に表示(データがなくても表示)
+        // 1〜3年生は常に表示（卒業年度付き）
         for ($grade = 1; $grade <= 3; $grade++) {
             $count = isset($gradeCountsRaw[$grade]) ? (int) $gradeCountsRaw[$grade] : 0;
+            $graduationYear = $gradeGraduationYears[$grade];
             
             $gradeCounts[] = [
                 'grade' => $grade,
-                'label' => $grade . '年',
+                'label' => "{$grade}年 ({$graduationYear}年卒)",
                 'count' => $count,
             ];
         }
 
-        // 4年生以上(卒業年度表示)はデータがある場合のみ表示
-        foreach ($gradeCountsRaw as $grade => $count) {
-            if ($grade <= 3) {
-                continue; // 1-3年生は既に追加済み
-            }
+        // 卒業生（過去の卒業年度）を admission_year から集計
+        // 現在の在学生の卒業年度を除外するため、それより前の年度のみ表示
+        $currentGraduationYears = array_values($gradeGraduationYears); // [2026, 2027, 2028]
+        
+        $pastGraduates = ExamSession::whereNotNull('finished_at')
+            ->whereNull('disqualified_at')
+            ->with('user')
+            ->get()
+            ->filter(function($session) {
+                return $session->user && $session->user->admission_year;
+            })
+            ->map(function($session) {
+                return [
+                    'admission_year' => $session->user->admission_year,
+                    'graduation_year' => $session->user->admission_year + 3,
+                    'session' => $session,
+                ];
+            })
+            ->filter(function($data) use ($currentGraduationYears) {
+                // 現在の在学生の卒業年度は除外
+                return !in_array($data['graduation_year'], $currentGraduationYears);
+            })
+            ->groupBy('graduation_year')
+            ->map(function($group, $graduationYear) {
+                return [
+                    'graduation_year' => $graduationYear,
+                    'count' => $group->count(),
+                ];
+            })
+            ->sortByDesc('graduation_year') // 新しい年度順
+            ->values();
 
-            // 卒業年度 = 現在年 - grade + 1
-            // 例: 2025年で grade=10 → 2025 - 10 + 1 = 2016年卒
-            $graduationYear = $currentYear - $grade + 1;
-            
+        foreach ($pastGraduates as $graduate) {
             $gradeCounts[] = [
-                'grade' => $grade,
-                'label' => $graduationYear . '年卒',
-                'count' => (int) $count,
+                'grade' => 'grad_' . $graduate['graduation_year'], // 一意なキーを生成
+                'label' => $graduate['graduation_year'] . '年卒',
+                'count' => $graduate['count'],
+                'is_graduate' => true,
+                'graduation_year' => $graduate['graduation_year'],
             ];
         }
 
         Log::info('Final grade counts', ['gradeCounts' => $gradeCounts]);
+        
+        // フィルター処理の修正
+        $validGrade = null;
+        if ($grade !== null && $grade !== '' && $grade !== 'all') {
+            // 'grad_YYYY' 形式の場合は卒業年度でフィルタリング
+            if (strpos($grade, 'grad_') === 0) {
+                $graduationYear = (int) str_replace('grad_', '', $grade);
+                // admission_year から卒業年度を計算してフィルタリング
+                $baseQuery = $baseQuery->whereHas('user', function($query) use ($graduationYear) {
+                    $query->whereRaw('admission_year + 3 = ?', [$graduationYear]);
+                });
+                $validGrade = $grade;
+            } else {
+                // 通常の grade (1, 2, 3) でフィルタリング
+                $gradeInt = (int) $grade;
+                if (in_array($gradeInt, [1, 2, 3])) {
+                    $validGrade = (string) $gradeInt;
+                } else {
+                    Log::warning('Invalid grade selected', ['grade' => $grade]);
+                }
+            }
+        }
+
+        // validGrade が設定されている場合、再集計
+        if ($validGrade !== null) {
+            if (strpos($validGrade, 'grad_') === 0) {
+                // 卒業年度でフィルタリング済み
+                $totalSessions = (clone $baseQuery)->count();
+                $sessions = (clone $baseQuery)->get();
+            } else {
+                // 通常の grade でフィルタリング
+                $totalSessions = (clone $baseQuery)->where('grade', (int) $validGrade)->count();
+                $sessions = (clone $baseQuery)->where('grade', (int) $validGrade)->get();
+            }
+            
+            // スコアなどを再計算
+            $scores = [];
+            $rankCounts = [
+                'Platinum' => 0,
+                'Gold' => 0,
+                'Silver' => 0,
+                'Bronze' => 0,
+            ];
+            $partScores = [1 => [], 2 => [], 3 => []];
+
+            foreach ($sessions as $session) {
+                $totalScore = $this->calculateScore($session->id);
+                $scores[] = $totalScore;
+
+                $rank = $this->calculateRank($totalScore);
+                $rankCounts[$rank]++;
+
+                for ($part = 1; $part <= 3; $part++) {
+                    $partScore = $this->calculateScore($session->id, $part);
+                    $partScores[$part][] = $partScore;
+                }
+            }
+
+            $averageScore = count($scores) > 0
+                ? round(array_sum($scores) / count($scores), 2)
+                : 0;
+
+            $scoreDistribution = [
+                '90-95' => 0,
+                '80-89' => 0,
+                '70-79' => 0,
+                '60-69' => 0,
+                '0-59' => 0,
+            ];
+
+            foreach ($scores as $score) {
+                if ($score >= 90) {
+                    $scoreDistribution['90-95']++;
+                } elseif ($score >= 80) {
+                    $scoreDistribution['80-89']++;
+                } elseif ($score >= 70) {
+                    $scoreDistribution['70-79']++;
+                } elseif ($score >= 60) {
+                    $scoreDistribution['60-69']++;
+                } else {
+                    $scoreDistribution['0-59']++;
+                }
+            }
+
+            $partAverages = [];
+            for ($part = 1; $part <= 3; $part++) {
+                $partAverages[$part] = count($partScores[$part]) > 0
+                    ? round(array_sum($partScores[$part]) / count($partScores[$part]), 2)
+                    : 0;
+            }
+
+            $monthlyData = [];
+            foreach ($sessions as $s) {
+                if (! $s->finished_at) continue;
+                $m = (int) $s->finished_at->format('n');
+                if (! isset($monthlyData[$m])) $monthlyData[$m] = 0;
+                $monthlyData[$m]++;
+            }
+
+            for ($month = 1; $month <= 12; $month++) {
+                if (! isset($monthlyData[$month])) $monthlyData[$month] = 0;
+            }
+            ksort($monthlyData);
+        }
 
         return Inertia::render('Admin/Results/Statistics', [
             'stats' => [
@@ -510,8 +662,8 @@ class ResultsManagementController extends Controller
                 'monthly_data' => $monthlyData,
             ],
             'filters' => [
-                'grade' => $grade,
-                'event_id' => $eventId,
+                'grade' => $validGrade,
+                'event_id' => $eventId ? (int) $eventId : null,
             ],
             'events' => $eventList,
             'gradeCounts' => $gradeCounts,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 
 interface RankDistribution {
     Platinum: number;
@@ -55,6 +55,49 @@ interface PropsWithFilters {
 }
 
 const { stats, filters, events, gradeCounts } = defineProps<PropsWithFilters>();
+
+// フィルターの状態を管理
+const selectedGrade = ref<string>("all");
+const selectedEventId = ref<string>("");
+
+// propsからの初期値設定
+watch(
+    () => filters,
+    newFilters => {
+        console.log("Filters changed:", newFilters);
+
+        if (
+            newFilters?.grade !== null &&
+            newFilters?.grade !== undefined &&
+            newFilters?.grade !== ""
+        ) {
+            const gradeValue = String(newFilters.grade);
+            // 選択肢に存在するかチェック
+            const gradeExists = gradeOptions.value.some(opt => opt.value === gradeValue);
+
+            if (gradeExists) {
+                selectedGrade.value = gradeValue;
+                console.log("Grade set to:", gradeValue);
+            } else {
+                // 選択肢に存在しない場合は「すべて」に戻す
+                console.warn(`Grade ${gradeValue} not found in options, resetting to 'all'`);
+                selectedGrade.value = "all";
+            }
+        } else {
+            console.log("No grade filter, setting to all");
+            selectedGrade.value = "all";
+        }
+
+        if (newFilters?.event_id) {
+            selectedEventId.value = String(newFilters.event_id);
+            console.log("Event ID set to:", newFilters.event_id);
+        } else {
+            console.log("No event filter");
+            selectedEventId.value = "";
+        }
+    },
+    { immediate: true }
+);
 
 // 学年選択肢を生成(データが存在する grade のみを表示)
 const gradeOptions = computed(() => {
@@ -110,7 +153,26 @@ console.log("Statistics component props:", {
     gradeCounts,
     gradeOptions: gradeOptions.value,
     filters,
+    selectedGrade: selectedGrade.value,
+    selectedEventId: selectedEventId.value,
 });
+
+// フォーム送信時のデバッグ
+const handleSubmit = (event: Event) => {
+    console.log("Form submitting with:", {
+        selectedGrade: selectedGrade.value,
+        selectedEventId: selectedEventId.value,
+    });
+
+    // selectedGrade が 'all' の場合は送信しない（allは指定なしと同じ）
+    if (selectedGrade.value === "all") {
+        const form = event.target as HTMLFormElement;
+        const gradeInput = form.querySelector('select[name="grade"]') as HTMLSelectElement;
+        if (gradeInput) {
+            gradeInput.removeAttribute("name");
+        }
+    }
+};
 </script>
 
 <template>
@@ -134,8 +196,8 @@ console.log("Statistics component props:", {
                         <label class="block text-sm font-medium text-gray-700">学年</label>
                         <select
                             name="grade"
+                            v-model="selectedGrade"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            :value="filters?.grade ?? 'all'"
                         >
                             <option value="all">すべて</option>
                             <option v-for="opt in gradeOptions" :key="opt.value" :value="opt.value">
@@ -148,8 +210,8 @@ console.log("Statistics component props:", {
                         <label class="block text-sm font-medium text-gray-700">イベント</label>
                         <select
                             name="event_id"
+                            v-model="selectedEventId"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            :value="filters?.event_id ?? ''"
                         >
                             <option value="">(指定なし)</option>
                             <option v-for="e in events ?? []" :key="e.id" :value="e.id">
@@ -169,14 +231,22 @@ console.log("Statistics component props:", {
                 </form>
 
                 <!-- デバッグ情報(開発時のみ表示 - 本番環境では削除またはコメントアウト) -->
-                <!-- 
-                <div class="mb-4 p-4 bg-gray-100 rounded text-xs">
+                <div class="mb-4 p-4 bg-gray-100 rounded text-xs font-mono">
                     <p><strong>Debug Info:</strong></p>
+                    <p>filters: {{ filters }}</p>
+                    <p>filters.grade: {{ filters?.grade }}</p>
+                    <p>filters.grade type: {{ typeof filters?.grade }}</p>
                     <p>gradeCounts: {{ gradeCounts }}</p>
                     <p>gradeOptions: {{ gradeOptions }}</p>
-                    <p>filters: {{ filters }}</p>
+                    <p>
+                        Current select value:
+                        {{
+                            filters?.grade !== null && filters?.grade !== undefined
+                                ? String(filters.grade)
+                                : "all"
+                        }}
+                    </p>
                 </div>
-                -->
 
                 <!-- 主要統計カード -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
