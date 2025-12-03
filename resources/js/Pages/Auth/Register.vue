@@ -29,7 +29,7 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="name" value="名前" />
 
                 <TextInput
                     id="name"
@@ -60,7 +60,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+                <InputLabel for="password" value="パスワード" />
 
                 <TextInput
                     id="password"
@@ -75,7 +75,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password_confirmation" value="Confirm Password" />
+                <InputLabel for="password_confirmation" value="再入力" />
 
                 <TextInput
                     id="password_confirmation"
@@ -90,7 +90,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="admission_year" value="Admission Year" />
+                <InputLabel for="admission_year" value="入学年度" />
 
                 <TextInput
                     id="admission_year"

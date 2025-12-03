@@ -2,8 +2,6 @@
 import { computed, ref } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import { Head } from "@inertiajs/vue3";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import GuestLayout from "@/Layouts/GuestLayout.vue";
 
 // 型定義
 type ChoiceType = {
@@ -139,11 +137,6 @@ const handleImageLoad = (event: Event) => {
     console.log(`画像読み込み成功: ${target.src}`);
 };
 
-// 重要: GuestLayout と AuthenticatedLayout を使い分け
-const layoutComponent = computed(() => {
-    return isGuest.value ? GuestLayout : AuthenticatedLayout;
-});
-
 function getCurrentPart(): number {
     if (page.props.practiceQuestions && page.props.practiceQuestions.length > 0) {
         return page.props.practiceQuestions[0].part;
@@ -159,11 +152,7 @@ function goToExam() {
     console.log("currentPart:", currentPart);
     console.log("isGuest:", isGuest.value);
 
-    // ★★★ 重要: 練習問題完了後は常に exam.part へ直接遷移 ★★★
-    // exam.start は「テスト開始」ボタンからのみ呼ばれるべき
-
     if (isGuest.value) {
-        // ゲスト用 - 常に直接 exam.part へ
         console.log(`ゲスト第${currentPart}部: exam.part へ直接遷移`);
         router.visit(route("guest.exam.part", { part: currentPart }), {
             preserveState: false,
@@ -185,7 +174,6 @@ function goToExam() {
             },
         });
     } else {
-        // 認証ユーザー用 - 常に直接 exam.part へ
         console.log(`認証ユーザー第${currentPart}部: exam.part へ直接遷移`);
         router.visit(route("exam.part", { part: currentPart }), {
             preserveState: false,
@@ -234,179 +222,274 @@ function getChoiceClass(choice: ChoiceType, question: PracticeQuestionType): str
 </script>
 
 <template>
-    <!-- レイアウトコンポーネントの動的切り替え -->
-    <component :is="layoutComponent">
+    <div>
         <Head title="解説ページ" />
 
+        <!-- 統一されたレイアウト(ゲスト・ログイン共通) -->
         <div class="min-h-screen bg-gray-100">
-            <!-- 上部ヘッダー -->
-            <div
-                class="max-w-7xl mx-auto flex justify-between items-center p-4 bg-white border-b shadow-sm"
-            >
-                <h2 class="text-xl font-bold text-gray-800">
-                    解説　第{{ getCurrentPart() }}部には次のような問題があります。
-                </h2>
-                <button
-                    @click="goToExam"
-                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md hover:shadow-lg"
-                    :disabled="isNavigating"
-                >
-                    {{ isNavigating ? "移動中..." : "本番へ" }}
-                </button>
-            </div>
+            <!-- ヘッダー(ゲストの場合のみ表示) -->
+            <nav v-if="isGuest" class="border-b border-gray-100 bg-white">
+                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div class="flex h-16 items-center justify-between">
+                        <div class="flex items-center">
+                            <img src="/images/YIC_logo.png" alt="YIC Logo" class="h-10" />
+                            <span class="ml-4 text-lg font-semibold text-gray-800">
+                                練習問題 解説
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-600">ゲストモード</div>
+                    </div>
+                </div>
+            </nav>
 
-            <!-- 問題リスト -->
-            <div class="max-w-7xl mx-auto p-6 space-y-6">
-                <div
-                    v-for="(q, idx) in processedQuestions"
-                    :key="q.id"
-                    class="bg-white border border-gray-200 rounded-lg shadow-sm p-6"
-                >
-                    <!-- 上段:問題番号と部ごとの説明文 -->
-                    <div class="flex justify-between items-start mb-6">
-                        <!-- 左:問題番号 -->
-                        <div class="text-lg font-bold text-gray-800">問題 {{ q.number }}</div>
+            <!-- ログインユーザーの場合はAuthenticatedLayoutのヘッダーを表示 -->
+            <nav v-else class="border-b border-gray-100 bg-white">
+                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div class="flex h-16 items-center">
+                        <img src="/images/YIC_logo.png" alt="YIC Logo" class="h-10" />
+                    </div>
+                </div>
+            </nav>
 
-                        <!-- 中央:部の説明文 -->
+            <!-- メインコンテンツ -->
+            <main>
+                <div class="py-6">
+                    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                        <!-- 上部ヘッダー -->
                         <div
-                            class="flex-1 ml-6 text-left text-base font-medium text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200"
+                            class="flex justify-between items-center px-6 py-4 bg-white border-b shadow-sm rounded-lg mb-6"
                         >
-                            <template v-if="q.part === 1">
-                                いくつかの文字が一定の規則に従って並んでいます。あなたはその規則を見つけ出し、配列を完成させて下さい。
-                            </template>
-                            <template v-else-if="q.part === 2">
-                                各列の左側にある四つの図は一定の順序で並んでいます。次にくるべき図はどれでしょうか。右側の五つの図の中から選んで下さい。
-                            </template>
-                            <template v-else>
-                                問題の下側に解答が5つありますが、正解は一つだけです。問題を解いてみて正しいと思う答えを選んでください。
-                            </template>
-                        </div>
-                    </div>
-
-                    <!-- 中段:問題文と選択肢(第1部・第2部) -->
-                    <div class="flex gap-6 mb-6" v-if="q.part === 1 || q.part === 2">
-                        <!-- 左:問題文と問題画像 -->
-                        <div class="flex-1">
-                            <p class="text-lg font-bold mb-4 text-gray-800">
-                                {{ q.text }}
-                            </p>
-                            <!-- 問題画像を追加 -->
-                            <div v-if="q.image && getImagePath(q.image, 'questions')" class="mt-4">
-                                <img
-                                    :src="getImagePath(q.image, 'questions')"
-                                    class="w-full max-w-sm h-auto rounded-lg shadow-md border border-gray-200"
-                                    :alt="`問題${q.number}`"
-                                    @error="handleImageError"
-                                    @load="handleImageLoad"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- 右:選択肢 -->
-                        <div class="flex-1 grid grid-cols-2 gap-3">
-                            <div
-                                v-for="choice in q.choices"
-                                :key="choice.id"
-                                class="border-2 rounded-lg p-3 transition-all duration-200"
-                                :class="getChoiceClass(choice, q)"
+                            <h2 class="text-2xl font-bold text-gray-800">
+                                解説　第{{ getCurrentPart() }}部には次のような問題があります。
+                            </h2>
+                            <button
+                                @click="goToExam"
+                                class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md hover:shadow-lg text-lg"
+                                :disabled="isNavigating"
                             >
-                                <div class="font-semibold text-base mb-2">
-                                    {{ choice.text }}
-                                </div>
-                                <!-- 選択肢画像を修正 -->
-                                <img
-                                    v-if="choice.image && getImagePath(choice.image, 'choices')"
-                                    :src="getImagePath(choice.image, 'choices')"
-                                    class="mt-2 max-w-[120px] max-h-[80px] object-contain rounded border shadow-sm"
-                                    :alt="`選択肢${choice.label}`"
-                                    @error="handleImageError"
-                                    @load="handleImageLoad"
-                                />
-                            </div>
+                                {{ isNavigating ? "移動中..." : "本番へ" }}
+                            </button>
                         </div>
-                    </div>
 
-                    <!-- 第三部:縦並び -->
-                    <div v-else class="flex flex-col gap-4 mb-6">
-                        <p class="text-lg font-bold mb-4 text-gray-800">
-                            {{ q.text }}
-                        </p>
-                        <!-- 問題画像を追加 -->
-                        <div v-if="q.image && getImagePath(q.image, 'questions')" class="mb-4">
-                            <img
-                                :src="getImagePath(q.image, 'questions')"
-                                class="w-full max-w-lg h-auto rounded-lg shadow-md border border-gray-200"
-                                :alt="`問題${q.number}`"
-                                @error="handleImageError"
-                                @load="handleImageLoad"
-                            />
-                        </div>
-                        <div class="grid grid-cols-1 gap-3">
+                        <!-- 問題リスト -->
+                        <div class="space-y-8">
                             <div
-                                v-for="choice in q.choices"
-                                :key="choice.id"
-                                class="border-2 rounded-lg p-4 transition-all duration-200"
-                                :class="getChoiceClass(choice, q)"
+                                v-for="(q, idx) in processedQuestions"
+                                :key="q.id"
+                                class="bg-white border border-gray-200 rounded-lg shadow-sm p-8"
                             >
-                                <div class="font-semibold text-base">
-                                    {{ choice.text }}
-                                </div>
-                                <!-- 選択肢画像を修正 -->
-                                <img
-                                    v-if="choice.image && getImagePath(choice.image, 'choices')"
-                                    :src="getImagePath(choice.image, 'choices')"
-                                    class="mt-2 max-w-[120px] max-h-[80px] object-contain rounded border shadow-sm"
-                                    :alt="`選択肢${choice.label}`"
-                                    @error="handleImageError"
-                                    @load="handleImageLoad"
-                                />
-                            </div>
-                        </div>
-                    </div>
+                                <!-- 上段:問題番号と部ごとの説明文 -->
+                                <div class="flex justify-between items-center mb-6">
+                                    <!-- 左:問題番号 -->
+                                    <div class="text-2xl font-bold text-gray-800 flex-shrink-0">
+                                        問題 {{ q.number }}
+                                    </div>
 
-                    <!-- 判定結果 -->
-                    <div class="mb-4 p-4 bg-gray-50 rounded-lg border">
-                        <div class="flex items-center gap-3">
-                            <span class="font-bold text-gray-800">判定:</span>
-                            <span v-if="q.selected && q.selected.trim()">
-                                <span
-                                    v-if="q.selected.trim() === q.answer.trim()"
-                                    class="text-green-600 font-bold text-xl"
+                                    <!-- 中央:部の説明文 -->
+                                    <div
+                                        class="flex-1 ml-8 text-left text-lg font-medium text-gray-700 bg-blue-50 p-4 rounded-lg border border-blue-200"
+                                    >
+                                        <template v-if="q.part === 1">
+                                            いくつかの文字が一定の規則に従って並んでいます。あなたはその規則を見つけ出し、配列を完成させて下さい。
+                                        </template>
+                                        <template v-else-if="q.part === 2">
+                                            各列の左側にある四つの図は一定の順序で並んでいます。次にくるべき図はどれでしょうか。右側の五つの図の中から選んで下さい。
+                                        </template>
+                                        <template v-else>
+                                            問題の下側に解答が5つありますが、正解は一つだけです。問題を解いてみて正しいと思う答えを選んでください。
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- 中段:問題文と選択肢(第1部・第2部) -->
+                                <div class="mb-6" v-if="q.part === 1 || q.part === 2">
+                                    <!-- 第1部:問題文のみ -->
+                                    <div v-if="q.part === 1">
+                                        <p class="text-3xl font-bold mb-6 text-gray-800">
+                                            {{ q.text }}
+                                        </p>
+                                        <!-- 選択肢(第1部) -->
+                                        <div class="grid grid-cols-5 gap-3">
+                                            <div
+                                                v-for="choice in q.choices"
+                                                :key="choice.id"
+                                                class="border-2 rounded-lg p-3 transition-all duration-200 min-h-[100px] flex flex-col items-center justify-center"
+                                                :class="getChoiceClass(choice, q)"
+                                            >
+                                                <div
+                                                    class="font-semibold text-2xl text-center mb-2"
+                                                >
+                                                    {{ choice.text }}
+                                                </div>
+                                                <img
+                                                    v-if="
+                                                        choice.image &&
+                                                        getImagePath(choice.image, 'choices')
+                                                    "
+                                                    :src="getImagePath(choice.image, 'choices')"
+                                                    class="mt-2 max-w-full max-h-[60px] object-contain rounded border shadow-sm"
+                                                    :alt="`選択肢${choice.label}`"
+                                                    @error="handleImageError"
+                                                    @load="handleImageLoad"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 第2部:問題画像と選択肢を横並び -->
+                                    <div v-if="q.part === 2" class="flex gap-8">
+                                        <!-- 左:問題画像 -->
+                                        <div
+                                            v-if="q.image && getImagePath(q.image, 'questions')"
+                                            class="w-2/5"
+                                        >
+                                            <img
+                                                :src="getImagePath(q.image, 'questions')"
+                                                class="w-full h-auto rounded-lg shadow-md border border-gray-200"
+                                                :alt="`問題${q.number}`"
+                                                @error="handleImageError"
+                                                @load="handleImageLoad"
+                                            />
+                                        </div>
+
+                                        <!-- 右:選択肢(第2部) -->
+                                        <div class="flex-1">
+                                            <div class="grid grid-cols-5 gap-3">
+                                                <div
+                                                    v-for="choice in q.choices"
+                                                    :key="choice.id"
+                                                    class="border-2 rounded-lg p-3 transition-all duration-200 flex flex-col items-center justify-center aspect-square"
+                                                    :class="getChoiceClass(choice, q)"
+                                                >
+                                                    <div
+                                                        class="font-semibold text-2xl text-center mb-2"
+                                                    >
+                                                        {{ choice.text }}
+                                                    </div>
+                                                    <div
+                                                        class="flex-1 flex items-center justify-center w-full"
+                                                    >
+                                                        <img
+                                                            v-if="
+                                                                choice.image &&
+                                                                getImagePath(
+                                                                    choice.image,
+                                                                    'choices'
+                                                                )
+                                                            "
+                                                            :src="
+                                                                getImagePath(
+                                                                    choice.image,
+                                                                    'choices'
+                                                                )
+                                                            "
+                                                            class="max-w-full max-h-[80px] object-contain rounded border shadow-sm"
+                                                            :alt="`選択肢${choice.label}`"
+                                                            @error="handleImageError"
+                                                            @load="handleImageLoad"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 第三部:横5列並び -->
+                                <div v-else class="mb-6">
+                                    <p class="text-3xl font-bold mb-6 text-gray-800">
+                                        {{ q.text }}
+                                    </p>
+                                    <div
+                                        v-if="q.image && getImagePath(q.image, 'questions')"
+                                        class="mb-6"
+                                    >
+                                        <img
+                                            :src="getImagePath(q.image, 'questions')"
+                                            class="w-full max-w-2xl h-auto rounded-lg shadow-md border border-gray-200"
+                                            :alt="`問題${q.number}`"
+                                            @error="handleImageError"
+                                            @load="handleImageLoad"
+                                        />
+                                    </div>
+                                    <div class="grid grid-cols-5 gap-4">
+                                        <div
+                                            v-for="choice in q.choices"
+                                            :key="choice.id"
+                                            class="border-2 rounded-lg p-4 transition-all duration-200 min-h-[100px] flex flex-col items-center justify-center"
+                                            :class="getChoiceClass(choice, q)"
+                                        >
+                                            <div class="font-semibold text-2xl text-center mb-2">
+                                                {{ choice.text }}
+                                            </div>
+                                            <img
+                                                v-if="
+                                                    choice.image &&
+                                                    getImagePath(choice.image, 'choices')
+                                                "
+                                                :src="getImagePath(choice.image, 'choices')"
+                                                class="mt-2 max-w-full max-h-[60px] object-contain rounded border shadow-sm"
+                                                :alt="`選択肢${choice.label}`"
+                                                @error="handleImageError"
+                                                @load="handleImageLoad"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 判定結果 -->
+                                <div class="mb-6 p-5 bg-gray-50 rounded-lg border">
+                                    <div class="flex items-center gap-4">
+                                        <span class="font-bold text-gray-800 text-lg">判定:</span>
+                                        <span v-if="q.selected && q.selected.trim()">
+                                            <span
+                                                v-if="q.selected.trim() === q.answer.trim()"
+                                                class="text-green-600 font-bold text-2xl"
+                                            >
+                                                ✓ 正解!
+                                            </span>
+                                            <span v-else class="text-red-600 font-bold text-2xl">
+                                                ✗ 不正解
+                                            </span>
+                                            <span class="ml-6 text-gray-700 text-lg">
+                                                あなたの回答: {{ q.selected.trim() }} | 正解:
+                                                {{ q.answer.trim() }}
+                                            </span>
+                                        </span>
+                                        <span v-else class="text-gray-500 font-semibold text-lg">
+                                            未回答
+                                            <span class="ml-6 text-gray-700">
+                                                正解: {{ q.answer.trim() }}
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- 下段:解説 -->
+                                <div
+                                    class="mt-6 p-5 bg-blue-50 border-l-4 border-blue-500 rounded-lg"
                                 >
-                                    ✓ 正解!
-                                </span>
-                                <span v-else class="text-red-600 font-bold text-xl">
-                                    ✗ 不正解
-                                </span>
-                                <span class="ml-4 text-gray-700 text-base">
-                                    あなたの回答: {{ q.selected.trim() }} | 正解:
-                                    {{ q.answer.trim() }}
-                                </span>
-                            </span>
-                            <span v-else class="text-gray-500 font-semibold text-base">
-                                未回答
-                                <span class="ml-4 text-gray-700">
-                                    正解: {{ q.answer.trim() }}
-                                </span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- 下段:解説 -->
-                    <div class="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
-                        <div class="flex items-start gap-3">
-                            <span class="font-bold text-blue-800 flex-shrink-0 text-base"
-                                >解説:</span
-                            >
-                            <span class="text-gray-700 leading-relaxed text-base">{{
-                                q.explanation
-                            }}</span>
+                                    <div class="flex items-start gap-4">
+                                        <span class="font-bold text-blue-800 flex-shrink-0 text-lg"
+                                            >解説:</span
+                                        >
+                                        <span class="text-gray-700 leading-relaxed text-lg">{{
+                                            q.explanation
+                                        }}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
+
+            <!-- フッター -->
+            <footer class="bg-gray-400 text-white text-center py-4">
+                © 2025 YIC Group. All rights reserved.
+            </footer>
         </div>
-    </component>
+    </div>
 </template>
 
 <style scoped>

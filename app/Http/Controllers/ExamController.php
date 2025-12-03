@@ -424,20 +424,18 @@ public function part(Request $request, $part)
 }
 
     /**
-     * パート完了処理(修正版) - 各部完了後は次の部の練習問題へ
-     */
-    /**
- * パート完了処理(修正版) - 各部完了後は次の部の練習問題へ
+ * パート完了処理(修正版) - 全問未回答・時間切れでも進める
  */
 public function completePart(Request $request)
 {
+    // ★ 修正: answers を nullable に変更、timeSpent も柔軟に
     $validated = $request->validate([
         'examSessionId' => 'required|uuid',
         'part' => 'required|integer|in:1,2,3',
-        'answers' => 'required|array',
-        'timeSpent' => 'required|integer|min:1',
-        'startTime' => 'required|integer',
-        'endTime' => 'required|integer',
+        'answers' => 'nullable|array',  // ★ required を nullable に変更
+        'timeSpent' => 'nullable|integer|min:0',  // ★ min:1 → min:0 に変更、nullable追加
+        'startTime' => 'nullable|integer',  // ★ nullable追加
+        'endTime' => 'nullable|integer',  // ★ nullable追加
         'totalQuestions' => 'required|integer|min:1',
     ]);
 
@@ -452,6 +450,7 @@ public function completePart(Request $request)
             'user_id' => $user->id,
             'part' => $part,
             'cache_session_id' => $cacheSessionId,
+            'answers_count' => count($validated['answers'] ?? []),  // ★ null チェック追加
         ]);
 
         // キャッシュからセッション情報を取得
@@ -492,8 +491,11 @@ public function completePart(Request $request)
             $securityLog['part_'.$part.'_answers'] = [];
         }
 
+        // ★ 修正: 解答が空の場合も処理を続ける
+        $answers = $validated['answers'] ?? [];
+        
         // リクエストの解答をマージ
-        foreach ($validated['answers'] as $questionId => $choice) {
+        foreach ($answers as $questionId => $choice) {
             $securityLog['part_'.$part.'_answers'][$questionId] = $choice;
         }
 
@@ -506,15 +508,16 @@ public function completePart(Request $request)
             'user_id' => $user->id,
             'part' => $part,
             'answers_count' => count($securityLog['part_'.$part.'_answers']),
+            'is_empty' => count($answers) === 0 ? 'yes' : 'no',  // ★ 空かどうかをログ出力
         ]);
 
-        // ★ 重要修正: 次のアクションを決定
+        // 次のアクションを決定
         if ($part < 3) {
             // 第一部・第二部完了後は次の部の練習問題へ
             $nextPart = $part + 1;
             
             $examSession->update([
-                'current_part' => $nextPart, // ★ current_part を更新
+                'current_part' => $nextPart,
                 'current_question' => 1,
                 'remaining_time' => 0,
             ]);
@@ -529,13 +532,12 @@ public function completePart(Request $request)
                 'updated_current_part' => $examSession->fresh()->current_part,
             ]);
 
-            // ★ 練習問題ページへリダイレクト
             return redirect()->route('practice.show', ['section' => $nextPart])
                 ->with('success', "第{$part}部が完了しました。第{$nextPart}部の練習問題を開始してください。");
                 
         } else {
-            // ★ 第三部完了後は全パートの解答をanswersテーブルに保存して結果表示へ
-            Log::info('第三部完了 - 全パートの採点開始', [
+            // 第三部完了後は全パートの解答をanswersテーブルに保存して結果表示へ
+            Log::info('第三部完了 - 全パート採点開始', [
                 'user_id' => $user->id,
                 'exam_session_id' => $examSession->id,
             ]);
@@ -547,6 +549,14 @@ public function completePart(Request $request)
                     $allAnswers = $allAnswers + $securityLog['part_'.$p.'_answers'];
                 }
             }
+
+            Log::info('全パート解答統合完了', [
+                'user_id' => $user->id,
+                'total_answers' => count($allAnswers),
+                'part1_answers' => count($securityLog['part_1_answers'] ?? []),
+                'part2_answers' => count($securityLog['part_2_answers'] ?? []),
+                'part3_answers' => count($securityLog['part_3_answers'] ?? []),
+            ]);
 
             // answersテーブルに保存
             $savedCount = 0;
@@ -1185,171 +1195,176 @@ public function completePart(Request $request)
     }
 
     /**
-     * ゲストパート完了処理 - 修正版(各部完了後は次の部の練習問題へ)
-     */
-    public function guestCompletePart(Request $request)
-    {
-        $validated = $request->validate([
-            'examSessionId' => 'required|uuid',
-            'part' => 'required|integer|in:1,2,3',
-            'answers' => 'required|array',
-            'timeSpent' => 'required|integer|min:1',
-        ]);
+ * ゲストパート完了処理 - 修正版(全問未回答・時間切れでも進める)
+ */
+public function guestCompletePart(Request $request)
+{
+    // ★ 修正: answers を nullable に変更、timeSpent も柔軟に
+    $validated = $request->validate([
+        'examSessionId' => 'required|uuid',
+        'part' => 'required|integer|in:1,2,3',
+        'answers' => 'nullable|array',  // ★ required を nullable に変更
+        'timeSpent' => 'nullable|integer|min:0',  // ★ min:1 → min:0 に変更、nullable追加
+    ]);
 
-        $guestId = session()->getId();
-        $sessionId = $validated['examSessionId'];
-        $part = $validated['part'];
+    $guestId = session()->getId();
+    $sessionId = $validated['examSessionId'];
+    $part = $validated['part'];
 
-        // セッション情報の検証
-        $cacheKey = "guest_exam_part_session_{$guestId}_{$sessionId}";
-        $sessionData = Cache::get($cacheKey);
-        if (! $sessionData) {
-            return redirect()->route('guest.test.start')
-                ->with('error', 'セッションが無効です。試験を最初からやり直してください。');
-        }
+    // セッション情報の検証
+    $cacheKey = "guest_exam_part_session_{$guestId}_{$sessionId}";
+    $sessionData = Cache::get($cacheKey);
+    if (! $sessionData) {
+        return redirect()->route('guest.test.start')
+            ->with('error', 'セッションが無効です。試験を最初からやり直してください。');
+    }
 
-        // ゲストセッション取得
-        $existingSessionKey = "guest_exam_session_{$guestId}";
-        $examSession = Cache::get($existingSessionKey);
-        if (! $examSession) {
-            return redirect()->route('guest.test.start')
-                ->with('error', 'セッションが見つかりません。');
-        }
+    // ゲストセッション取得
+    $existingSessionKey = "guest_exam_session_{$guestId}";
+    $examSession = Cache::get($existingSessionKey);
+    if (! $examSession) {
+        return redirect()->route('guest.test.start')
+            ->with('error', 'セッションが見つかりません。');
+    }
 
-        // 回答をキャッシュに保存
-        $answers = $request->input('answers', []);
-        $sanitizedAnswers = $this->sanitizeAnswers($answers);
-        $answersKey = "guest_exam_answers_{$guestId}_part_{$part}";
-        Cache::put($answersKey, $sanitizedAnswers, 2 * 60 * 60);
+    // ★ 修正: 解答が空でもキャッシュに保存
+    $answers = $request->input('answers', []);
+    $sanitizedAnswers = $this->sanitizeAnswers($answers);
+    $answersKey = "guest_exam_answers_{$guestId}_part_{$part}";
+    Cache::put($answersKey, $sanitizedAnswers, 2 * 60 * 60);
 
-        Log::info("ゲスト第{$part}部の解答を保存", [
+    Log::info("ゲスト第{$part}部の解答を保存", [
+        'guest_id' => $guestId,
+        'part' => $part,
+        'answers_count' => count($sanitizedAnswers),
+        'is_empty' => count($sanitizedAnswers) === 0 ? 'yes' : 'no',  // ★ 空かどうかをログ出力
+    ]);
+
+    // 次のアクションを決定
+    if ($part < 3) {
+        // 第一部・第二部完了後は次の部の練習問題へ
+        $examSession['current_part'] = $part + 1;
+        $examSession['current_question'] = 1;
+        $examSession['remaining_time'] = 0;
+        Cache::put($existingSessionKey, $examSession, 2 * 60 * 60);
+
+        Cache::forget($cacheKey);
+
+        Log::info("ゲスト第{$part}部完了 - 第".($part + 1)."部練習問題へ", [
             'guest_id' => $guestId,
-            'part' => $part,
-            'answers_count' => count($sanitizedAnswers),
+            'completed_part' => $part,
+            'next_part' => $part + 1,
         ]);
 
-        // ★ 重要修正: 次のアクションを決定
-        if ($part < 3) {
-            // 第一部・第二部完了後は次の部の練習問題へ
-            $examSession['current_part'] = $part + 1;
-            $examSession['current_question'] = 1;
-            $examSession['remaining_time'] = 0;
-            Cache::put($existingSessionKey, $examSession, 2 * 60 * 60);
+        return redirect()->route('guest.practice.show', ['section' => $part + 1])
+            ->with('success', "第{$part}部が完了しました。第".($part + 1).'部の練習問題を開始してください。');
+    } else {
+        // 第三部完了時に全パートの採点を実行
+        Log::info('ゲスト試験完了 - 全パート採点開始', [
+            'guest_id' => $guestId,
+        ]);
 
-            Cache::forget($cacheKey);
+        // 各パートの結果を集計
+        $results = [];
 
-            Log::info("ゲスト第{$part}部完了 - 第".($part + 1)."部練習問題へ", [
-                'guest_id' => $guestId,
-                'completed_part' => $part,
-                'next_part' => $part + 1,
-            ]);
+        for ($p = 1; $p <= 3; $p++) {
+            $partAnswersKey = "guest_exam_answers_{$guestId}_part_{$p}";
+            $partAnswers = Cache::get($partAnswersKey, []);
 
-            return redirect()->route('guest.practice.show', ['section' => $part + 1])
-                ->with('success', "第{$part}部が完了しました。第".($part + 1).'部の練習問題を開始してください。');
-        } else {
-            // ★ 第三部完了時に全パートの採点を実行
-            Log::info('ゲスト試験完了 - 全パート採点開始', [
-                'guest_id' => $guestId,
-            ]);
+            // 各部の正しい問題数
+            if ($p == 1) {
+                $totalQuestions = 40;
+            } elseif ($p == 2) {
+                $totalQuestions = 30;
+            } else {
+                $totalQuestions = 25;
+            }
 
-            // 各パートの結果を集計
-            $results = [];
+            $correct = 0;
+            $incorrect = 0;
 
-            for ($p = 1; $p <= 3; $p++) {
-                $partAnswersKey = "guest_exam_answers_{$guestId}_part_{$p}";
-                $partAnswers = Cache::get($partAnswersKey, []);
+            // 正解判定
+            foreach ($partAnswers as $questionId => $choice) {
+                $question = Question::with('choices')->find($questionId);
+                if ($question && $question->part == $p) {
+                    $correctChoice = $question->choices()
+                        ->where('part', $p)
+                        ->where('is_correct', true)
+                        ->first();
 
-                // 各部の正しい問題数
-                if ($p == 1) {
-                    $totalQuestions = 40;
-                } elseif ($p == 2) {
-                    $totalQuestions = 30;
-                } else {
-                    $totalQuestions = 25;
-                }
-
-                $correct = 0;
-                $incorrect = 0;
-
-                // 正解判定
-                foreach ($partAnswers as $questionId => $choice) {
-                    $question = Question::with('choices')->find($questionId);
-                    if ($question && $question->part == $p) {
-                        $correctChoice = $question->choices()
-                            ->where('part', $p)
-                            ->where('is_correct', true)
-                            ->first();
-
-                        if ($correctChoice && trim($correctChoice->label) === trim($choice)) {
-                            $correct++;
-                        } else {
-                            $incorrect++;
-                        }
+                    if ($correctChoice && trim($correctChoice->label) === trim($choice)) {
+                        $correct++;
+                    } else {
+                        $incorrect++;
                     }
                 }
-
-                $unanswered = $totalQuestions - ($correct + $incorrect);
-                $score = ($correct * 1) + ($incorrect * -0.25);
-
-                $results[$p] = [
-                    'correct' => $correct,
-                    'incorrect' => $incorrect,
-                    'unanswered' => $unanswered,
-                    'total' => $totalQuestions,
-                    'score' => round($score, 2),
-                ];
             }
 
-            // 総合スコア
-            $totalScore = $results[1]['score'] + $results[2]['score'] + $results[3]['score'];
+            $unanswered = $totalQuestions - ($correct + $incorrect);
+            $score = ($correct * 1) + ($incorrect * -0.25);
 
-            // ランク判定
-            if ($totalScore >= 61) {
-                $rank = 'A';
-                $rankName = 'Platinum';
-            } elseif ($totalScore >= 51) {
-                $rank = 'B';
-                $rankName = 'Gold';
-            } elseif ($totalScore >= 36) {
-                $rank = 'C';
-                $rankName = 'Silver';
-            } else {
-                $rank = 'D';
-                $rankName = 'Bronze';
-            }
-
-            // ゲスト情報を取得
-            $guestName = $examSession['guest_name'] ?? session('guest_name') ?? 'ゲスト';
-            $guestSchool = $examSession['guest_school'] ?? session('guest_school_name') ?? '学校名未入力';
-
-            // セッションに結果を保存
-            session([
-                'exam_results' => [
-                    'results' => $results,
-                    'rankName' => $rankName,
-                    'totalScore' => round($totalScore, 2),
-                    'rank' => $rank,
-                ],
-                'isGuest' => true,
-                'guestName' => $guestName,
-                'guestSchool' => $guestSchool,
-            ]);
-
-            // セッション更新
-            $examSession['finished_at'] = now();
-            Cache::put($existingSessionKey, $examSession, 2 * 60 * 60);
-            Cache::forget($cacheKey);
-
-            Log::info('ゲスト試験完了', [
-                'guest_id' => $guestId,
-                'total_score' => round($totalScore, 2),
-                'rank' => $rankName,
-            ]);
-
-            return redirect()->route('guest.result')
-                ->with('success', '試験が完了しました。');
+            $results[$p] = [
+                'correct' => $correct,
+                'incorrect' => $incorrect,
+                'unanswered' => $unanswered,
+                'total' => $totalQuestions,
+                'score' => round($score, 2),
+            ];
         }
+
+        // 総合スコア
+        $totalScore = $results[1]['score'] + $results[2]['score'] + $results[3]['score'];
+
+        // ランク判定
+        if ($totalScore >= 61) {
+            $rank = 'A';
+            $rankName = 'Platinum';
+        } elseif ($totalScore >= 51) {
+            $rank = 'B';
+            $rankName = 'Gold';
+        } elseif ($totalScore >= 36) {
+            $rank = 'C';
+            $rankName = 'Silver';
+        } else {
+            $rank = 'D';
+            $rankName = 'Bronze';
+        }
+
+        // ゲスト情報を取得
+        $guestName = $examSession['guest_name'] ?? session('guest_name') ?? 'ゲスト';
+        $guestSchool = $examSession['guest_school'] ?? session('guest_school_name') ?? '学校名未入力';
+
+        // セッションに結果を保存
+        session([
+            'exam_results' => [
+                'results' => $results,
+                'rankName' => $rankName,
+                'totalScore' => round($totalScore, 2),
+                'rank' => $rank,
+            ],
+            'isGuest' => true,
+            'guestName' => $guestName,
+            'guestSchool' => $guestSchool,
+        ]);
+
+        // セッション更新
+        $examSession['finished_at'] = now();
+        Cache::put($existingSessionKey, $examSession, 2 * 60 * 60);
+        Cache::forget($cacheKey);
+
+        Log::info('ゲスト試験完了', [
+            'guest_id' => $guestId,
+            'total_score' => round($totalScore, 2),
+            'rank' => $rankName,
+            'part1_answers' => count(Cache::get("guest_exam_answers_{$guestId}_part_1", [])),
+            'part2_answers' => count(Cache::get("guest_exam_answers_{$guestId}_part_2", [])),
+            'part3_answers' => count(Cache::get("guest_exam_answers_{$guestId}_part_3", [])),
+        ]);
+
+        return redirect()->route('guest.result')
+            ->with('success', '試験が完了しました。');
     }
+}
 
     /**
      * ゲスト試験結果を表示

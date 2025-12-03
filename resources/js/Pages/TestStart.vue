@@ -31,18 +31,14 @@ function handleImageError() {
             </div>
 
             <!-- タイトル -->
-            <div class="text-center mt-8">
+            <div class="text-center title-container">
                 <h1 class="custom-title">プログラマー適性検査</h1>
             </div>
 
             <!-- スタートリンク -->
-            <div class="flex justify-center mt-10">
-                <Link
-                    v-if="authUser"
-                    :href="route('practice.instructions')"
-                    class="px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                    練習問題スタート
+            <div class="flex justify-center button-container">
+                <Link v-if="authUser" :href="route('practice.instructions')" class="start-button">
+                    始める
                 </Link>
                 <div v-else class="space-x-4">
                     <Link
@@ -68,10 +64,40 @@ function handleImageError() {
     width: 403px;
     height: 51px;
 }
+
+.title-container {
+    margin-top: 120px;
+}
+
 .custom-title {
     font-family: "Yu Mincho Demibold", "游明朝 Demibold", "YuMincho", serif;
-    font-size: 50px;
+    font-size: 60px;
 }
+
+.button-container {
+    margin-top: 180px;
+}
+
+.start-button {
+    display: inline-block;
+    width: 280px;
+    padding: 20px 40px;
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    color: white;
+    background-color: #2563eb;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.start-button:hover {
+    background-color: #1d4ed8;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
 .main_contents {
     height: 100%;
 }

@@ -26,6 +26,7 @@ use Inertia\Inertia;
 // ========================================
 Route::get('/', [SessionCodeController::class, 'entry'])->name('session.entry');
 Route::post('/session/verify', [SessionCodeController::class, 'verify'])->name('session.verify');
+Route::post('/session/clear', [SessionCodeController::class, 'clearSession'])->name('session.clear'); // ← この行を追加
 
 // ========================================
 // 管理者ルート(セッションコード不要)

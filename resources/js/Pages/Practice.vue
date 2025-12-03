@@ -145,7 +145,7 @@
 
                 <!-- 問題表示エリア全体 -->
                 <div class="problem-display-area">
-                    <!-- 部ごとの説明文（全体の上部に表示）-->
+                    <!-- 部ごとの説明文(全体の上部に表示) -->
                     <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <div class="font-semibold text-blue-800 text-base text-left">
                             <template v-if="currentPart === 1">
@@ -160,16 +160,13 @@
                         </div>
                     </div>
 
-                    <!-- 第一部・第二部：3列レイアウト（問題文＋回答状況 | 選択肢） -->
-                    <div
-                        v-if="currentPart === 1 || currentPart === 2"
-                        class="flex gap-4 mb-4 min-h-[400px]"
-                    >
-                        <!-- 左側：問題エリアと回答状況 -->
-                        <div class="w-1/2 space-y-4">
-                            <!-- 上部：問題エリア（サイズ縮小） -->
+                    <!-- 第一部・第二部:4分割レイアウト -->
+                    <div v-if="currentPart === 1 || currentPart === 2" class="mb-4">
+                        <!-- 上段:問題エリアと選択肢 -->
+                        <div class="flex gap-4 mb-4">
+                            <!-- 左上:問題エリア -->
                             <div
-                                class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm min-h-[200px]"
+                                class="w-1/2 bg-white p-4 rounded-lg border border-gray-200 shadow-sm min-h-[200px]"
                             >
                                 <!-- 問題番号 -->
                                 <div class="mb-3 text-left">
@@ -180,7 +177,9 @@
 
                                 <!-- 問題文 -->
                                 <div v-if="currentQuestion.text" class="mb-4">
-                                    <p class="text-xl leading-relaxed text-gray-800 font-medium">
+                                    <p
+                                        class="text-4xl leading-relaxed text-gray-800 font-medium tracking-widest"
+                                    >
                                         {{ currentQuestion.text }}
                                     </p>
                                 </div>
@@ -224,8 +223,91 @@
                                 </div>
                             </div>
 
-                            <!-- 下部：回答状況の表（縦の高さ調整） -->
-                            <div class="bg-gray-50 border rounded p-3 min-h-[220px]">
+                            <!-- 右上:選択肢エリア -->
+                            <div
+                                class="w-1/2 bg-white p-4 rounded-lg border border-gray-200 shadow-sm"
+                            >
+                                <div class="mb-3">
+                                    <h3
+                                        class="text-base font-semibold text-gray-800 border-b border-gray-200 pb-2"
+                                    >
+                                        選択肢を選んでください
+                                    </h3>
+                                </div>
+
+                                <!-- 選択肢ボタン(横並び) -->
+                                <div class="flex flex-wrap gap-3">
+                                    <button
+                                        v-for="(choice, choiceIndex) in validatedChoices"
+                                        :key="getChoiceKey(choice, choiceIndex)"
+                                        class="flex-1 min-w-[100px] group p-3 border-2 rounded-lg transition-all duration-200 text-center min-h-[80px] flex flex-col justify-center hover:shadow-md"
+                                        :class="{
+                                            'bg-blue-100 border-blue-500 shadow-lg scale-105':
+                                                answerStatus[currentIndex]?.selected ===
+                                                choice.label,
+                                            'border-gray-200 hover:border-blue-300 hover:bg-blue-50':
+                                                answerStatus[currentIndex]?.selected !==
+                                                choice.label,
+                                        }"
+                                        @click="handleAnswer(choice.label)"
+                                    >
+                                        <!-- 第一部:選択肢テキスト -->
+                                        <div
+                                            v-if="currentPart === 1 && choice.text"
+                                            class="text-2xl leading-relaxed text-gray-700"
+                                        >
+                                            {{ choice.text }}
+                                        </div>
+
+                                        <!-- 第二部:選択肢画像 -->
+                                        <div
+                                            v-if="currentPart === 2"
+                                            class="flex justify-center items-center flex-1"
+                                        >
+                                            <div v-if="shouldShowChoiceImage(choice)">
+                                                <img
+                                                    v-if="
+                                                        choice.image &&
+                                                        getImagePath(choice.image, 'choices')
+                                                    "
+                                                    :src="getImagePath(choice.image, 'choices')"
+                                                    class="max-w-[80px] max-h-[50px] object-contain rounded border shadow-sm"
+                                                    :alt="`選択肢${choice.label}`"
+                                                    @error="handleImageError"
+                                                    @load="handleImageLoad"
+                                                />
+                                                <div
+                                                    v-else
+                                                    class="flex items-center justify-center w-[80px] h-[50px] bg-gray-100 rounded border-2 border-dashed border-gray-300"
+                                                >
+                                                    <div class="text-center text-gray-400 text-xs">
+                                                        <div>
+                                                            {{ choice.image || "画像なし" }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- 画像がない場合の警告 -->
+                                            <div
+                                                v-if="!choice.image"
+                                                class="flex items-center justify-center w-[80px] h-[50px] bg-red-50 rounded border-2 border-dashed border-red-300"
+                                            >
+                                                <div class="text-center text-red-500 text-xs">
+                                                    <div>⚠️</div>
+                                                    <div>画像データなし</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 下段:回答状況とナビゲーションボタン -->
+                        <div class="flex justify-between items-start gap-4">
+                            <!-- 左下:回答状況の表 -->
+                            <div class="bg-gray-50 border rounded p-3 w-1/2">
                                 <h3 class="font-semibold mb-3 text-sm">回答状況</h3>
                                 <div
                                     class="overflow-x-auto"
@@ -255,25 +337,57 @@
                                             <tr
                                                 v-for="(ans, idx) in answerStatus"
                                                 :key="ans.questionNumber"
-                                                class="hover:bg-gray-50"
-                                                :class="{
-                                                    'bg-yellow-100': idx === currentIndex,
+                                                :style="{
+                                                    backgroundColor:
+                                                        idx === currentIndex && !ans.checked
+                                                            ? '#DBEAFE'
+                                                            : ans.checked
+                                                              ? '#FEE2E2'
+                                                              : '',
                                                 }"
                                             >
                                                 <td
-                                                    class="border px-1 py-1 cursor-pointer hover:bg-blue-100 transition-colors text-xs"
+                                                    class="border px-1 py-2 cursor-pointer transition-colors text-xs hover:bg-blue-200"
+                                                    :style="{
+                                                        backgroundColor:
+                                                            idx === currentIndex && !ans.checked
+                                                                ? '#DBEAFE'
+                                                                : ans.checked
+                                                                  ? '#FEE2E2'
+                                                                  : '',
+                                                    }"
                                                     @click="jumpToQuestion(idx)"
                                                 >
                                                     {{ ans.questionNumber }}
                                                 </td>
-                                                <td class="border px-1 py-1 text-xs">
+                                                <td
+                                                    class="border px-1 py-2 text-xs"
+                                                    :style="{
+                                                        backgroundColor:
+                                                            idx === currentIndex && !ans.checked
+                                                                ? '#DBEAFE'
+                                                                : ans.checked
+                                                                  ? '#FEE2E2'
+                                                                  : '',
+                                                    }"
+                                                >
                                                     {{ ans.selected || "-" }}
                                                 </td>
-                                                <td class="border px-1 py-1">
+                                                <td
+                                                    class="border px-1 py-2"
+                                                    :style="{
+                                                        backgroundColor:
+                                                            idx === currentIndex && !ans.checked
+                                                                ? '#DBEAFE'
+                                                                : ans.checked
+                                                                  ? '#FEE2E2'
+                                                                  : '',
+                                                    }"
+                                                >
                                                     <input
                                                         type="checkbox"
                                                         v-model="ans.checked"
-                                                        class="form-checkbox scale-75"
+                                                        class="form-checkbox w-4 h-4"
                                                     />
                                                 </td>
                                             </tr>
@@ -281,104 +395,18 @@
                                     </table>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- 右側：選択肢エリア -->
-                        <div
-                            class="w-1/2 bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col"
-                        >
-                            <div class="mb-3">
-                                <h3
-                                    class="text-base font-semibold text-gray-800 border-b border-gray-200 pb-2"
-                                >
-                                    選択肢を選んでください
-                                </h3>
-                            </div>
-
-                            <!-- 選択肢ボタン -->
-                            <div class="grid grid-cols-2 gap-3 flex-1">
+                            <!-- 右下:ナビゲーションボタン -->
+                            <div class="w-1/2 flex gap-4 justify-center items-center">
                                 <button
-                                    v-for="(choice, choiceIndex) in validatedChoices"
-                                    :key="getChoiceKey(choice, choiceIndex)"
-                                    class="group p-3 border-2 rounded-lg transition-all duration-200 text-center min-h-[80px] flex flex-col justify-center hover:shadow-md"
-                                    :class="{
-                                        'bg-blue-100 border-blue-500 shadow-lg scale-105':
-                                            answerStatus[currentIndex]?.selected === choice.label,
-                                        'border-gray-200 hover:border-blue-300 hover:bg-blue-50':
-                                            answerStatus[currentIndex]?.selected !== choice.label,
-                                    }"
-                                    @click="handleAnswer(choice.label)"
-                                >
-                                    <!-- 第一部：選択肢テキスト -->
-                                    <div
-                                        v-if="currentPart === 1 && choice.text"
-                                        class="text-2xl leading-relaxed"
-                                        :class="{
-                                            'text-blue-800':
-                                                answerStatus[currentIndex]?.selected ===
-                                                choice.label,
-                                            'text-gray-700':
-                                                answerStatus[currentIndex]?.selected !==
-                                                choice.label,
-                                        }"
-                                    >
-                                        {{ choice.text }}
-                                    </div>
-
-                                    <!-- 第二部：選択肢画像 -->
-                                    <div
-                                        v-if="currentPart === 2"
-                                        class="flex justify-center items-center flex-1"
-                                    >
-                                        <div v-if="shouldShowChoiceImage(choice)">
-                                            <img
-                                                v-if="
-                                                    choice.image &&
-                                                    getImagePath(choice.image, 'choices')
-                                                "
-                                                :src="getImagePath(choice.image, 'choices')"
-                                                class="max-w-[80px] max-h-[50px] object-contain rounded border shadow-sm"
-                                                :alt="`選択肢${choice.label}`"
-                                                @error="handleImageError"
-                                                @load="handleImageLoad"
-                                            />
-                                            <div
-                                                v-else
-                                                class="flex items-center justify-center w-[80px] h-[50px] bg-gray-100 rounded border-2 border-dashed border-gray-300"
-                                            >
-                                                <div class="text-center text-gray-400 text-xs">
-                                                    <div>
-                                                        {{ choice.image || "画像なし" }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- 画像がない場合の警告 -->
-                                        <div
-                                            v-if="!choice.image"
-                                            class="flex items-center justify-center w-[80px] h-[50px] bg-red-50 rounded border-2 border-dashed border-red-300"
-                                        >
-                                            <div class="text-center text-red-500 text-xs">
-                                                <div>⚠️</div>
-                                                <div>画像データなし</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </button>
-                            </div>
-
-                            <!-- 第一部・第二部のナビゲーションボタン（横並び） -->
-                            <div class="flex gap-2 justify-center mt-4">
-                                <button
-                                    class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
+                                    class="px-12 py-4 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-xl font-bold"
                                     :disabled="currentIndex === 0"
                                     @click="prevQuestion"
                                 >
                                     前の問題
                                 </button>
                                 <button
-                                    class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
+                                    class="px-12 py-4 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-xl font-bold"
                                     :disabled="currentIndex === questions.length - 1"
                                     @click="nextQuestion"
                                 >
@@ -388,7 +416,7 @@
                         </div>
                     </div>
 
-                    <!-- 第三部：縦並びレイアウト -->
+                    <!-- 第三部:縦並びレイアウト -->
                     <div v-else class="mb-6">
                         <!-- 問題エリア -->
                         <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-4">
@@ -407,7 +435,7 @@
                             </div>
                         </div>
 
-                        <!-- 選択肢エリア（横並び） -->
+                        <!-- 選択肢エリア(横並び) -->
                         <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-4">
                             <div class="mb-4">
                                 <h3
@@ -421,7 +449,7 @@
                                 <button
                                     v-for="(choice, choiceIndex) in validatedChoices"
                                     :key="getChoiceKey(choice, choiceIndex, 'part3')"
-                                    class="flex-1 min-w-0 p-4 border-2 rounded-lg transition-all duration-200 text-left hover:shadow-md flex flex-col items-center justify-center"
+                                    class="flex-1 min-w-0 p-6 border-2 rounded-lg transition-all duration-200 text-center hover:shadow-md flex flex-col items-center justify-center"
                                     :class="{
                                         'bg-blue-100 border-blue-500 shadow-lg':
                                             answerStatus[currentIndex]?.selected === choice.label,
@@ -430,48 +458,21 @@
                                     }"
                                     @click="handleAnswer(choice.label)"
                                 >
-                                    <div class="flex items-start gap-4">
-                                        <div class="text-center">
-                                            <!-- 選択肢ラベル（上部中央） -->
-                                            <div
-                                                class="text-2xl font-bold mb-3"
-                                                :class="{
-                                                    'text-blue-600':
-                                                        answerStatus[currentIndex]?.selected ===
-                                                        choice.label,
-                                                    'text-gray-600':
-                                                        answerStatus[currentIndex]?.selected !==
-                                                        choice.label,
-                                                }"
-                                            >
-                                                {{ choice.label }}
-                                            </div>
-
-                                            <!-- 選択肢テキスト（下部中央） -->
-                                            <div
-                                                v-if="choice.text"
-                                                class="text-lg leading-relaxed"
-                                                :class="{
-                                                    'text-blue-800':
-                                                        answerStatus[currentIndex]?.selected ===
-                                                        choice.label,
-                                                    'text-gray-700':
-                                                        answerStatus[currentIndex]?.selected !==
-                                                        choice.label,
-                                                }"
-                                            >
-                                                {{ choice.text }}
-                                            </div>
-                                        </div>
+                                    <!-- 選択肢テキストのみ(記号なし・文字大き) -->
+                                    <div
+                                        v-if="choice.text"
+                                        class="text-2xl leading-relaxed font-medium text-gray-700"
+                                    >
+                                        {{ choice.text }}
                                     </div>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- 下部：回答状況と ナビゲーションボタンを横並び -->
+                        <!-- 下部:回答状況と ナビゲーションボタンを横並び -->
                         <div class="flex justify-between items-start mt-4 gap-4">
-                            <!-- 左側：回答状況（幅を広げて表示） -->
-                            <div class="bg-gray-50 border rounded p-3 w-96">
+                            <!-- 左側:回答状況(幅を広げて表示) -->
+                            <div class="bg-gray-50 border rounded p-3 w-1/2">
                                 <h3 class="font-semibold mb-3 text-sm">回答状況</h3>
                                 <div
                                     class="overflow-x-auto"
@@ -503,25 +504,57 @@
                                             <tr
                                                 v-for="(ans, idx) in answerStatus"
                                                 :key="ans.questionNumber"
-                                                class="hover:bg-gray-50"
-                                                :class="{
-                                                    'bg-yellow-100': idx === currentIndex,
+                                                :style="{
+                                                    backgroundColor:
+                                                        idx === currentIndex && !ans.checked
+                                                            ? '#DBEAFE'
+                                                            : ans.checked
+                                                              ? '#FEE2E2'
+                                                              : '',
                                                 }"
                                             >
                                                 <td
-                                                    class="border px-2 py-1 cursor-pointer hover:bg-blue-100 transition-colors text-xs"
+                                                    class="border px-2 py-2 cursor-pointer transition-colors text-xs hover:bg-blue-200"
+                                                    :style="{
+                                                        backgroundColor:
+                                                            idx === currentIndex && !ans.checked
+                                                                ? '#DBEAFE'
+                                                                : ans.checked
+                                                                  ? '#FEE2E2'
+                                                                  : '',
+                                                    }"
                                                     @click="jumpToQuestion(idx)"
                                                 >
                                                     {{ ans.questionNumber }}
                                                 </td>
-                                                <td class="border px-2 py-1 text-xs">
+                                                <td
+                                                    class="border px-2 py-2 text-xs"
+                                                    :style="{
+                                                        backgroundColor:
+                                                            idx === currentIndex && !ans.checked
+                                                                ? '#DBEAFE'
+                                                                : ans.checked
+                                                                  ? '#FEE2E2'
+                                                                  : '',
+                                                    }"
+                                                >
                                                     {{ ans.selected || "-" }}
                                                 </td>
-                                                <td class="border px-2 py-1">
+                                                <td
+                                                    class="border px-2 py-2"
+                                                    :style="{
+                                                        backgroundColor:
+                                                            idx === currentIndex && !ans.checked
+                                                                ? '#DBEAFE'
+                                                                : ans.checked
+                                                                  ? '#FEE2E2'
+                                                                  : '',
+                                                    }"
+                                                >
                                                     <input
                                                         type="checkbox"
                                                         v-model="ans.checked"
-                                                        class="form-checkbox scale-75"
+                                                        class="form-checkbox w-4 h-4"
                                                     />
                                                 </td>
                                             </tr>
@@ -530,17 +563,17 @@
                                 </div>
                             </div>
 
-                            <!-- 右側：ナビゲーションボタン（横並び・右寄せ） -->
-                            <div class="flex gap-2 items-center">
+                            <!-- 右側:ナビゲーションボタン(横並び・左寄せ) -->
+                            <div class="flex gap-4 items-center justify-start flex-1 pl-8">
                                 <button
-                                    class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
+                                    class="px-12 py-4 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-xl font-bold"
                                     :disabled="currentIndex === 0"
                                     @click="prevQuestion"
                                 >
                                     前の問題
                                 </button>
                                 <button
-                                    class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
+                                    class="px-12 py-4 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-xl font-bold"
                                     :disabled="currentIndex === questions.length - 1"
                                     @click="nextQuestion"
                                 >
@@ -739,7 +772,8 @@ const initializeQuestions = () => {
 // ゲストモード判定
 const isGuest = computed(() => !page.props.auth?.user || page.props.isGuest === true);
 
-// フォーム設定
+// Practice.vue の form 定義を以下のように修正
+
 const form = useForm({
     answers: {} as Record<number, string>,
     practiceSessionId: page.props.practiceSessionId || "",
@@ -748,6 +782,7 @@ const form = useForm({
     endTime: 0,
     timeSpent: 0,
     totalQuestions: 0,
+    isTimeout: false, // ★ 追加: タイムアウトフラグ
 });
 
 const currentQuestion = computed(() => questions.value[currentIndex.value] || {});
@@ -932,6 +967,15 @@ const showImagePlaceholder = (parent: HTMLElement | null, imageName: string) => 
 // Practice.vue の completePractice 関数を以下のように修正
 
 const completePractice = () => {
+    console.log("=== completePractice 呼び出し ===");
+    console.log("isTimeout:", form.isTimeout);
+
+    // タイマーを停止
+    if (timer) {
+        clearInterval(timer);
+        timer = undefined;
+    }
+
     form.practiceSessionId = props.practiceSessionId || page.props.practiceSessionId || "";
     form.part = currentPart.value;
     form.endTime = Date.now();
@@ -946,6 +990,7 @@ const completePractice = () => {
     console.log("answersCount:", Object.keys(form.answers).length);
     console.log("timeSpent:", form.timeSpent);
     console.log("totalQuestions:", form.totalQuestions);
+    console.log("isTimeout:", form.isTimeout); // ★ 追加
     console.log("========================");
 
     if (!form.practiceSessionId) {
@@ -964,11 +1009,10 @@ const completePractice = () => {
 
     const routeName = isGuest.value ? "guest.practice.complete" : "practice.complete";
 
-    // ★ 重要修正: これらのオプションを削除または変更
     form.post(route(routeName), {
         preserveState: false,
         preserveScroll: false,
-        replace: false, // ★ true → false に変更
+        replace: false,
         forceFormData: false,
         onBefore: () => {
             console.log("=== POST送信直前 ===");
@@ -978,8 +1022,6 @@ const completePractice = () => {
         onSuccess: response => {
             console.log("練習完了データ送信完了");
             console.log("Response:", response);
-            // ★ 削除: 手動でのページ遷移は不要
-            // Inertia.jsがサーバーからのredirect()を自動処理する
         },
         onError: errors => {
             showConfirm.value = false;
@@ -1057,9 +1099,65 @@ function confirmComplete() {
     completePractice();
 }
 
+// Practice.vue の handleTimeUp 関数を以下のように修正
+
 function handleTimeUp() {
-    alert("制限時間が終了しました。自動的に解説画面に進みます。");
-    completePractice();
+    console.log("=== タイムアップ発生 ===");
+    console.log("remainingTime:", remainingTime.value);
+    console.log("currentPart:", currentPart.value);
+
+    // タイマーを停止
+    if (timer) {
+        clearInterval(timer);
+        timer = undefined;
+    }
+
+    // ★ 重要: isTimeout フラグを true に設定
+    form.isTimeout = true;
+    form.practiceSessionId = props.practiceSessionId || page.props.practiceSessionId || "";
+    form.part = currentPart.value;
+    form.endTime = Date.now();
+    form.timeSpent = Math.floor((Date.now() - form.startTime) / 1000);
+    form.totalQuestions = questions.value.length;
+
+    // 回答データを更新（空でも送信）
+    updateFormAnswers();
+
+    console.log("=== タイムアップ時の送信データ ===");
+    console.log("isTimeout:", form.isTimeout);
+    console.log("part:", form.part);
+    console.log("practiceSessionId:", form.practiceSessionId);
+    console.log("timeSpent:", form.timeSpent);
+    console.log("answers:", form.answers);
+    console.log("================================");
+
+    const routeName = isGuest.value ? "guest.practice.complete" : "practice.complete";
+
+    // アラート表示
+    alert("制限時間が終了しました。自動的に次のパートに進みます。");
+
+    // 直接POSTリクエストを送信
+    form.post(route(routeName), {
+        preserveState: false,
+        preserveScroll: false,
+        replace: false,
+        forceFormData: false,
+        onBefore: () => {
+            console.log("=== タイムアップPOST送信直前 ===");
+            console.log("Route:", routeName);
+            console.log("Data:", form.data());
+        },
+        onSuccess: response => {
+            console.log("タイムアップデータ送信成功:", response);
+        },
+        onError: errors => {
+            console.error("タイムアップデータ送信エラー:", errors);
+            alert("エラーが発生しました。ページをリロードしてください。");
+        },
+        onFinish: () => {
+            console.log("タイムアップリクエスト処理完了");
+        },
+    });
 }
 
 // パート変更時のウォッチャー
@@ -1071,19 +1169,35 @@ watch(
     }
 );
 
+// 4. タイマー処理を修正
 onMounted(async () => {
     initializeQuestions();
 
     const startTimer = () => {
-        if (!showPracticeStartPopup.value) {
+        if (!showPracticeStartPopup.value && !timer) {
+            console.log("タイマー開始:", {
+                remainingTime: remainingTime.value,
+                part: currentPart.value,
+            });
+
             timer = setInterval(() => {
                 if (remainingTime.value > 0) {
                     remainingTime.value--;
+
+                    // デバッグ: 残り10秒でログ出力
+                    if (remainingTime.value <= 10) {
+                        console.log(`残り時間: ${remainingTime.value}秒`);
+                    }
                 } else {
+                    console.log("=== 時間切れ検出 ===");
+                    if (timer) {
+                        clearInterval(timer);
+                        timer = undefined;
+                    }
                     handleTimeUp();
                 }
             }, 1000);
-        } else {
+        } else if (showPracticeStartPopup.value) {
             setTimeout(startTimer, 100);
         }
     };
@@ -1091,7 +1205,12 @@ onMounted(async () => {
     startTimer();
 });
 
+// 5. コンポーネント破棄時の処理
 onUnmounted(() => {
-    if (timer) clearInterval(timer);
+    console.log("Practice.vue アンマウント - タイマークリア");
+    if (timer) {
+        clearInterval(timer);
+        timer = undefined;
+    }
 });
 </script>
