@@ -26,7 +26,7 @@ use Inertia\Inertia;
 // ========================================
 Route::get('/', [SessionCodeController::class, 'entry'])->name('session.entry');
 Route::post('/session/verify', [SessionCodeController::class, 'verify'])->name('session.verify');
-Route::post('/session/clear', [SessionCodeController::class, 'clearSession'])->name('session.clear'); // ← この行を追加
+Route::post('/session/clear', [SessionCodeController::class, 'clearSession'])->name('session.clear');
 
 // ========================================
 // 管理者ルート(セッションコード不要)
@@ -232,6 +232,11 @@ Route::middleware(['check.session.code'])->group(function () {
                 ->name('part');
             Route::post('/complete-part', [ExamController::class, 'completePart'])->name('complete-part');
             Route::post('/save-answer', [ExamController::class, 'saveAnswer'])->name('save-answer');
+            
+            // ★ 新規追加: バッチ処理用エンドポイント
+            Route::post('/save-answers-batch', [ExamController::class, 'saveAnswersBatch'])->name('save-answers-batch');
+            Route::get('/questions-batch/{part}/{offset?}', [ExamController::class, 'getQuestionsBatch'])->name('get-questions-batch');
+            
             Route::post('/report-violation', [ExamController::class, 'reportViolation'])->name('report-violation');
             Route::get('/disqualified', [ExamController::class, 'disqualified'])->name('disqualified');
             Route::get('/result/{sessionUuid}', [ExamController::class, 'showResult'])->name('result');

@@ -1,3 +1,10 @@
+# 🔒 開発環境用 Docker Compose（localhost のみ）
+# 用途: ローカル開発、セキュアな開発環境
+# 実行: docker-compose -f docker-compose.dev.yml up -d
+
+# 注意: このファイルはホストマシンのみアクセス可能
+# 他のPCからアクセスできません（セキュリティ対策）
+
 services:
     laravel.test:
         build:
@@ -9,8 +16,9 @@ services:
         extra_hosts:
             - "host.docker.internal:host-gateway"
         ports:
-            - "0.0.0.0:${APP_PORT:-80}:80"
-            - "0.0.0.0:${VITE_PORT:-5173}:${VITE_PORT:-5173}"
+            # localhost (127.0.0.1) のみバインド
+            - "127.0.0.1:${APP_PORT:-80}:80"
+            - "127.0.0.1:${VITE_PORT:-5173}:${VITE_PORT:-5173}"
         environment:
             WWWUSER: "${WWWUSER}"
             LARAVEL_SAIL: 1
@@ -31,7 +39,7 @@ services:
     mysql:
         image: "mysql/mysql-server:8.0"
         ports:
-            - "${FORWARD_DB_PORT:-3306}:3306"
+            - "127.0.0.1:${FORWARD_DB_PORT:-3306}:3306"
         environment:
             MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
             MYSQL_ROOT_HOST: "%"
@@ -56,7 +64,7 @@ services:
     redis:
         image: "redis:alpine"
         ports:
-            - "${FORWARD_REDIS_PORT:-6379}:6379"
+            - "127.0.0.1:${FORWARD_REDIS_PORT:-6379}:6379"
         volumes:
             - "sail-redis:/data"
         networks:
@@ -72,57 +80,36 @@ services:
     meilisearch:
         image: "getmeili/meilisearch:latest"
         ports:
-            - "${FORWARD_MEILISEARCH_PORT:-7700}:7700"
+            - "127.0.0.1:${FORWARD_MEILISEARCH_PORT:-7700}:7700"
         environment:
             MEILI_NO_ANALYTICS: "${MEILISEARCH_NO_ANALYTICS:-false}"
         volumes:
             - "sail-meilisearch:/meili_data"
         networks:
             - sail
-        healthcheck:
-            test:
-                - CMD
-                - wget
-                - "--no-verbose"
-                - "--spider"
-                - "http://127.0.0.1:7700/health"
-            retries: 3
-            timeout: 5s
 
     mailpit:
         image: "axllent/mailpit:latest"
         ports:
-            - "${FORWARD_MAILPIT_PORT:-1025}:1025"
-            - "${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025"
+            - "127.0.0.1:${FORWARD_MAILPIT_PORT:-1025}:1025"
+            - "127.0.0.1:${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025"
         networks:
             - sail
 
     selenium:
-        image: selenium/standalone-chromium
+        image: "selenium/standalone-chrome"
         extra_hosts:
             - "host.docker.internal:host-gateway"
+        ports:
+            - "127.0.0.1:${FORWARD_SELENIUM_PORT:-4444}:4444"
         volumes:
             - "/dev/shm:/dev/shm"
-        networks:
-            - sail
-
-    phpmyadmin:
-        image: phpmyadmin/phpmyadmin
-        restart: always
-        ports:
-            - 8080:80
-        environment:
-            PMA_HOST: mysql
-            PMA_PORT: 3306
-        depends_on:
-            - mysql
         networks:
             - sail
 
 networks:
     sail:
         driver: bridge
-
 volumes:
     sail-mysql:
         driver: local

@@ -424,185 +424,173 @@ public function part(Request $request, $part)
 }
 
     /**
- * パート完了処理(修正版) - 全問未回答・時間切れでも進める
+ * パート完了処理(改善版) - トランザクションスコープ最適化
  */
 public function completePart(Request $request)
 {
-    // ★ 修正: answers を nullable に変更、timeSpent も柔軟に
     $validated = $request->validate([
         'examSessionId' => 'required|uuid',
         'part' => 'required|integer|in:1,2,3',
-        'answers' => 'nullable|array',  // ★ required を nullable に変更
-        'timeSpent' => 'nullable|integer|min:0',  // ★ min:1 → min:0 に変更、nullable追加
-        'startTime' => 'nullable|integer',  // ★ nullable追加
-        'endTime' => 'nullable|integer',  // ★ nullable追加
+        'answers' => 'nullable|array',
+        'timeSpent' => 'nullable|integer|min:0',
+        'startTime' => 'nullable|integer',
+        'endTime' => 'nullable|integer',
         'totalQuestions' => 'required|integer|min:1',
     ]);
 
+    $user = Auth::user();
+    $part = $validated['part'];
+    $cacheSessionId = $validated['examSessionId'];
+
+    Log::info("=== completePart 開始 ===", [
+        'user_id' => $user->id,
+        'part' => $part,
+        'cache_session_id' => $cacheSessionId,
+        'answers_count' => count($validated['answers'] ?? []),
+    ]);
+
+    // ★改善1: トランザクション外でデータ準備
+    $cacheKey = "exam_part_session_{$user->id}_{$cacheSessionId}";
+    $cacheSession = Cache::get($cacheKey);
+
+    if (!$cacheSession) {
+        Log::error('キャッシュセッション見つからず', [
+            'user_id' => $user->id,
+            'cache_key' => $cacheKey,
+        ]);
+        return back()->withErrors(['examSessionId' => '無効なセッションです。']);
+    }
+
+    $examType = $cacheSession['exam_type'] ?? 'full';
+    $answers = $validated['answers'] ?? [];
+
     try {
+        // ★改善2: 短いトランザクションで検証とロック
         DB::beginTransaction();
 
-        $user = Auth::user();
-        $part = $validated['part'];
-        $cacheSessionId = $validated['examSessionId'];
+        $examSession = ExamSession::lockForUpdate()
+            ->find($cacheSession['exam_session_id']);
 
-        Log::info("=== completePart 開始 ===", [
-            'user_id' => $user->id,
-            'part' => $part,
-            'cache_session_id' => $cacheSessionId,
-            'answers_count' => count($validated['answers'] ?? []),  // ★ null チェック追加
-        ]);
-
-        // キャッシュからセッション情報を取得
-        $cacheKey = "exam_part_session_{$user->id}_{$cacheSessionId}";
-        $cacheSession = Cache::get($cacheKey);
-
-        if (! $cacheSession) {
+        if (!$examSession 
+            || $examSession->user_id !== $user->id
+            || $examSession->finished_at
+            || $examSession->disqualified_at) {
             DB::rollBack();
-            Log::error('キャッシュセッション見つからず', [
-                'user_id' => $user->id,
-                'cache_key' => $cacheKey,
-            ]);
-            return back()->withErrors(['examSessionId' => '無効なセッションです。']);
-        }
-
-        $examType = $cacheSession['exam_type'] ?? 'full';
-
-        // ExamSessionを取得
-        $examSession = ExamSession::where('user_id', $user->id)
-            ->where('id', $cacheSession['exam_session_id'])
-            ->whereNull('finished_at')
-            ->whereNull('disqualified_at')
-            ->first();
-
-        if (! $examSession) {
-            DB::rollBack();
-            Log::error('ExamSession見つからず', [
+            Log::error('ExamSession見つからずまたは無効', [
                 'user_id' => $user->id,
                 'exam_session_id' => $cacheSession['exam_session_id'],
             ]);
             return back()->withErrors(['examSessionId' => '試験セッションが見つかりません。']);
         }
 
-        // このパートの解答をsecurity_logに保存
+        // security_log更新
         $securityLog = json_decode($examSession->security_log ?? '{}', true);
         
         if (!isset($securityLog['part_'.$part.'_answers'])) {
             $securityLog['part_'.$part.'_answers'] = [];
         }
 
-        // ★ 修正: 解答が空の場合も処理を続ける
-        $answers = $validated['answers'] ?? [];
-        
-        // リクエストの解答をマージ
         foreach ($answers as $questionId => $choice) {
             $securityLog['part_'.$part.'_answers'][$questionId] = $choice;
         }
 
-        // security_logを更新
         $examSession->update([
             'security_log' => json_encode($securityLog),
         ]);
+
+        DB::commit();
 
         Log::info("第{$part}部完了 - security_log更新", [
             'user_id' => $user->id,
             'part' => $part,
             'answers_count' => count($securityLog['part_'.$part.'_answers']),
-            'is_empty' => count($answers) === 0 ? 'yes' : 'no',  // ★ 空かどうかをログ出力
+            'is_empty' => count($answers) === 0 ? 'yes' : 'no',
         ]);
 
-        // 次のアクションを決定
-        if ($part < 3) {
-            // 第一部・第二部完了後は次の部の練習問題へ
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Part completion failed (security_log update)', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+        return back()->withErrors(['general' => 'システムエラーが発生しました。']);
+    }
+
+    // ★改善3: 次のアクション決定（トランザクション外）
+    if ($part < 3) {
+        // 第一部・第二部完了後は次の部の練習問題へ
+        try {
+            DB::beginTransaction();
+
+            $examSession = ExamSession::lockForUpdate()
+                ->find($examSession->id);
+
             $nextPart = $part + 1;
-            
             $examSession->update([
                 'current_part' => $nextPart,
                 'current_question' => 1,
                 'remaining_time' => 0,
             ]);
 
-            Cache::forget($cacheKey);
             DB::commit();
+
+            Cache::forget($cacheKey);
 
             Log::info("第{$part}部完了 - 第{$nextPart}部練習問題へ遷移", [
                 'user_id' => $user->id,
                 'completed_part' => $part,
                 'next_part' => $nextPart,
-                'updated_current_part' => $examSession->fresh()->current_part,
             ]);
 
             return redirect()->route('practice.show', ['section' => $nextPart])
                 ->with('success', "第{$part}部が完了しました。第{$nextPart}部の練習問題を開始してください。");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('次のパートへの遷移失敗', [
+                'error' => $e->getMessage(),
+            ]);
+            return back()->withErrors(['general' => 'システムエラーが発生しました。']);
+        }
                 
-        } else {
-            // 第三部完了後は全パートの解答をanswersテーブルに保存して結果表示へ
-            Log::info('第三部完了 - 全パート採点開始', [
-                'user_id' => $user->id,
-                'exam_session_id' => $examSession->id,
-            ]);
+    } else {
+        // ★改善4: 第三部完了後は全パートの解答をanswerテーブルに保存
+        Log::info('第三部完了 - 全パート採点開始', [
+            'user_id' => $user->id,
+            'exam_session_id' => $examSession->id,
+        ]);
 
-            // 全パートの解答を統合
-            $allAnswers = [];
-            for ($p = 1; $p <= 3; $p++) {
-                if (isset($securityLog['part_'.$p.'_answers'])) {
-                    $allAnswers = $allAnswers + $securityLog['part_'.$p.'_answers'];
-                }
-            }
+        // トランザクション外でデータ準備
+        $securityLog = json_decode($examSession->security_log ?? '{}', true);
+        $allAnswers = $this->collectAllAnswers($securityLog);
 
-            Log::info('全パート解答統合完了', [
-                'user_id' => $user->id,
-                'total_answers' => count($allAnswers),
-                'part1_answers' => count($securityLog['part_1_answers'] ?? []),
-                'part2_answers' => count($securityLog['part_2_answers'] ?? []),
-                'part3_answers' => count($securityLog['part_3_answers'] ?? []),
-            ]);
+        Log::info('全パート解答統合完了', [
+            'user_id' => $user->id,
+            'total_answers' => count($allAnswers),
+            'part1_answers' => count($securityLog['part_1_answers'] ?? []),
+            'part2_answers' => count($securityLog['part_2_answers'] ?? []),
+            'part3_answers' => count($securityLog['part_3_answers'] ?? []),
+        ]);
 
-            // answersテーブルに保存
-            $savedCount = 0;
-            foreach ($allAnswers as $questionId => $choice) {
-                if (! is_numeric($questionId) || ! in_array($choice, ['A', 'B', 'C', 'D', 'E'])) {
-                    continue;
-                }
+        // トランザクション外で採点データ準備
+        $answersToInsert = $this->prepareAnswersForInsert($allAnswers, $user, $examSession);
 
-                $question = Question::with('choices')->find($questionId);
-                if (! $question) {
-                    continue;
-                }
+        // ★改善5: 短いトランザクションで一括UPSERT
+        try {
+            DB::beginTransaction();
 
-                $correctChoice = $question->choices()
-                    ->where('part', $question->part)
-                    ->where('is_correct', 1)
-                    ->first();
-
-                $isCorrect = false;
-                if ($correctChoice) {
-                    $isCorrect = (trim($correctChoice->label) === trim($choice));
-                }
-
-                Answer::updateOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'question_id' => $questionId,
-                    ],
-                    [
-                        'exam_session_id' => $examSession->id,
-                        'part' => $question->part,
-                        'choice' => $choice,
-                        'is_correct' => $isCorrect,
-                    ]
+            if (!empty($answersToInsert)) {
+                Answer::upsert(
+                    $answersToInsert,
+                    ['user_id', 'question_id'],
+                    ['exam_session_id', 'part', 'choice', 'is_correct', 'updated_at']
                 );
-
-                $savedCount++;
-            }
-
-            // すべてのキャッシュを削除
-            Cache::forget($cacheKey);
-            for ($p = 1; $p <= 3; $p++) {
-                Cache::forget("exam_answers_{$user->id}_{$p}");
             }
 
             // セッション完了
+            $examSession = ExamSession::lockForUpdate()
+                ->find($examSession->id);
+
             $examSession->update([
                 'finished_at' => now(),
                 'current_part' => 3,
@@ -611,26 +599,93 @@ public function completePart(Request $request)
 
             DB::commit();
 
+            // キャッシュクリーンアップ
+            Cache::forget($cacheKey);
+            for ($p = 1; $p <= 3; $p++) {
+                Cache::forget("exam_answers_{$user->id}_{$p}");
+            }
+
             Log::info('試験完了 - 全パート採点完了', [
                 'user_id' => $user->id,
                 'exam_session_id' => $examSession->id,
                 'total_answers' => count($allAnswers),
-                'saved_count' => $savedCount,
+                'saved_count' => count($answersToInsert),
             ]);
 
             return redirect()->route('exam.result', ['sessionUuid' => $examSession->session_uuid])
                 ->with('success', '試験が完了しました。');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('試験完了処理失敗', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return back()->withErrors(['general' => 'システムエラーが発生しました。']);
+        }
+    }
+}
+
+/**
+ * ★新規追加: security_logから全パートの解答を収集
+ */
+private function collectAllAnswers(array $securityLog): array
+{
+    $allAnswers = [];
+    for ($p = 1; $p <= 3; $p++) {
+        if (isset($securityLog['part_'.$p.'_answers'])) {
+            $allAnswers = $allAnswers + $securityLog['part_'.$p.'_answers'];
+        }
+    }
+    return $allAnswers;
+}
+
+/**
+ * ★新規追加: 採点データを準備
+ */
+private function prepareAnswersForInsert(array $allAnswers, $user, $examSession): array
+{
+    $questionIds = array_keys($allAnswers);
+    
+    $questions = Question::with(['choices' => function ($query) {
+        $query->where('is_correct', 1);
+    }])
+    ->whereIn('id', $questionIds)
+    ->get()
+    ->keyBy('id');
+    
+    $answersToInsert = [];
+    
+    foreach ($allAnswers as $questionId => $choice) {
+        if (!is_numeric($questionId) || !in_array($choice, ['A', 'B', 'C', 'D', 'E'])) {
+            continue;
         }
 
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Part completion failed', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-        ]);
+        $question = $questions->get($questionId);
+        if (!$question) {
+            continue;
+        }
 
-        return back()->withErrors(['general' => 'システムエラーが発生しました。']);
+        $correctChoice = $question->choices->first();
+        $isCorrect = false;
+        
+        if ($correctChoice) {
+            $isCorrect = (trim($correctChoice->label) === trim($choice));
+        }
+
+        $answersToInsert[] = [
+            'user_id' => $user->id,
+            'exam_session_id' => $examSession->id,
+            'question_id' => $questionId,
+            'part' => $question->part,
+            'choice' => $choice,
+            'is_correct' => $isCorrect,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
     }
+    
+    return $answersToInsert;
 }
 
     /**
@@ -791,6 +846,185 @@ public function completePart(Request $request)
             ], 500);
         }
     }
+
+    /**
+ * 複数回答を一括保存(バッチ処理) - デッドロック対策版
+ */
+public function saveAnswersBatch(Request $request)
+{
+    $validated = $request->validate([
+        'examSessionId' => 'required|uuid',
+        'answers' => 'required|array|max:10', // 最大10問まで
+        'answers.*' => 'string|in:A,B,C,D,E',
+        'part' => 'required|integer|in:1,2,3',
+        'remainingTime' => 'nullable|integer|min:0',
+    ]);
+
+    $maxRetries = 3;
+    $attempt = 0;
+
+    while ($attempt < $maxRetries) {
+        try {
+            DB::beginTransaction();
+
+            $user = Auth::user();
+
+            // ゲストは処理しない
+            if (!$user) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ゲストモードでは保存できません',
+                ], 403);
+            }
+
+            $cacheSessionId = $validated['examSessionId'];
+
+            // キャッシュからセッション情報を取得
+            $cacheKey = "exam_part_session_{$user->id}_{$cacheSessionId}";
+            $cacheSession = Cache::get($cacheKey);
+
+            if (!$cacheSession) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => '無効なセッションです。',
+                ], 403);
+            }
+
+            // ★改善1: プライマリキーで直接取得し、排他ロック
+            $examSession = ExamSession::lockForUpdate()
+                ->find($cacheSession['exam_session_id']);
+
+            // ★改善2: 取得後に条件チェック
+            if (!$examSession 
+                || $examSession->user_id !== $user->id
+                || $examSession->finished_at
+                || $examSession->disqualified_at) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => '無効な試験セッションです。',
+                ], 403);
+            }
+
+            // 現在の解答状況を security_log に保存
+            $securityLog = json_decode($examSession->security_log ?? '{}', true);
+
+            if (!isset($securityLog['part_'.$validated['part'].'_answers'])) {
+                $securityLog['part_'.$validated['part'].'_answers'] = [];
+            }
+
+            // 複数回答を一括更新
+            foreach ($validated['answers'] as $questionId => $choice) {
+                if (!is_numeric($questionId)) continue;
+                $securityLog['part_'.$validated['part'].'_answers'][$questionId] = $choice;
+            }
+
+            $securityLog['last_updated'] = now()->toISOString();
+            
+            // 時間も更新
+            $updateData = [
+                'security_log' => json_encode($securityLog),
+            ];
+            
+            if (isset($validated['remainingTime'])) {
+                $updateData['remaining_time'] = $validated['remainingTime'];
+            }
+
+            $examSession->update($updateData);
+
+            DB::commit();
+
+            Log::info('バッチ保存成功', [
+                'user_id' => $user->id,
+                'exam_session_id' => $examSession->id,
+                'answers_count' => count($validated['answers']),
+                'part' => $validated['part'],
+                'remaining_time' => $validated['remainingTime'] ?? 'not updated',
+                'attempt' => $attempt + 1,
+            ]);
+
+            return response()->json(['success' => true]);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
+            
+            // ★改善3: デッドロック検出とリトライ
+            $isDeadlock = false;
+            
+            // MySQL のデッドロック (エラーコード 1213)
+            if ($e->getCode() == '40001' || str_contains($e->getMessage(), 'Deadlock')) {
+                $isDeadlock = true;
+            }
+            
+            // PostgreSQL のデッドロック (SQLSTATE 40P01)
+            if ($e->getCode() == '40P01') {
+                $isDeadlock = true;
+            }
+            
+            if ($isDeadlock) {
+                $attempt++;
+                
+                if ($attempt >= $maxRetries) {
+                    Log::error('デッドロック: 最大リトライ回数超過', [
+                        'user_id' => Auth::id(),
+                        'attempt' => $attempt,
+                        'error' => $e->getMessage(),
+                    ]);
+                    
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'サーバーが混雑しています。もう一度お試しください。',
+                    ], 503);
+                }
+                
+                // ★改善4: 指数バックオフで待機
+                $waitTime = rand(100, 500) * 1000 * $attempt; // マイクロ秒
+                Log::warning('デッドロック検出 - リトライ', [
+                    'user_id' => Auth::id(),
+                    'attempt' => $attempt,
+                    'wait_ms' => $waitTime / 1000,
+                ]);
+                
+                usleep($waitTime);
+                continue; // リトライ
+            }
+            
+            // デッドロック以外のエラー
+            Log::error('バッチ保存失敗', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'code' => $e->getCode(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'システムエラーが発生しました。',
+            ], 500);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error('バッチ保存失敗 (予期しないエラー)', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'システムエラーが発生しました。',
+            ], 500);
+        }
+    }
+
+    // リトライループを抜けた場合（通常はここに到達しない）
+    return response()->json([
+        'success' => false,
+        'message' => 'リクエストの処理に失敗しました。',
+    ], 500);
+}
 
     /**
      * ゲスト用本番試験パート表示 - カスタム対応修正版
@@ -1543,6 +1777,98 @@ public function guestCompletePart(Request $request)
             'disqualified' => $examSession['violation_count'] >= 3,
         ]);
     }
+
+    /**
+ * 問題をバッチで取得(5問ずつ) - インデックス最適化版
+ */
+public function getQuestionsBatch(Request $request, $part, $offset = 0)
+{
+    $user = Auth::user();
+    $part = (int) $part;
+    $offset = (int) $offset;
+    $batchSize = 5; // 一度に5問取得
+
+    // パート番号の検証
+    if (!in_array($part, [1, 2, 3])) {
+        return response()->json(['error' => '無効なパート番号です'], 400);
+    }
+
+    // ★改善1: セッションコードの確認
+    $sessionCode = session('exam_session_code') ?? session('verified_session_code');
+    $event = $sessionCode ? $this->getEventBySessionCode($sessionCode) : null;
+    $examType = $event ? $event->exam_type : 'full';
+
+    // 問題数を取得
+    $questionCount = $this->getQuestionCountByEvent($part, $examType, $event);
+
+    // ★改善2: プライマリキーとインデックスを使った効率的な取得
+    // 順序付きロック: user_id, event_id の順で検索
+    $session = ExamSession::where('user_id', $user->id)
+        ->when($event, function ($query) use ($event) {
+            return $query->where('event_id', $event->id);
+        })
+        ->whereNull('finished_at')
+        ->whereNull('disqualified_at')
+        ->orderBy('id', 'asc') // ★追加: デッドロック防止
+        ->first();
+
+    if (!$session) {
+        return response()->json(['error' => 'セッションが見つかりません'], 404);
+    }
+
+    // security_logから保存済みの解答を取得
+    $securityLog = json_decode($session->security_log ?? '{}', true);
+    $savedAnswers = $securityLog['part_'.$part.'_answers'] ?? [];
+
+    // ★改善3: 必要なカラムのみ取得してパフォーマンス向上
+    // インデックスを活用: part + number の複合インデックス
+    $questions = Question::select(['id', 'number', 'part', 'text', 'image'])
+        ->with(['choices' => function ($query) use ($part) {
+            $query->select(['id', 'question_id', 'label', 'text', 'image', 'part', 'is_correct'])
+                ->where('part', $part)
+                ->orderBy('label');
+        }])
+        ->where('part', $part)
+        ->orderBy('number')
+        ->offset($offset)
+        ->limit(min($batchSize, $questionCount - $offset))
+        ->get()
+        ->map(function ($q) use ($savedAnswers) {
+            return [
+                'id' => $q->id,
+                'number' => $q->number,
+                'part' => $q->part,
+                'text' => $q->text,
+                'image' => $q->image,
+                'choices' => $q->choices->map(function ($c) {
+                    return [
+                        'id' => $c->id,
+                        'label' => $c->label,
+                        'text' => $c->text,
+                        'image' => $c->image,
+                        'part' => $c->part,
+                    ];
+                }),
+                'selected' => $savedAnswers[$q->id] ?? null,
+            ];
+        });
+
+    Log::info('問題バッチ取得成功', [
+        'user_id' => $user->id,
+        'part' => $part,
+        'offset' => $offset,
+        'batch_size' => $batchSize,
+        'retrieved' => $questions->count(),
+        'has_more' => ($offset + $batchSize) < $questionCount,
+    ]);
+
+    return response()->json([
+        'questions' => $questions,
+        'hasMore' => ($offset + $batchSize) < $questionCount,
+        'total' => $questionCount,
+        'loaded' => $offset + $questions->count(),
+    ]);
+}
 
     // ===== プライベートメソッド =====
 

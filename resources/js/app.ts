@@ -16,6 +16,12 @@ createInertiaApp({
             import.meta.glob<DefineComponent>("./Pages/**/*.vue")
         ),
     setup({ el, App, props, plugin }) {
+        // メタタグからCSRFトークンを取得してpropsに追加
+        const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement;
+        if (csrfTokenMeta?.content && props.initialPage.props) {
+            (props.initialPage.props as any).csrf = csrfTokenMeta.content;
+        }
+
         createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)

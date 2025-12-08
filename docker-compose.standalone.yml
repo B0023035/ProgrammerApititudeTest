@@ -1,0 +1,57 @@
+# 🖥️ スタンドアロン環境（Docker なし）
+# 用途: Docker を使わずにホストマシン上で直接実行
+# 推奨環境: PHP 8.4 + MySQL 8.0 + Redis 7 がホストにインストールされている場合
+
+version: "3.8"
+
+services:
+    # ℹ️ このファイルは Docker なし実行時の参考設定です
+    # 実際の実行には以下の環境構築が必要：
+    
+    # PHP 8.4 FPM
+    # MySQL 8.0
+    # Redis 7
+    # Node.js (npm)
+    
+    # 以下のコマンドで直接実行：
+    # php artisan serve
+    # npm run dev
+    
+    # データベース初期化：
+    # php artisan migrate --force
+    # php artisan db:seed
+
+    # ホストマシン上での実行方法：
+    
+    laravel-app:
+        description: "Laravel アプリケーションサーバー"
+        command: "php -S 0.0.0.0:8000 -t public"
+        environment:
+            APP_PORT: 8000
+            APP_URL: "http://0.0.0.0:8000"
+            APP_DEBUG: "true"
+            APP_ENV: "local"
+            CACHE_DRIVER: "redis"
+            SESSION_DRIVER: "cookie"
+            QUEUE_CONNECTION: "sync"
+            DB_HOST: "127.0.0.1"
+            DB_PORT: 3306
+            REDIS_HOST: "127.0.0.1"
+            REDIS_PORT: 6379
+        ports:
+            - "0.0.0.0:8000:8000"
+
+    nodejs-dev-server:
+        description: "Node.js 開発サーバー（Vite）"
+        command: "npm run dev"
+        environment:
+            VITE_PORT: 5173
+        ports:
+            - "0.0.0.0:5173:5173"
+
+# ネットワーク設定は不要（localhost のみ使用）
+networks:
+    host:
+        driver: host
+
+# ボリューム設定も不要（ホストマシンのストレージ使用）

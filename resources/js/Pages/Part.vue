@@ -58,7 +58,6 @@
                             <span class="font-semibold text-red-800">制限時間</span>
                         </div>
                         <p class="text-red-700">
-                            <!-- ★ 無制限の場合の表示 -->
                             <span v-if="(page.props.partTime || 0) === 0" class="font-bold text-xl">
                                 ∞ (無制限)
                             </span>
@@ -98,7 +97,7 @@
 
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8" v-show="!showPracticeStartPopup">
             <div class="p-4">
-                <!-- 【修正】上部ヘッダー - 赤色に変更 -->
+                <!-- 上部ヘッダー - 赤色に変更 -->
                 <div
                     class="flex justify-between items-center mb-4 bg-red-50 border border-red-200 rounded p-3"
                 >
@@ -118,7 +117,6 @@
                             残り時間: {{ timerDisplay }}
                         </div>
                     </div>
-                    <!-- 【修正】赤色に変更 -->
                     <button
                         class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
                         @click="showConfirm = true"
@@ -140,7 +138,6 @@
                             回答済み: {{ getAnsweredCount() }} / {{ questions.length }} 問
                         </div>
                         <div class="flex justify-end gap-2">
-                            <!-- 【修正】赤色に変更 -->
                             <button
                                 class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                                 @click="confirmComplete"
@@ -161,7 +158,7 @@
 
                 <!-- 問題表示エリア全体 -->
                 <div class="problem-display-area">
-                    <!-- 【修正】部ごとの説明文 - 赤色に変更 -->
+                    <!-- 部ごとの説明文 - 赤色に変更 -->
                     <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                         <div class="font-semibold text-red-800 text-base text-left">
                             <template v-if="currentPart === 1">
@@ -482,7 +479,7 @@
                                     }"
                                     @click="handleAnswer(choice.label)"
                                 >
-                                    <!-- 選択肢テキストのみ(記号なし・文字大きく) -->
+                                    <!-- 選択肢テキストのみ(記号なし・文字大き) -->
                                     <div
                                         v-if="choice.text"
                                         class="text-2xl leading-relaxed font-medium"
@@ -621,17 +618,14 @@
 </template>
 
 <style scoped>
-/* 選択された状態のアニメーション */
 .scale-105 {
     transform: scale(1.02);
 }
 
-/* ホバー時のスムーズなトランジション */
 button {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* レスポンシブ対応 */
 @media (max-width: 768px) {
     .flex.gap-4 {
         flex-direction: column;
@@ -707,7 +701,7 @@ interface PageProps {
 // Props定義
 const props = defineProps<{
     practiceSessionId?: string;
-    examSessionId?: string; // この行を追加
+    examSessionId?: string;
     part?: number;
     practiceQuestions: any[];
     currentPart?: number;
@@ -720,7 +714,18 @@ const props = defineProps<{
 
 const page = usePage<PageProps>();
 
-// 重要：現在の部に該当する問題のみをフィルタリング
+// CSRFトークンを取得（メタタグから）
+const getCsrfToken = (): string => {
+    const meta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement;
+    if (meta?.content) {
+        return meta.content;
+    }
+    // フォールバック: propsから取得
+    const token = page.props.ziggy?.csrf || page.props.csrf;
+    return token || "";
+};
+
+// 現在の部を取得
 const getCurrentPartValue = (): number => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlPart = urlParams.get("part");
@@ -768,7 +773,7 @@ const isGuest = computed(() => !page.props.auth?.user || page.props.isGuest === 
 // フォーム設定
 const form = useForm({
     answers: {} as Record<number, string>,
-    examSessionId: page.props.examSessionId || page.props.practiceSessionId || "", // 追加
+    examSessionId: page.props.examSessionId || page.props.practiceSessionId || "",
     practiceSessionId: page.props.practiceSessionId || "",
     part: currentPart.value,
     startTime: Date.now(),
@@ -787,19 +792,28 @@ const answerStatus = ref<AnswerStatus[]>(
 
 const currentQuestion = computed(() => questions.value[currentIndex.value] || {});
 
+// ★★★ 改善版: バッチ保存用の変数 ★★★
+const pendingAnswers = ref<Record<number, string>>({});
+const lastSyncTime = ref(Date.now());
+let syncTimer: number | undefined;
+
+// 問題の遅延読み込み用
+const loadedQuestionCount = ref(questions.value.length);
+const totalQuestions = ref(questions.value.length);
+const isLoadingMore = ref(false);
+
 // 練習開始関数
 function startPractice() {
     showPracticeStartPopup.value = false;
     form.startTime = Date.now();
 
-    // ★ 追加: ポップアップを閉じたタイミングでタイマー開始
     const partTimeLimit = page.props.partTime || 0;
 
     if (partTimeLimit > 0) {
-        // 時間制限がある場合のみタイマーを開始
         timer = setInterval(() => {
             if (remainingTime.value > 0) {
                 remainingTime.value--;
+                scheduleBatchSync(); // ★ タイマー減少時に定期保存
             } else {
                 handleTimeUp();
             }
@@ -814,7 +828,7 @@ function startPractice() {
     }
 }
 
-// 選択肢のバリデーションと重複排除(Part.vueと同じロジック)
+// 選択肢のバリデーションと重複排除
 const validatedChoices = computed(() => {
     if (!currentQuestion.value.choices) {
         console.log("No choices found for current question");
@@ -845,7 +859,6 @@ const validatedChoices = computed(() => {
         return [];
     }
 
-    // 重複除去(IDベース)
     const uniqueChoiceIds = new Set<number>();
     const uniqueChoices = validPartChoices.filter(choice => {
         if (!choice || !choice.id) {
@@ -860,7 +873,6 @@ const validatedChoices = computed(() => {
         return true;
     });
 
-    // ラベルの重複チェック
     const uniqueLabels = new Set<string>();
     const finalChoices = uniqueChoices.filter(choice => {
         if (!choice.label) {
@@ -875,7 +887,6 @@ const validatedChoices = computed(() => {
         return true;
     });
 
-    // ラベル順でソート(A, B, C, D, E)
     finalChoices.sort((a, b) => a.label.localeCompare(b.label));
 
     console.log("Final choices:", finalChoices);
@@ -898,9 +909,7 @@ const remainingTime = ref<number>(
     page.props.remainingTime !== undefined ? page.props.remainingTime : page.props.partTime || 300
 );
 
-// タイマー表示の計算プロパティ(無制限対応版)
 const timerDisplay = computed(() => {
-    // ★ 無制限時間(0分)の場合は特別表示
     const partTimeLimit = page.props.partTime || 0;
 
     if (partTimeLimit === 0) {
@@ -940,7 +949,6 @@ const getImagePath = (imageName: any, imageType: "questions" | "choices"): strin
 
     try {
         const imagePath = new URL(`./images/${imageType}/${trimmedName}`, import.meta.url).href;
-
         return imagePath;
     } catch (error) {
         const fallbackPath = `/images/${imageType}/${trimmedName}`;
@@ -948,7 +956,6 @@ const getImagePath = (imageName: any, imageType: "questions" | "choices"): strin
     }
 };
 
-// 画像を表示すべきかどうかを判定する計算プロパティ
 const shouldShowQuestionImage = computed(() => {
     return (
         currentPart.value === 2 &&
@@ -957,18 +964,15 @@ const shouldShowQuestionImage = computed(() => {
     );
 });
 
-// 第二部の選択肢表示を画像のみに修正する関数
 const shouldShowChoiceImage = (choice: ChoiceType) => {
     return currentPart.value === 2 && choice.image && choice.image.trim() !== "";
 };
 
-// 画像読み込み成功時の処理
 const handleImageLoad = (event: Event) => {
     const target = event.target as HTMLImageElement;
     console.log(`画像読み込み成功: ${target.src}`);
 };
 
-// 画像エラーハンドリング
 const handleImageError = (event: Event): void => {
     const target = event.target as HTMLImageElement;
     const imageName = target.src.split("/").pop() || "unknown";
@@ -1027,7 +1031,6 @@ const handleImageError = (event: Event): void => {
     }
 };
 
-// 画像プレースホルダー表示関数
 const showImagePlaceholder = (parent: HTMLElement | null, imageName: string) => {
     if (parent && !parent.querySelector(".image-placeholder")) {
         const placeholder = document.createElement("div");
@@ -1047,8 +1050,214 @@ const showImagePlaceholder = (parent: HTMLElement | null, imageName: string) => 
     }
 };
 
+// ★★★ 変更1: syncAnswersToServer - バッチ保存関数(完全版) ★★★
+/**
+ * 未送信の回答をサーバーへバッチ送信
+ * ✅ 解答選択時と1分ごとに呼ばれる
+ */
+async function syncAnswersToServer() {
+    if (isGuest.value) {
+        console.log("ゲストモード: サーバー同期をスキップ");
+        return;
+    }
+
+    if (Object.keys(pendingAnswers.value).length === 0) {
+        console.log("未送信の回答がありません");
+        return;
+    }
+
+    const answersToSync = { ...pendingAnswers.value };
+    const currentRemainingTime = remainingTime.value;
+
+    console.log("=== バッチ同期開始 ===", {
+        answers_count: Object.keys(answersToSync).length,
+        remaining_time: currentRemainingTime,
+        part: currentPart.value,
+    });
+
+    // 送信前にpendingAnswersをクリア
+    pendingAnswers.value = {};
+
+    try {
+        const csrfToken = getCsrfToken();
+
+        if (!csrfToken) {
+            console.error("CSRFトークンが見つかりません - 認証エラーの可能性");
+            console.log("メタタグおよびpropsからのトークン取得に失敗しました");
+            pendingAnswers.value = { ...answersToSync, ...pendingAnswers.value };
+            return;
+        }
+
+        const response = await fetch(route("exam.save-answers-batch"), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": csrfToken,
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+                examSessionId: form.examSessionId,
+                answers: answersToSync,
+                part: currentPart.value,
+                remainingTime: currentRemainingTime,
+            }),
+        });
+
+        if (!response.ok) {
+            console.warn("バッチ保存失敗:", response.status, response.statusText);
+
+            if (response.status === 503) {
+                console.log("サーバー混雑 - 5秒後にリトライします");
+                pendingAnswers.value = { ...answersToSync, ...pendingAnswers.value };
+                setTimeout(() => syncAnswersToServer(), 5000);
+                return;
+            } else if (response.status === 403 || response.status === 401) {
+                console.error("認証エラー - セッションが切れた可能性があります");
+                alert("セッションが切れました。ページを再読み込みしてください。");
+                return;
+            } else {
+                pendingAnswers.value = { ...answersToSync, ...pendingAnswers.value };
+                return;
+            }
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            console.log("✅ バッチ保存成功:", {
+                answers_count: Object.keys(answersToSync).length,
+                remaining_time: currentRemainingTime,
+            });
+
+            lastSyncTime.value = Date.now();
+        } else {
+            console.warn("バッチ保存失敗:", data.message);
+            pendingAnswers.value = { ...answersToSync, ...pendingAnswers.value };
+        }
+    } catch (error) {
+        console.error("バッチ保存エラー:", error);
+        pendingAnswers.value = { ...answersToSync, ...pendingAnswers.value };
+
+        if (error instanceof TypeError && error.message.includes("fetch")) {
+            console.log("ネットワークエラー - 5秒後にリトライします");
+            setTimeout(() => syncAnswersToServer(), 5000);
+        }
+    }
+}
+
+// ★★★ 変更2: handleAnswer - 解答選択時に即座保存 ★★★
+/**
+ * 回答選択時の処理
+ * ✅ 解答選択時に即座にサーバーへ送信
+ */
+async function handleAnswer(label: string) {
+    const sanitizedLabel = String(label).trim().slice(0, 5);
+    if (!/^[A-E]$/.test(sanitizedLabel)) return;
+
+    // 回答状態を更新
+    answerStatus.value[currentIndex.value].selected = sanitizedLabel;
+
+    // フォームの回答を更新
+    updateFormAnswers();
+
+    const questionId = currentQuestion.value.id;
+
+    console.log("回答選択:", {
+        question: questionId,
+        choice: sanitizedLabel,
+        is_guest: isGuest.value,
+    });
+
+    // ゲストモードの場合はローカル保存のみ
+    if (isGuest.value) {
+        console.log("ゲストモード: 回答をローカルにのみ保存");
+        return;
+    }
+
+    // 認証ユーザー: pendingAnswers に追加
+    pendingAnswers.value[questionId] = sanitizedLabel;
+
+    console.log("🔥 解答選択時の即座保存:", {
+        question: questionId,
+        choice: sanitizedLabel,
+        pending_count: Object.keys(pendingAnswers.value).length,
+    });
+
+    // 🔥 重要: 解答選択時に即座にサーバー送信
+    await syncAnswersToServer();
+}
+
+// ============================================
+// preloadNextBatch 関数の修正
+// ============================================
+// 既存の loadMoreQuestions 関数を削除して、
+// この preloadNextBatch 関数に置き換えてください
+
+/**
+ * 次の問題バッチをプリロード - 改善版
+ * ★既存の loadMoreQuestions を削除して、この関数に置き換え
+ */
+async function preloadNextBatch() {
+    if (isLoadingMore.value || loadedQuestionCount.value >= totalQuestions.value) {
+        return;
+    }
+
+    isLoadingMore.value = true;
+
+    try {
+        const response = await fetch(
+            route("exam.questions-batch", {
+                part: currentPart.value,
+                offset: loadedQuestionCount.value,
+            })
+        );
+
+        if (!response.ok) {
+            console.error("問題取得失敗:", response.statusText);
+            return;
+        }
+
+        const data = await response.json();
+
+        if (data.questions && data.questions.length > 0) {
+            questions.value.push(...data.questions);
+
+            // ★変更1: loadedQuestionCount の更新方法を改善
+            // 旧: loadedQuestionCount.value += data.questions.length;
+            // 新: サーバーから返された loaded 値を使用
+            loadedQuestionCount.value =
+                data.loaded || loadedQuestionCount.value + data.questions.length;
+
+            // ★変更2: totalQuestions の更新を追加
+            if (data.total) {
+                totalQuestions.value = data.total;
+            }
+
+            data.questions.forEach((q: QuestionType) => {
+                answerStatus.value.push({
+                    checked: false,
+                    questionNumber: q.number,
+                    selected: q.selected || null,
+                });
+            });
+
+            console.log("問題バッチ読み込み成功:", {
+                loaded: data.questions.length,
+                total_loaded: loadedQuestionCount.value,
+                total_questions: totalQuestions.value, // ★追加
+                has_more: data.hasMore,
+            });
+        }
+    } catch (error) {
+        console.error("問題プリロードエラー:", error);
+    } finally {
+        isLoadingMore.value = false;
+    }
+}
+
 const completePractice = () => {
-    // セッションIDを複数のソースから取得を試みる
     let sessionId =
         props.practiceSessionId ||
         props.examSessionId ||
@@ -1064,36 +1273,31 @@ const completePractice = () => {
     console.log("最終的なsessionId:", sessionId);
     console.log("========================");
 
-    // セッションIDの存在確認
     if (!sessionId || sessionId.trim() === "") {
         alert("セッションIDが見つかりません。ページを再読み込みしてください。");
         console.error("セッションIDが空です");
         return;
     }
 
-    // 数値のみの場合はエラー
     if (/^\d+$/.test(sessionId)) {
         alert("セッションIDの形式が不正です(数値のみ)。ページを再読み込みしてください。");
         console.error("セッションIDが数値のみです:", sessionId);
         return;
     }
 
-    // 最小長チェック(UUID = 36文字、ハイフン抜きでも32文字)
     if (sessionId.length < 32) {
         alert("セッションIDの形式が不正です。ページを再読み込みしてください。");
         console.error("セッションIDが短すぎます:", sessionId);
         return;
     }
 
-    // 【修正】本番試験用にexamSessionIdとして設定
-    form.examSessionId = sessionId; // これが重要！
-    form.practiceSessionId = sessionId; // 互換性のため両方設定
+    form.examSessionId = sessionId;
+    form.practiceSessionId = sessionId;
     form.part = currentPart.value;
     form.endTime = Date.now();
     form.timeSpent = Math.floor((Date.now() - form.startTime) / 1000);
     form.totalQuestions = questions.value.length;
 
-    // タイムスタンプの検証
     if (form.timeSpent < 0 || form.timeSpent > 7200) {
         alert("時間データが不正です。");
         console.error("timeSpent が範囲外:", form.timeSpent);
@@ -1102,29 +1306,25 @@ const completePractice = () => {
 
     updateFormAnswers();
 
-    // 回答数の検証
     if (Object.keys(form.answers).length > questions.value.length) {
         alert("回答データが不正です。");
         console.error("回答数が問題数を超えています");
         return;
     }
 
-    // totalQuestionsが0の場合のフォールバック
     if (form.totalQuestions === 0) {
         alert("問題データが読み込まれていません。ページを再読み込みしてください。");
         console.error("totalQuestions is 0, questions:", questions.value);
         return;
     }
 
-    // ★ 追加: 第三部の場合のみ answers テーブルに保存されることをログ出力
     if (currentPart.value === 3) {
         console.log("=== 第三部完了: answers テーブルに保存します ===");
     }
 
-    // 【修正】送信データの構造を明確化
     const payload = {
-        examSessionId: form.examSessionId, // 本番試験用
-        practiceSessionId: form.practiceSessionId, // 互換性のため
+        examSessionId: form.examSessionId,
+        practiceSessionId: form.practiceSessionId,
         part: form.part,
         answers: form.answers,
         timeSpent: form.timeSpent,
@@ -1144,20 +1344,16 @@ const completePractice = () => {
     console.log("questions.length:", questions.value.length);
     console.log("========================");
 
-    // ★ 追加: 完了前にキャッシュキーを記録
     if (currentPart.value === 3) {
         console.log("=== 第三部完了: キャッシュをクリアします ===");
     }
 
-    // 本番試験の完了処理ルート
     const routeName = isGuest.value ? "guest.exam.complete-part" : "exam.complete-part";
 
     form.post(route(routeName), {
         onSuccess: () => {
             console.log("試験パート完了データ送信完了");
-            // ★ 追加: 成功時にローカルストレージもクリア
             if (currentPart.value === 3) {
-                // ブラウザのローカルストレージをクリア(もし使っていれば)
                 try {
                     localStorage.removeItem(`exam_session_${sessionId}`);
                     localStorage.removeItem(`exam_answers_part_1`);
@@ -1194,197 +1390,19 @@ const completePractice = () => {
     });
 };
 
-// handleAnswer 関数を修正（既存の関数を置き換え）
-async function handleAnswer(label: string) {
-    const sanitizedLabel = String(label).trim().slice(0, 5);
-    if (!/^[A-E]$/.test(sanitizedLabel)) return;
-
-    // 解答を記録
-    answerStatus.value[currentIndex.value].selected = sanitizedLabel;
-    updateFormAnswers();
-
-    // サーバーに即座に保存
-    await saveCurrentAnswer(sanitizedLabel);
-}
-
-// 現在の解答をサーバーに保存する関数
-// Part.vue の saveCurrentAnswer 関数を修正
-
-// Part.vue の saveCurrentAnswer 関数 - 完全版
-
-const saveCurrentAnswer = async (choice: string, retryCount = 0) => {
-    const MAX_RETRIES = 2;
-
-    if (showPracticeStartPopup.value) return;
-
-    // ★ ゲストはサーバー保存をスキップ(メモリのみ)
-    if (isGuest.value) {
-        console.log("ゲストモード: メモリのみ保存", {
-            question: currentQuestion.value.id,
-            choice: choice,
-            part: currentPart.value,
-        });
-        return;
-    }
-
-    const currentQuestionId = currentQuestion.value.id;
-
-    // ★★★ 追加: 問題IDの基本検証 ★★★
-    if (!currentQuestionId || currentQuestionId <= 0) {
-        console.warn("無効な問題ID:", currentQuestionId);
-        return;
-    }
-
-    // ★★★ 追加: 問題が questions 配列に存在するか確認 ★★★
-    const questionExists = questions.value.some(q => q.id === currentQuestionId);
-    if (!questionExists) {
-        console.warn("この問題はクエリ対象外です:", {
-            questionId: currentQuestionId,
-            part: currentPart.value,
-            availableQuestions: questions.value.map(q => q.id),
-            questionsCount: questions.value.length,
-        });
-        return; // ★ 保存をスキップ
-    }
-
-    try {
-        // CSRFトークンを取得
-        const getCsrfToken = () => {
-            const metaToken = document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute("content");
-
-            if (metaToken) return metaToken;
-
-            const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-            if (cookieMatch) {
-                return decodeURIComponent(cookieMatch[1]);
-            }
-
-            return null;
-        };
-
-        let csrfToken = getCsrfToken();
-
-        if (!csrfToken) {
-            console.warn("CSRFトークンが見つかりません - スキップ");
-            return; // ★ エラーにせずスキップ
-        }
-
-        console.log("=== リクエスト送信 ===", {
-            url: route("exam.save-answer"),
-            examSessionId: form.examSessionId,
-            questionId: currentQuestionId,
-            retryCount,
-            part: currentPart.value,
-            availableQuestions: questions.value.map(q => q.id),
-        });
-
-        const response = await fetch(route("exam.save-answer"), {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": csrfToken,
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-            credentials: "same-origin",
-            body: JSON.stringify({
-                examSessionId: form.examSessionId,
-                questionId: currentQuestionId,
-                choice: choice,
-                part: currentPart.value,
-                remainingTime: remainingTime.value,
-            }),
-        });
-
-        console.log("=== レスポンス受信 ===", {
-            status: response.status,
-            statusText: response.statusText,
-            questionId: currentQuestionId,
-        });
-
-        // 419エラーの処理(リトライ回数制限付き)
-        if (response.status === 419) {
-            console.error(`419 CSRF Token Mismatch (試行 ${retryCount + 1}/${MAX_RETRIES + 1})`, {
-                questionId: currentQuestionId,
-                part: currentPart.value,
-            });
-
-            if (retryCount >= MAX_RETRIES) {
-                console.warn("最大リトライ回数に達しました。解答は一時保存されています。", {
-                    questionId: currentQuestionId,
-                    choice: choice,
-                });
-                // ★ アラートを表示しない - サイレントに失敗
-                return;
-            }
-
-            // CSRFトークンをリフレッシュ
-            try {
-                const refreshResponse = await fetch("/sanctum/csrf-cookie", {
-                    method: "GET",
-                    credentials: "same-origin",
-                });
-
-                if (refreshResponse.ok) {
-                    console.log("CSRFトークンをリフレッシュしました");
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    return saveCurrentAnswer(choice, retryCount + 1);
-                } else {
-                    console.error("CSRFトークンのリフレッシュに失敗");
-                }
-            } catch (refreshError) {
-                console.error("CSRFトークンのリフレッシュ中にエラー:", refreshError);
-            }
-
-            return;
-        }
-
-        if (!response.ok) {
-            console.warn("解答保存に失敗:", response.status, response.statusText, {
-                questionId: currentQuestionId,
-                part: currentPart.value,
-            });
-            return; // ★ エラーにせず続行
-        }
-
-        const data = await response.json();
-
-        if (data.success) {
-            console.log("解答保存成功:", {
-                question: currentQuestionId,
-                choice: choice,
-                part: currentPart.value,
-            });
-        } else {
-            console.warn("解答保存に失敗:", data.message, {
-                questionId: currentQuestionId,
-            });
-        }
-    } catch (error) {
-        console.error("解答保存エラー:", error, {
-            questionId: currentQuestionId,
-            part: currentPart.value,
-        });
-        // ★ アラートを表示せず、サイレントに失敗
-    }
-};
-
-// Part.vue の updateFormAnswers 関数（修正版）
-
 function updateFormAnswers() {
     const answers: Record<number, string> = {};
     answerStatus.value.forEach((ans, index) => {
-        // ★ 修正: 回答がある場合のみ追加
         if (ans.selected && questions.value[index]) {
             answers[questions.value[index].id] = ans.selected;
         }
     });
-    form.answers = answers;
+
+    form.answers = { ...answers, ...pendingAnswers.value };
+    pendingAnswers.value = {};
 
     console.log("フォーム回答更新:", {
-        answersCount: Object.keys(answers).length,
+        answersCount: Object.keys(form.answers).length,
         totalQuestions: questions.value.length,
     });
 }
@@ -1399,9 +1417,23 @@ function prevQuestion() {
     }
 }
 
+// ============================================
+// nextQuestion 関数の修正
+// ============================================
+// 既存の nextQuestion 関数を以下に置き換えてください
+
+/**
+ * 次の問題へ移動(改善版)
+ * ★既存の nextQuestion 関数を削除して、この関数に置き換え
+ */
 function nextQuestion() {
     if (currentIndex.value < questions.value.length - 1) {
         currentIndex.value++;
+
+        // ★追加: 残り3問になったら次のバッチをプリロード
+        if (currentIndex.value >= loadedQuestionCount.value - 3) {
+            preloadNextBatch();
+        }
     }
 }
 
@@ -1427,34 +1459,58 @@ function confirmComplete() {
     completePractice();
 }
 
-// Part.vue の handleTimeUp 関数（修正版）
-// この関数を既存のファイル内で探して、まるごと置き換えてください
-
+// ★★★ 変更3: handleTimeUp - 時間切れ処理(最終同期追加) ★★★
+/**
+ * 時間切れ処理
+ * ✅ 未送信の回答があれば最後の同期を試みる
+ */
 function handleTimeUp() {
     console.log("=== 時間切れ処理開始 ===", {
         currentPart: currentPart.value,
         remainingTime: remainingTime.value,
         answersCount: Object.keys(form.answers).length,
+        pendingCount: Object.keys(pendingAnswers.value).length,
     });
 
-    // タイマーを停止
     if (timer) {
         clearInterval(timer);
         timer = undefined;
     }
 
-    // ★ 修正: 時間切れメッセージを表示後、自動的に次に進む
+    // 未送信の回答があれば最後の同期
+    if (!isGuest.value && Object.keys(pendingAnswers.value).length > 0) {
+        console.log("時間切れ前の最終同期", {
+            pending_count: Object.keys(pendingAnswers.value).length,
+        });
+
+        // 同期的に送信を試みる(非推奨だが、時間切れ時は必要)
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", route("exam.save-answers-batch"), false); // 同期リクエスト
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.setRequestHeader("X-CSRF-TOKEN", page.props.ziggy?.csrf || "");
+        xhr.send(
+            JSON.stringify({
+                examSessionId: form.examSessionId,
+                answers: pendingAnswers.value,
+                part: currentPart.value,
+                remainingTime: 0,
+            })
+        );
+
+        if (xhr.status === 200) {
+            console.log("時間切れ時の最終同期成功");
+            pendingAnswers.value = {};
+        }
+    }
+
     alert("制限時間が終了しました。自動的に次のパートに進みます。");
 
-    // ★ 修正: 確認ダイアログをスキップして直接完了処理を実行
     try {
         completePractice();
     } catch (error) {
         console.error("時間切れ時の完了処理エラー:", error);
-        // ★ エラーが出ても強制的に次に進む
         alert("処理中にエラーが発生しましたが、次のパートに進みます。");
 
-        // ★ フォールバック: 直接次のパートへ遷移
         const nextPart = currentPart.value < 3 ? currentPart.value + 1 : 3;
         const routeName = isGuest.value
             ? nextPart < 3
@@ -1472,7 +1528,6 @@ function handleTimeUp() {
     }
 }
 
-// 問題が変更された時にanswerStatusを更新
 const updateAnswerStatus = () => {
     answerStatus.value = questions.value.map(q => ({
         checked: false,
@@ -1481,36 +1536,167 @@ const updateAnswerStatus = () => {
     }));
 };
 
+// ★★★ 変更4: handleBeforeUnload - ページ離脱時の処理 ★★★
+/**
+ * ページ離脱時のハンドラ
+ * ✅ 未送信の回答があれば sendBeacon で送信
+ */
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    // 試験中かつゲストでない場合のみ警告
+    if (
+        !isGuest.value &&
+        remainingTime.value > 0 &&
+        currentPart.value <= 3 &&
+        !showPracticeStartPopup.value
+    ) {
+        // 未送信の回答がある場合は最後の同期を試みる
+        if (Object.keys(pendingAnswers.value).length > 0) {
+            console.log("ページ離脱前の緊急同期", {
+                pending_count: Object.keys(pendingAnswers.value).length,
+            });
+
+            // sendBeacon APIで同期(より確実)
+            const csrfToken = page.props.ziggy?.csrf;
+            if (csrfToken) {
+                const blob = new Blob(
+                    [
+                        JSON.stringify({
+                            examSessionId: form.examSessionId,
+                            answers: pendingAnswers.value,
+                            part: currentPart.value,
+                            remainingTime: remainingTime.value,
+                            _token: csrfToken,
+                        }),
+                    ],
+                    { type: "application/json" }
+                );
+
+                navigator.sendBeacon(route("exam.save-answers-batch"), blob);
+            }
+        }
+
+        event.preventDefault();
+        event.returnValue = "試験時間中にページを離れると、回答が失われる可能性があります。";
+    }
+};
+
+/**
+ * ★新規追加2: バッチ同期のスケジュール設定（デバウンス）
+ * 配置場所: handleBeforeUnload の直後
+ */
+function scheduleBatchSync() {
+    if (syncTimer) {
+        clearTimeout(syncTimer);
+    }
+
+    // 30秒ごとに自動同期
+    syncTimer = window.setInterval(async () => {
+        if (!isGuest.value) {
+            await syncAnswersToServer();
+        }
+    }, 30000);
+}
+
+// ★★★ 変更5: onMounted - 1分ごとの自動同期を統合 ★★★
+/**
+ * コンポーネントマウント時の処理
+ * ✅ 1分(60秒)ごとに自動同期を実行
+ */
 onMounted(async () => {
-    // 問題フィルタリング後にanswerStatusを更新
     updateAnswerStatus();
 
-    // 無制限(partTime=0)の場合はタイマーを開始しない
+    // 初期問題数が0の場合は読み込み
+    if (questions.value.length === 0) {
+        await preloadNextBatch();
+    }
+
+    const initialQuestionCount = page.props.practiceQuestions?.length || 0;
+    if (initialQuestionCount > 0 && totalQuestions.value === 0) {
+        totalQuestions.value = initialQuestionCount;
+    }
+
     const partTimeLimit = page.props.partTime || 0;
 
+    // タイマーを一本化(1分ごとの自動同期を統合)
     const startTimer = () => {
         if (!showPracticeStartPopup.value) {
-            // 無制限の場合はタイマーをスキップ
             if (partTimeLimit === 0) {
                 console.log("無制限時間モード: タイマーは動作しません");
                 return;
             }
 
-            // 時間制限がある場合のみタイマーを開始
             timer = setInterval(() => {
                 if (remainingTime.value > 0) {
                     remainingTime.value--;
+
+                    // 🔥 1分(60秒)ごとに自動同期
+                    if (
+                        !isGuest.value &&
+                        remainingTime.value % 60 === 0 &&
+                        Object.keys(pendingAnswers.value).length > 0
+                    ) {
+                        console.log("🔥 1分ごとの自動同期トリガー", {
+                            remaining_time: remainingTime.value,
+                            pending_count: Object.keys(pendingAnswers.value).length,
+                        });
+                        syncAnswersToServer();
+                    }
                 } else {
                     handleTimeUp();
                 }
             }, 1000);
+
+            console.log("タイマー開始", {
+                partTimeLimit,
+                remainingTime: remainingTime.value,
+            });
         }
     };
 
     startTimer();
+
+    // beforeunloadイベントの登録
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    console.log("=== コンポーネントマウント完了 ===", {
+        questions_count: questions.value.length,
+        total_questions: totalQuestions.value,
+        part_time_limit: partTimeLimit,
+        remaining_time: remainingTime.value,
+        is_guest: isGuest.value,
+    });
 });
 
+// ★★★ 変更6: onUnmounted - クリーンアップ処理 ★★★
+/**
+ * コンポーネントアンマウント時の処理
+ * ✅ 未送信の回答があれば最後の同期を試みる
+ */
 onUnmounted(() => {
-    if (timer) clearInterval(timer);
+    console.log("=== コンポーネントアンマウント開始 ===", {
+        has_pending_answers: Object.keys(pendingAnswers.value).length > 0,
+        is_guest: isGuest.value,
+    });
+
+    // beforeunloadイベントリスナーの削除
+    window.removeEventListener("beforeunload", handleBeforeUnload);
+
+    // タイマーのクリア
+    if (timer) {
+        clearInterval(timer);
+        timer = undefined;
+    }
+
+    // 最後の同期(ゲスト以外かつ未送信がある場合)
+    if (!isGuest.value && Object.keys(pendingAnswers.value).length > 0) {
+        console.log("アンマウント時の最終同期", {
+            pending_count: Object.keys(pendingAnswers.value).length,
+        });
+
+        // 同期処理(非同期だが、できるだけ送信を試みる)
+        syncAnswersToServer();
+    }
+
+    console.log("=== コンポーネントアンマウント完了 ===");
 });
 </script>
