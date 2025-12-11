@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { usePage, router } from "@inertiajs/vue3";
+import { usePage, router, useForm } from "@inertiajs/vue3";
 import { Head } from "@inertiajs/vue3";
 
 // 型定義
@@ -144,6 +144,7 @@ function getCurrentPart(): number {
     return page.props.currentPart || 1;
 }
 
+// ★ 修正: useFormを毎回新しく作成してCSRFトークンをリフレッシュ
 function goToExam() {
     const currentPart = getCurrentPart();
     isNavigating.value = true;
@@ -152,48 +153,61 @@ function goToExam() {
     console.log("currentPart:", currentPart);
     console.log("isGuest:", isGuest.value);
 
+    // ★ 重要: 毎回新しいフォームインスタンスを作成してCSRFトークンを更新
+    const freshForm = useForm({});
+
     if (isGuest.value) {
-        console.log(`ゲスト第${currentPart}部: exam.part へ直接遷移`);
-        router.visit(route("guest.exam.part", { part: currentPart }), {
+        console.log(`ゲスト第${currentPart}部: guest.exam.start (form.post) で遷移`);
+        freshForm.post(route("guest.exam.start"), {
             preserveState: false,
             preserveScroll: false,
-            replace: true,
             onBefore: () => {
-                console.log(`guest.exam.part(${currentPart}) リクエスト送信前`);
+                console.log(`guest.exam.start POST 送信前`);
             },
-            onSuccess: page => {
-                console.log(`guest.exam.part(${currentPart}) 成功:`, page);
+            onSuccess: (page: any) => {
+                console.log(`guest.exam.start 成功、自動リダイレクト完了`);
             },
             onFinish: () => {
                 isNavigating.value = false;
             },
-            onError: errors => {
-                console.error("本番試験への遷移エラー:", errors);
+            onError: (errors: any) => {
+                console.error("本番試験開始エラー:", errors);
                 isNavigating.value = false;
-                alert("ページ遷移に失敗しました。もう一度お試しください。");
+
+                // ★ CSRFエラーの場合は明示的にメッセージを表示
+                if (errors.message && errors.message.includes("419")) {
+                    alert("セッションの有効期限が切れました。ページを再読み込みしてください。");
+                    window.location.reload();
+                } else {
+                    alert("本番試験の開始に失敗しました。セッションコードを確認してください。");
+                }
             },
         });
     } else {
-        console.log(`認証ユーザー第${currentPart}部: exam.part へ直接遷移`);
-        router.visit(route("exam.part", { part: currentPart }), {
+        console.log(`認証ユーザー第${currentPart}部: exam.start (form.post) で遷移`);
+        freshForm.post(route("exam.start"), {
             preserveState: false,
             preserveScroll: false,
-            replace: true,
             onBefore: () => {
-                console.log(`exam.part(${currentPart}) リクエスト送信前`);
+                console.log(`exam.start POST 送信前`);
             },
-            onSuccess: page => {
-                console.log(`exam.part(${currentPart}) 成功:`, page);
-                console.log("component:", page.component);
-                console.log("url:", page.url);
+            onSuccess: (page: any) => {
+                console.log(`exam.start 成功、自動リダイレクト完了`);
             },
             onFinish: () => {
                 isNavigating.value = false;
             },
-            onError: errors => {
-                console.error("本番試験への遷移エラー:", errors);
+            onError: (errors: any) => {
+                console.error("本番試験開始エラー:", errors);
                 isNavigating.value = false;
-                alert("ページ遷移に失敗しました。もう一度お試しください。");
+
+                // ★ CSRFエラーの場合は明示的にメッセージを表示
+                if (errors.message && errors.message.includes("419")) {
+                    alert("セッションの有効期限が切れました。ページを再読み込みしてください。");
+                    window.location.reload();
+                } else {
+                    alert("本番試験の開始に失敗しました。セッションコードを確認してください。");
+                }
             },
         });
     }
@@ -260,7 +274,7 @@ function getChoiceClass(choice: ChoiceType, question: PracticeQuestionType): str
                             class="flex justify-between items-center px-6 py-4 bg-white border-b shadow-sm rounded-lg mb-6"
                         >
                             <h2 class="text-2xl font-bold text-gray-800">
-                                解説　第{{ getCurrentPart() }}部には次のような問題があります。
+                                解説 第{{ getCurrentPart() }}部には次のような問題があります。
                             </h2>
                             <button
                                 @click="goToExam"
@@ -296,7 +310,7 @@ function getChoiceClass(choice: ChoiceType, question: PracticeQuestionType): str
                                             各列の左側にある四つの図は一定の順序で並んでいます。次にくるべき図はどれでしょうか。右側の五つの図の中から選んで下さい。
                                         </template>
                                         <template v-else>
-                                            問題の下側に解答が5つありますが、正解は一つだけです。問題を解いてみて正しいと思う答えを選んでください。
+                                            問題の下側に解答が5つありますが、正解は一つだけです。問題を解いてみて正しいと思う答えを選んで下さい。
                                         </template>
                                     </div>
                                 </div>
@@ -483,6 +497,18 @@ function getChoiceClass(choice: ChoiceType, question: PracticeQuestionType): str
                     </div>
                 </div>
             </main>
+
+            <!-- 本番試験への移動ボタン -->
+            <div class="fixed bottom-6 right-6 flex gap-3">
+                <button
+                    @click="goToExam"
+                    :disabled="isNavigating"
+                    class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                    <span v-if="!isNavigating">本番試験へ進む →</span>
+                    <span v-else>読み込み中...</span>
+                </button>
+            </div>
 
             <!-- フッター -->
             <footer class="bg-gray-400 text-white text-center py-4">

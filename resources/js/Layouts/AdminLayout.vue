@@ -4,7 +4,7 @@ import { computed } from "vue";
 
 const page = usePage();
 
-const admin = computed(() => page.props.auth?.admin || page.props.admin);
+const admin = computed(() => page.props.auth?.user);
 
 // 現在のルート名を取得（安全に呼び出す）
 const currentRoute = computed(() => {

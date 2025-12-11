@@ -40,7 +40,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             return Inertia::render('Admin/Login');
         })->name('login');
 
-        Route::post('/login', [AdminAuthController::class, 'login'])->name('login.post');
+        Route::post('/login', [AdminAuthController::class, 'login'])->name('login');
     });
 
     // 認証済み管理者のみアクセス可能

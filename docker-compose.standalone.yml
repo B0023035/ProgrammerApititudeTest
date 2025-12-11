@@ -7,22 +7,22 @@ version: "3.8"
 services:
     # ℹ️ このファイルは Docker なし実行時の参考設定です
     # 実際の実行には以下の環境構築が必要：
-    
+
     # PHP 8.4 FPM
     # MySQL 8.0
     # Redis 7
     # Node.js (npm)
-    
+
     # 以下のコマンドで直接実行：
     # php artisan serve
     # npm run dev
-    
+
     # データベース初期化：
     # php artisan migrate --force
     # php artisan db:seed
 
     # ホストマシン上での実行方法：
-    
+
     laravel-app:
         description: "Laravel アプリケーションサーバー"
         command: "php -S 0.0.0.0:8000 -t public"
@@ -53,5 +53,4 @@ services:
 networks:
     host:
         driver: host
-
 # ボリューム設定も不要（ホストマシンのストレージ使用）

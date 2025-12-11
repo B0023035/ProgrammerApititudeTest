@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { Head, useForm } from "@inertiajs/vue3";
+import { ref, onMounted } from "vue";
+import { Head, useForm, usePage } from "@inertiajs/vue3";
 
 defineProps<{
     canResetPassword?: boolean;
     status?: string;
 }>();
+
+const page = usePage();
 
 const form = useForm({
     email: "",
@@ -15,8 +17,27 @@ const form = useForm({
 
 const serverError = ref("");
 
+onMounted(() => {
+    // CSRF トークンをコンソールに出力（デバッグ用）
+    const csrfToken =
+        page.props.csrf ||
+        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+    console.log(
+        "CSRF Token available:",
+        !!csrfToken,
+        "Token:",
+        csrfToken?.substring(0, 20) + "..."
+    );
+});
+
 const submit = () => {
     serverError.value = "";
+
+    // CSRF トークンをデバッグ出力
+    const csrfToken =
+        page.props.csrf ||
+        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+    console.log("Submitting login form with CSRF:", !!csrfToken);
 
     form.post(route("admin.login"), {
         preserveScroll: true,
@@ -100,7 +121,6 @@ const submit = () => {
                                 v-model="form.email"
                                 type="email"
                                 required
-                                autofocus
                                 autocomplete="username"
                                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                                 :class="{ 'border-red-500': form.errors.email }"

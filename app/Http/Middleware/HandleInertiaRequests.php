@@ -31,22 +31,19 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        // 管理者エリアかどうかを判定（修正）
-        $isAdminArea = $request->is('admin') || $request->is('admin/*');
-
         // 適切なガードからユーザー情報を取得
-        $user = null;
-        if ($isAdminArea) {
-            $user = Auth::guard('admin')->user();
-        } else {
-            $user = Auth::guard('web')->user();
-        }
+        $adminUser = Auth::guard('admin')->user();
+        $webUser = Auth::guard('web')->user();
+
+        // CSRF トークンを常に新規に生成（ページ遷移ごとに更新）
+        $csrfToken = $request->session()->token();
 
         return array_merge(parent::share($request), [
             'auth' => [
-                'user' => $user,
-                'isAdmin' => $isAdminArea && $user !== null,
+                'user' => $adminUser ?? $webUser,
+                'isAdmin' => $adminUser !== null,
             ],
+            'csrf' => $csrfToken,
             'ziggy' => fn () => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),

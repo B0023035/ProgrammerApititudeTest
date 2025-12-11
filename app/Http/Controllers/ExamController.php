@@ -80,7 +80,7 @@ public function start()
             'event_id' => $event->id,
         ]);
 
-        return Inertia::location(route('exam.part', ['part' => $existingSession->current_part]));
+        return redirect()->route('exam.part', ['part' => $existingSession->current_part]);
     }
 
     // セッション実施時の学年を計算して保存
@@ -113,7 +113,7 @@ public function start()
         'starting_part' => 1,
     ]);
 
-    return Inertia::location(route('exam.part', ['part' => 1]));
+    return redirect()->route('exam.part', ['part' => 1]);
 }
 
 
@@ -1219,7 +1219,7 @@ public function saveAnswersBatch(Request $request)
                 'current_part' => $existingSession['current_part'] ?? 1,
             ]);
 
-            return Inertia::location(route('guest.exam.part', ['part' => $existingSession['current_part'] ?? 1]));
+            return redirect()->route('guest.exam.part', ['part' => $existingSession['current_part'] ?? 1]);
         }
 
         // ★ 重要修正: 新しい試験セッションを作成(常にパート1から開始)
@@ -1252,7 +1252,7 @@ public function saveAnswersBatch(Request $request)
         ]);
 
         // ★ 修正: 常にパート1から開始
-        return Inertia::location(route('guest.exam.part', ['part' => 1]));
+        return redirect()->route('guest.exam.part', ['part' => 1]);
     }
 
     /**

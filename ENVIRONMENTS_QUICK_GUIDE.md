@@ -108,13 +108,13 @@ docker-compose -f docker-compose.dev.yml up -d
 
 ## 🎯 推奨される使い分け
 
-| シナリオ | 環境 | コマンド |
-|--------|------|--------|
-| 複数PCでテスト | ネットワーク対応 | `docker-compose up -d` |
-| 自分のPC開発 | 開発環境 | `docker-compose -f docker-compose.dev.yml up -d` |
-| ラズパイでテスト | ネットワーク対応 | `docker-compose up -d` |
-| Docker 不要 | スタンドアロン | `bash setup-standalone.sh` |
-| 本番デプロイ | `docker-compose.prod.yml` | [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) |
+| シナリオ         | 環境                      | コマンド                                         |
+| ---------------- | ------------------------- | ------------------------------------------------ |
+| 複数PCでテスト   | ネットワーク対応          | `docker-compose up -d`                           |
+| 自分のPC開発     | 開発環境                  | `docker-compose -f docker-compose.dev.yml up -d` |
+| ラズパイでテスト | ネットワーク対応          | `docker-compose up -d`                           |
+| Docker 不要      | スタンドアロン            | `bash setup-standalone.sh`                       |
+| 本番デプロイ     | `docker-compose.prod.yml` | [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md)   |
 
 ---
 
@@ -141,6 +141,7 @@ docker ps
 ## 🆘 トラブルシューティング
 
 各環境でのトラブル解決方法は以下を参照してください：
+
 - [ENVIRONMENT_SWITCHING.md](./ENVIRONMENT_SWITCHING.md#-トラブルシューティング)
 - [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md#トラブルシューティング)
 

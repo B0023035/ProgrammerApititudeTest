@@ -158,7 +158,7 @@ docker-compose.prod.yml で以下を追加:
 
 ```yaml
 volumes:
-  - /etc/letsencrypt:/etc/letsencrypt:ro
+    - /etc/letsencrypt:/etc/letsencrypt:ro
 ```
 
 docker/default.conf に HTTPS リダイレクトを追加:
@@ -326,6 +326,7 @@ docker-compose -f docker-compose.prod.yml exec app \
 ## 📞 サポート
 
 問題が発生した場合:
+
 1. ログファイルを確認: `docker-compose logs -f`
 2. GitHub Issues で報告
 3. ドキュメントを確認: DEPLOYMENT.md
