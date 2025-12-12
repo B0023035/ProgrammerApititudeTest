@@ -20,6 +20,34 @@ use Inertia\Inertia;
 |--------------------------------------------------------------------------
 */
 
+
+Route::get('/debug-csrf', function () {
+    return response()->json([
+        'session_id' => session()->getId(),
+        'csrf_token' => csrf_token(),
+        'session_token' => session()->token(),
+        'session_driver' => config('session.driver'),
+        'session_domain' => config('session.domain'),
+        'session_secure' => config('session.secure'),
+        'session_same_site' => config('session.same_site'),
+        'app_url' => config('app.url'),
+        'redis_connection' => config('database.redis.default'),
+    ]);
+});
+
+Route::post('/debug-csrf-post', function () {
+    return response()->json([
+        'success' => true,
+        'message' => 'CSRF token is valid',
+        'token_received' => request()->input('_token'),
+        'session_token' => session()->token(),
+    ]);
+});
+
+Route::get('/debug-csrf-page', function () {
+    return view('debug-csrf');
+});
+
 // ========================================
 // セッションコード入力(最初にアクセスするページ)
 // ※ これはセッションコード認証不要
