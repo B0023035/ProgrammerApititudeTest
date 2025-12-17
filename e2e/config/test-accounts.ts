@@ -13,7 +13,7 @@ export const testAccounts = {
         school: "YIC高等学校",
         name: "山口太郎",
     },
-    sessionCode: process.env.TEST_SESSION_CODE || "TEST-CODE-123",
+    sessionCode: process.env.TEST_SESSION_CODE || "TEST0000",
 };
 
 export const testUrls = {

@@ -35,15 +35,11 @@ class HandleInertiaRequests extends Middleware
         $adminUser = Auth::guard('admin')->user();
         $webUser = Auth::guard('web')->user();
 
-        // CSRF トークンを常に新規に生成（ページ遷移ごとに更新）
-        $csrfToken = $request->session()->token();
-
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $adminUser ?? $webUser,
                 'isAdmin' => $adminUser !== null,
             ],
-            'csrf' => $csrfToken,
             'ziggy' => fn () => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),

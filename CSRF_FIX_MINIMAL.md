@@ -3,12 +3,14 @@
 ## 🔍 問題の原因特定
 
 ### 前の修正の問題点
+
 1. **RefreshCsrfToken の多重再生成** - リクエスト前後でトークンを2回再生成
 2. **VerifyCsrfToken の検証時再生成** - 検証時にさらにトークン再生成
 3. **regenerate_on_request の有効化** - セッション設定で毎リクエスト再生成
 4. **過度なミドルウェアチェーン** - カスタムミドルウェア×2 + 標準ミドルウェア
 
 ### 結果
+
 - トークンが破壊された
 - セッション状態が不安定になった
 - 既に動いていた機能まで壊れた
@@ -18,6 +20,7 @@
 ## ✅ 実装した最小限の修正
 
 ### 1️⃣ Kernel.php - ミドルウェア順序を正規化
+
 ```php
 'web' => [
     \App\Http\Middleware\EncryptCookies::class,
@@ -33,21 +36,25 @@
 ```
 
 **修正内容**:
+
 - ❌ 削除: `\App\Http\Middleware\RefreshCsrfToken::class`
 - ❌ 削除: `\App\Http\Middleware\VerifyCsrfToken::class` (カスタム版)
 - ✅ 採用: `\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class` (標準版)
 
 ### 2️⃣ config/session.php - セッション有効期限を延長
+
 ```php
 'lifetime' => (int) env('SESSION_LIFETIME', 1440),  // 120分 → 1440分（24時間）
 ```
 
 **理由**:
+
 - 元の 120分では、テスト実行中にセッションが失効
 - 1440分（24時間）でテスト運用に対応
 - CSRF トークンもセッションと同期
 
 ### 3️⃣ .env - セッション設定を正規化
+
 ```dotenv
 SESSION_DRIVER=redis
 SESSION_LIFETIME=1440
@@ -59,6 +66,7 @@ SESSION_SAME_SITE=lax
 ```
 
 ### 4️⃣ .env.testing - テスト環境設定を追加
+
 ```dotenv
 APP_ENV=testing
 SESSION_DRIVER=database          # テスト用にデータベースドライバ
@@ -67,6 +75,7 @@ CACHE_STORE=file
 ```
 
 ### 5️⃣ ミドルウェアファイル削除
+
 - ❌ `app/Http/Middleware/RefreshCsrfToken.php` 削除
 - ❌ `app/Http/Middleware/VerifyCsrfToken.php` 削除
 
@@ -77,6 +86,7 @@ CACHE_STORE=file
 ## 🎯 なぜこれで解決するのか
 
 ### Laravel の CSRF 保護は十分
+
 ```
 フォーム表示時: セッション内に _token を保存
 フォーム送信時: POST フォーム内の _token とセッションの _token を比較
@@ -84,6 +94,7 @@ CACHE_STORE=file
 ```
 
 ### 問題は過度な対応にあった
+
 ```
 ❌ 前の修正:
    フォーム表示 → RefreshCsrfToken で再生成
@@ -102,20 +113,21 @@ CACHE_STORE=file
 
 ## 📋 修正ファイル一覧
 
-| ファイル | 変更内容 |
-|---------|---------|
-| `app/Http/Kernel.php` | ミドルウェアをシンプル化（標準 VerifyCsrfToken のみ） |
-| `config/session.php` | SESSION_LIFETIME: 120 → 1440 分 |
-| `.env` | SESSION_LIFETIME=1440 を明示 |
-| `.env.testing` | テスト環境設定を追加 |
-| ❌ `RefreshCsrfToken.php` | 削除 |
-| ❌ `VerifyCsrfToken.php` | 削除 |
+| ファイル                  | 変更内容                                              |
+| ------------------------- | ----------------------------------------------------- |
+| `app/Http/Kernel.php`     | ミドルウェアをシンプル化（標準 VerifyCsrfToken のみ） |
+| `config/session.php`      | SESSION_LIFETIME: 120 → 1440 分                       |
+| `.env`                    | SESSION_LIFETIME=1440 を明示                          |
+| `.env.testing`            | テスト環境設定を追加                                  |
+| ❌ `RefreshCsrfToken.php` | 削除                                                  |
+| ❌ `VerifyCsrfToken.php`  | 削除                                                  |
 
 ---
 
 ## 🔧 動作確認
 
 ### 1. キャッシュクリア
+
 ```bash
 php artisan config:clear
 php artisan route:clear
@@ -123,11 +135,13 @@ php artisan cache:clear  # MySQL がないため失敗してもOK
 ```
 
 ### 2. ブラウザでアクセス
+
 ```
 http://localhost:8000/
 ```
 
 期待される動作:
+
 - ✅ セッションコード入力ページが表示される
 - ✅ コード入力 → Welcome ページに遷移
 - ✅ ログイン → テスト開始ページに遷移
@@ -135,11 +149,13 @@ http://localhost:8000/
 - ✅ リロード不要で動作
 
 ### 3. Playwright テスト実行
+
 ```bash
 npx playwright test
 ```
 
 期待される結果:
+
 - ✅ 21個以上のテストが合格
 - ✅ 419 エラーが発生しない
 
@@ -194,15 +210,15 @@ regenerate_on_request = true の効果:
 
 ## 📊 修正前後の比較
 
-| 項目 | 修正前 | 修正後 |
-|------|-------|-------|
-| SESSION_LIFETIME | 120分 | 1440分（24時間） |
-| RefreshCsrfToken | あり（過度） | ❌ 削除 |
-| VerifyCsrfToken | カスタム版（過度） | ✅ 標準版のみ |
-| regenerate_on_request | true（過度） | なし |
-| ハンドラ数 | 4段階 | 1段階 |
-| セッション安定性 | 低 | 高 |
-| 419エラー発生 | 頻繁 | なし（期待値） |
+| 項目                  | 修正前             | 修正後           |
+| --------------------- | ------------------ | ---------------- |
+| SESSION_LIFETIME      | 120分              | 1440分（24時間） |
+| RefreshCsrfToken      | あり（過度）       | ❌ 削除          |
+| VerifyCsrfToken       | カスタム版（過度） | ✅ 標準版のみ    |
+| regenerate_on_request | true（過度）       | なし             |
+| ハンドラ数            | 4段階              | 1段階            |
+| セッション安定性      | 低                 | 高               |
+| 419エラー発生         | 頻繁               | なし（期待値）   |
 
 ---
 
@@ -220,53 +236,59 @@ regenerate_on_request = true の効果:
 ## ⚠️ 重要: 次のステップ
 
 1. **すべての変更をコミット**
-   ```bash
-   git add -A
-   git commit -m "CSRF token 419 error: minimal fix - restore to standard middleware"
-   ```
+
+    ```bash
+    git add -A
+    git commit -m "CSRF token 419 error: minimal fix - restore to standard middleware"
+    ```
 
 2. **キャッシュをクリア**
-   ```bash
-   php artisan config:clear
-   php artisan route:clear
-   ```
+
+    ```bash
+    php artisan config:clear
+    php artisan route:clear
+    ```
 
 3. **テスト実行**
-   ```bash
-   npx playwright test
-   ```
+
+    ```bash
+    npx playwright test
+    ```
 
 4. **ブラウザで動作確認**
-   - セッションコード入力
-   - ログイン
-   - 練習問題
-   - ボタン操作全般
+    - セッションコード入力
+    - ログイン
+    - 練習問題
+    - ボタン操作全般
 
 ---
 
 ## 🔍 もし 419 エラーが出た場合
 
 1. **セッションドライバ確認**
-   ```bash
-   redis-cli ping  # Redis が動いているか
-   ```
+
+    ```bash
+    redis-cli ping  # Redis が動いているか
+    ```
 
 2. **ログ確認**
-   ```bash
-   tail storage/logs/laravel.log | grep CSRF
-   ```
+
+    ```bash
+    tail storage/logs/laravel.log | grep CSRF
+    ```
 
 3. **DB接続確認**
-   ```bash
-   php artisan tinker
-   >>> DB::connection('mysql')->select('select 1')  # DB接続テスト
-   ```
+
+    ```bash
+    php artisan tinker
+    >>> DB::connection('mysql')->select('select 1')  # DB接続テスト
+    ```
 
 4. **SESSION_LIFETIME が 1440 になっているか**
-   ```bash
-   php artisan tinker
-   >>> config('session.lifetime')  # 1440 が返されるか
-   ```
+    ```bash
+    php artisan tinker
+    >>> config('session.lifetime')  # 1440 が返されるか
+    ```
 
 ---
 

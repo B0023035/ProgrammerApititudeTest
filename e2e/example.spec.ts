@@ -206,7 +206,75 @@ test.describe("練習問題機能", () => {
         await expect(authenticatedPage.locator('input[type="checkbox"]')).toBeChecked();
     });
 
-    test("練習を完了できる", async ({ authenticatedPage }) => {
+    test("練習を完了できる（419エラーデバッグ付き）", async ({ authenticatedPage }) => {
+        // ★★★ テスト開始時に必ずCookieをクリア ★★★
+        console.log("\n🧹 テスト開始: 古いCookieを削除...");
+        await authenticatedPage.context().clearCookies();
+        console.log("✅ Cookie削除完了\n");
+
+        // ★★★ セッションコードから再認証 ★★★
+        const auth = new AuthHelper(authenticatedPage);
+        await auth.enterSessionCode();
+        await auth.loginAsUser();
+
+        // Cookieを確認
+        const cookies = await authenticatedPage.context().cookies();
+        const sessionCookie = cookies.find(c => c.name === "laravel_session");
+        console.log("\n📋 現在のセッションCookie:");
+        console.log("  値:", sessionCookie?.value.substring(0, 50) + "...");
+        console.log("  長さ:", sessionCookie?.value.length);
+
+        // 暗号化されているかチェック
+        if (sessionCookie?.value.startsWith("eyJ")) {
+            console.log("  ⚠️  警告: Cookieが暗号化されています (eyJで始まる)");
+        } else {
+            console.log("  ✅ Cookieは平文です");
+        }
+
+        // ネットワークリクエストを監視
+        const requests: any[] = [];
+        const responses: any[] = [];
+
+        authenticatedPage.on("request", request => {
+            if (request.url().includes("/practice/complete")) {
+                console.log("\n=== /practice/complete リクエスト ===");
+                console.log("Method:", request.method());
+                console.log("Headers:", JSON.stringify(request.headers(), null, 2));
+                requests.push(request);
+            }
+        });
+
+        authenticatedPage.on("response", async response => {
+            if (response.url().includes("/practice/complete")) {
+                console.log("\n=== /practice/complete レスポンス ===");
+                console.log("Status:", response.status());
+                console.log("Status Text:", response.statusText());
+
+                if (response.status() === 419) {
+                    console.log("❌ 419エラー発生！");
+                    try {
+                        const body = await response.text();
+                        console.log("Response Body:", body.substring(0, 500));
+                    } catch (e) {
+                        console.log("レスポンスボディの取得失敗");
+                    }
+                }
+
+                responses.push(response);
+            }
+        });
+
+        // CSRFトークンとCookieを事前確認
+        const csrfToken = await authenticatedPage.evaluate(() => {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+        });
+        console.log("\nCSRFトークン (meta):", csrfToken);
+
+        const finalCookies = await authenticatedPage.context().cookies();
+        const finalSessionCookie = finalCookies.find(c => c.name === "laravel_session");
+        console.log("セッションCookie:", finalSessionCookie?.value.substring(0, 100));
+
+        // テスト実行
         await authenticatedPage.click("text=始める");
         await authenticatedPage.click("text=第1部の練習を始める");
         await authenticatedPage.click('button:has-text("練習を開始する")');
@@ -222,7 +290,21 @@ test.describe("練習問題機能", () => {
         // 確認ダイアログ
         await authenticatedPage.click('button:has-text("OK")');
 
-        // 解説ページに遷移
+        // レスポンスを待つ
+        await authenticatedPage.waitForTimeout(2000);
+
+        // 結果を検証
+        const finalUrl = authenticatedPage.url();
+        console.log("\n最終URL:", finalUrl);
+
+        // 419エラーがないことを確認
+        if (responses.length > 0) {
+            const lastResponse = responses[responses.length - 1];
+            console.log("\n最終ステータス:", lastResponse.status());
+            expect(lastResponse.status()).not.toBe(419);
+        }
+
+        // 解説ページに遷移していることを確認
         await expect(authenticatedPage).toHaveURL(/.*practice\/explanation/);
     });
 

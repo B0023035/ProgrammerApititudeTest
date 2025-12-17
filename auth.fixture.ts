@@ -9,68 +9,51 @@ type AuthFixtures = {
 
 export const test = base.extend<AuthFixtures>({
     authenticatedPage: async ({ page }, use) => {
-        // ★ 1. まずCSRF Cookieを取得
-        await page.goto("/sanctum/csrf-cookie");
-        await page.waitForTimeout(500);
+        // ★ 重要: 古いCookieを完全にクリア
+        await page.context().clearCookies();
 
-        // ★ 2. セッションコード入力
         await page.goto(testUrls.sessionEntry);
         await page.fill("input#session_code", testAccounts.sessionCode);
         await page.click('button:has-text("確認")');
-        await page.waitForURL("**/welcome", { timeout: 10000 });
+        await page.waitForURL("**/welcome");
 
-        // セッションが保存されるまで待機
-        await page.waitForTimeout(1000);
-
-        // ★ 3. ログイン
         await page.goto(testUrls.login);
         await page.fill('input[type="email"]', testAccounts.user.email);
         await page.fill('input[type="password"]', testAccounts.user.password);
         await page.click('button:has-text("Log in")');
-        await page.waitForURL("**/test-start", { timeout: 10000 });
-
-        // 認証完了まで待機
-        await page.waitForTimeout(1000);
+        await page.waitForURL("**/test-start");
 
         await use(page);
     },
 
     adminPage: async ({ page }, use) => {
-        // ★ CSRF Cookieを取得
-        await page.goto("/sanctum/csrf-cookie");
-        await page.waitForTimeout(500);
+        // ★ 重要: 古いCookieを完全にクリア
+        await page.context().clearCookies();
 
         await page.goto(testUrls.adminLogin);
         await page.fill("input#email", testAccounts.admin.email);
         await page.fill("input#password", testAccounts.admin.password);
         await page.click('button[type="submit"]');
-        await page.waitForURL("**/admin/dashboard", { timeout: 10000 });
+        await page.waitForURL("**/admin/dashboard");
 
-        await page.waitForTimeout(1000);
         await use(page);
     },
 
     guestPage: async ({ page }, use) => {
-        // ★ CSRF Cookieを取得
-        await page.goto("/sanctum/csrf-cookie");
-        await page.waitForTimeout(500);
+        // ★ 重要: 古いCookieを完全にクリア
+        await page.context().clearCookies();
 
-        // セッションコード入力
         await page.goto(testUrls.sessionEntry);
         await page.fill("input#session_code", testAccounts.sessionCode);
         await page.click('button:has-text("確認")');
-        await page.waitForURL("**/welcome", { timeout: 10000 });
+        await page.waitForURL("**/welcome");
 
-        await page.waitForTimeout(1000);
-
-        // ゲスト情報入力
         await page.goto(testUrls.guestInfo);
         await page.fill("input#school_name", testAccounts.guest.school);
         await page.fill("input#guest_name", testAccounts.guest.name);
         await page.click('button:has-text("始める")');
-        await page.waitForURL("**/guest/practice/1", { timeout: 10000 });
+        await page.waitForURL("**/guest/practice/1");
 
-        await page.waitForTimeout(1000);
         await use(page);
     },
 });

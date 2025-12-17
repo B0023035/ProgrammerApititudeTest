@@ -18,7 +18,8 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    // ★修正箇所: デフォルトを redis に変更
+    'driver' => env('SESSION_DRIVER', 'redis'),
 
     /*
     |--------------------------------------------------------------------------
@@ -73,7 +74,8 @@ return [
     |
     */
 
-    'connection' => env('SESSION_CONNECTION'),
+    // ★修正箇所: デフォルトを 'default' に変更
+    'connection' => env('SESSION_CONNECTION', 'default'),
 
     /*
     |--------------------------------------------------------------------------

@@ -12,40 +12,112 @@ use App\Http\Controllers\SessionCodeController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
+
+// ★★★ Sanctum CSRF Cookie エンドポイント(Inertia必須) ★★★
+Route::get('/sanctum/csrf-cookie', function () {
+    // セッションを明示的に開始
+    if (!Session::isStarted()) {
+        Session::start();
+    }
+    
+    // CSRFトークンを生成(セッションに保存)
+    $token = Session::token();
+    
+    \Log::info('CSRF Cookie設定', [
+        'token' => $token,
+        'session_id' => Session::getId(),
+    ]);
+    
+    return response()->json([
+        'message' => 'CSRF cookie set',
+        'token' => $token
+    ]);
+})->middleware('web');
+
+// CSRFトークン取得エンドポイント(フロントエンド用)
+Route::get('/csrf-token', function () {
+    return response()->json([
+        'token' => csrf_token()
+    ]);
+})->middleware('web');
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Web Routes - デバッグルート(ミドルウェアの外)
 |--------------------------------------------------------------------------
 */
 
-
-Route::get('/debug-csrf', function () {
+Route::get('/debug-session-simple', function () {
+    $testValue = 'test_' . time();
+    session(['simple_test' => $testValue]);
+    
     return response()->json([
+        'wrote' => $testValue,
+        'read' => session('simple_test'),
         'session_id' => session()->getId(),
-        'csrf_token' => csrf_token(),
-        'session_token' => session()->token(),
-        'session_driver' => config('session.driver'),
-        'session_domain' => config('session.domain'),
-        'session_secure' => config('session.secure'),
-        'session_same_site' => config('session.same_site'),
-        'app_url' => config('app.url'),
-        'redis_connection' => config('database.redis.default'),
+        'all_session_data' => session()->all(),
     ]);
 });
 
-Route::post('/debug-csrf-post', function () {
+Route::get('/debug-session-detailed', function () {
+    session()->start();
+    session()->put('test_key', 'test_value_' . time());
+    session()->save();
+    
+    $redis = Redis::connection();
+    $allKeys = $redis->keys('*');
+    $sessionKeys = $redis->keys('*session*');
+    
     return response()->json([
-        'success' => true,
-        'message' => 'CSRF token is valid',
-        'token_received' => request()->input('_token'),
-        'session_token' => session()->token(),
+        'session_driver' => config('session.driver'),
+        'session_id' => session()->getId(),
+        'session_name' => config('session.cookie'),
+        'session_connection' => config('session.connection'),
+        'session_data' => session()->all(),
+        'redis_prefix' => config('database.redis.options.prefix'),
+        'redis_host' => config('database.redis.default.host'),
+        'redis_ping' => $redis->ping(),
+        'redis_total_keys' => count($allKeys),
+        'redis_session_keys' => $sessionKeys,
     ]);
 });
 
-Route::get('/debug-csrf-page', function () {
-    return view('debug-csrf');
+Route::get('/debug-write-to-redis', function () {
+    $redis = Redis::connection();
+    $sessionId = 'test_' . Str::random(40);
+    $prefix = config('database.redis.options.prefix');
+    $sessionKey = $prefix . 'laravel_session:' . $sessionId;
+    
+    $sessionData = serialize([
+        '_token' => Str::random(40),
+        '_previous' => ['url' => url()->current()],
+        '_flash' => ['old' => [], 'new' => []],
+    ]);
+    
+    $redis->setex($sessionKey, 7200, $sessionData);
+    
+    return response()->json([
+        'prefix' => $prefix,
+        'written_key' => $sessionKey,
+        'exists' => $redis->exists($sessionKey),
+        'ttl' => $redis->ttl($sessionKey),
+        'all_session_keys' => $redis->keys('*session*'),
+    ]);
+});
+
+Route::get('/debug-csrf-web', function () {
+    return response()->json([
+        'csrf_token' => csrf_token(),
+        'csrf_token_length' => strlen(csrf_token()),
+        'session_id' => session()->getId(),
+        'session_token' => session()->token(),
+        'session_data' => session()->all(),
+        'redis_keys' => Redis::connection()->keys('*'),
+    ]);
 });
 
 // ========================================
@@ -160,7 +232,7 @@ Route::middleware(['check.session.code'])->group(function () {
     // テスト開始画面(ログイン後)
     Route::get('/test-start', function () {
         // 未認証の場合はログインページへ
-        if (! Auth::check()) {
+        if (!Auth::check()) {
             return redirect()->route('login');
         }
 
@@ -208,7 +280,7 @@ Route::middleware(['check.session.code'])->group(function () {
 
         // ゲスト用本番試験
         Route::prefix('exam')->name('exam.')->group(function () {
-            // ★ 追加: 本番試験説明ページ(練習問題完了後に表示)
+            // 本番試験説明ページ(練習問題完了後に表示)
             Route::get('/explanation/{part}', [ExamController::class, 'guestExplanation'])
                 ->where('part', '[1-3]')
                 ->name('explanation');
@@ -249,7 +321,7 @@ Route::middleware(['check.session.code'])->group(function () {
 
         // 本番試験
         Route::prefix('exam')->name('exam.')->group(function () {
-            // ★ 追加: 本番試験説明ページ(練習問題完了後に表示)
+            // 本番試験説明ページ(練習問題完了後に表示)
             Route::get('/explanation/{part}', [ExamController::class, 'explanation'])
                 ->where('part', '[1-3]')
                 ->name('explanation');
@@ -261,7 +333,7 @@ Route::middleware(['check.session.code'])->group(function () {
             Route::post('/complete-part', [ExamController::class, 'completePart'])->name('complete-part');
             Route::post('/save-answer', [ExamController::class, 'saveAnswer'])->name('save-answer');
             
-            // ★ 新規追加: バッチ処理用エンドポイント
+            // バッチ処理用エンドポイント
             Route::post('/save-answers-batch', [ExamController::class, 'saveAnswersBatch'])->name('save-answers-batch');
             Route::get('/questions-batch/{part}/{offset?}', [ExamController::class, 'getQuestionsBatch'])->name('get-questions-batch');
             

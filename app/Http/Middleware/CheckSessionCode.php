@@ -9,12 +9,21 @@ use Symfony\Component\HttpFoundation\Response;
 class CheckSessionCode
 {
     /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * セッションコードが必要なルートをチェック
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // セッションコードが検証済みかチェック
+        if (!session()->has('verified_session_code')) {
+            \Log::warning('セッションコード未検証 - リダイレクト', [
+                'url' => $request->url(),
+                'session_id' => session()->getId(),
+                'all_session' => session()->all(),
+            ]);
+            
+            return redirect()->route('session.entry');
+        }
+        
         return $next($request);
     }
 }

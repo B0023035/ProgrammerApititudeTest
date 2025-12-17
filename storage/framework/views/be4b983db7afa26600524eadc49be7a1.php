@@ -3,11 +3,9 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        
+        
         <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
-        <!-- キャッシュ制御: ブラウザキャッシュを無効化して常に最新の CSRF トークンを取得 -->
-        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-        <meta http-equiv="Pragma" content="no-cache">
-        <meta http-equiv="Expires" content="0">
 
         <title inertia><?php echo e(config('app.name', 'Laravel')); ?></title>
 
@@ -38,5 +36,4 @@
     <body class="font-sans antialiased">
         <?php if (!isset($__inertiaSsrDispatched)) { $__inertiaSsrDispatched = true; $__inertiaSsrResponse = app(\Inertia\Ssr\Gateway::class)->dispatch($page); }  if ($__inertiaSsrResponse) { echo $__inertiaSsrResponse->body; } else { ?><div id="app" data-page="<?php echo e(json_encode($page)); ?>"></div><?php } ?>
     </body>
-</html>
-<?php /**PATH /var/www/html/resources/views/app.blade.php ENDPATH**/ ?>
+</html><?php /**PATH /var/www/html/resources/views/app.blade.php ENDPATH**/ ?>
