@@ -772,6 +772,7 @@ const isGuest = computed(() => !page.props.auth?.user || page.props.isGuest === 
 
 // フォーム設定
 const form = useForm({
+    _token: (page.props as any).csrf_token || "",  // ★ CSRF トークン
     answers: {} as Record<number, string>,
     examSessionId: page.props.examSessionId || page.props.practiceSessionId || "",
     practiceSessionId: page.props.practiceSessionId || "",
@@ -923,7 +924,7 @@ const timerDisplay = computed(() => {
     return `${minutes}:${seconds}`;
 });
 
-let timer: number | undefined;
+let timer: ReturnType<typeof setInterval> | undefined;
 
 // 画像パス生成関数
 const getImagePath = (imageName: any, imageType: "questions" | "choices"): string => {
@@ -1322,6 +1323,10 @@ const completePractice = () => {
         console.log("=== 第三部完了: answers テーブルに保存します ===");
     }
 
+    // ★ CSRF トークンを更新
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    form._token = csrfToken;
+
     const payload = {
         examSessionId: form.examSessionId,
         practiceSessionId: form.practiceSessionId,
@@ -1392,9 +1397,20 @@ const completePractice = () => {
 
 function updateFormAnswers() {
     const answers: Record<number, string> = {};
+    
+    console.log("=== updateFormAnswers (Exam) ===");
+    console.log("answerStatus length:", answerStatus.value.length);
+    console.log("questions length:", questions.value.length);
+    
     answerStatus.value.forEach((ans, index) => {
         if (ans.selected && questions.value[index]) {
-            answers[questions.value[index].id] = ans.selected;
+            const questionId = questions.value[index].id;
+            if (questionId !== undefined) {
+                answers[questionId] = ans.selected;
+                console.log(`Q${index}: ID=${questionId}, Answer=${ans.selected}`);
+            } else {
+                console.warn(`Q${index}: ID is undefined`);
+            }
         }
     });
 
@@ -1404,6 +1420,7 @@ function updateFormAnswers() {
     console.log("フォーム回答更新:", {
         answersCount: Object.keys(form.answers).length,
         totalQuestions: questions.value.length,
+        answers: form.answers,
     });
 }
 

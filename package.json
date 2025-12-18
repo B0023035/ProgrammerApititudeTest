@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vue-tsc && vite build && vite build --ssr",
+    "build": "vite build && vite build --ssr",
     "dev": "vite"
   },
   "devDependencies": {

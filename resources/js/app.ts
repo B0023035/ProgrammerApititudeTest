@@ -239,25 +239,40 @@ createInertiaApp({
     },
 });
 
+// ★★★ axios インターセプタで POST 系リクエストのトークン更新を確実に行う ★★★
+axios.interceptors.request.use(async config => {
+    // ★ credentialsを確保（セッションCookieをリクエストに含める）
+    config.withCredentials = true;
+    
+    // POST/PUT/PATCH/DELETE の場合のみトークンを更新
+    if (config.method && ["post", "put", "patch", "delete"].includes(config.method.toLowerCase())) {
+        try {
+            // トークン更新を待つ
+            const freshToken = await tokenManager.ensureFreshToken();
+            // ヘッダーに設定
+            config.headers["X-CSRF-TOKEN"] = freshToken;
+        } catch (error) {
+            console.error("❌ [axios] CSRF更新失敗:", error);
+        }
+    }
+    return config;
+});
+
 // ★★★ Inertia Router グローバルフック ★★★
 
-// すべてのリクエスト前にCSRFトークンを更新
-router.on("before", async event => {
+// ★ Inertia リクエスト前：credentials を「include」に設定
+router.on("before", event => {
     const method = event.detail.visit.method.toLowerCase();
     const url = event.detail.visit.url;
 
     console.log(`🚀 [Inertia] ${method.toUpperCase()} ${url.pathname}`);
-
-    // POST/PUT/PATCH/DELETE の場合は必ずトークンを更新
-    if (["post", "put", "patch", "delete"].includes(method)) {
-        console.log("📝 [Inertia] POST系リクエスト - CSRF更新");
-        try {
-            const token = await tokenManager.ensureFreshToken();
-            console.log("✓ [Inertia] CSRF更新完了:", token.substring(0, 20) + "...");
-        } catch (error) {
-            console.error("❌ [Inertia] CSRF更新失敗:", error);
-        }
+    
+    // ★ すべてのリクエストに credentials を含める
+    if (!event.detail.visit.options) {
+        event.detail.visit.options = {};
     }
+    (event.detail.visit.options as any).credentials = "include";
+    console.log(`🔐 [Inertia] credentials='include' を設定`);
 });
 
 // ページ遷移成功時

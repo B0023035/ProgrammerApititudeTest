@@ -40,6 +40,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $adminUser ?? $webUser,
                 'isAdmin' => $adminUser !== null,
             ],
+            'csrf_token' => csrf_token(), // ★ CSRF トークンを明示的に追加
             'ziggy' => fn () => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),

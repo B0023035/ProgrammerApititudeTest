@@ -5,6 +5,11 @@ npm-debug.log
 yarn-error.log
 pnpm-debug.log
 
+# Playwright
+playwright-storage/
+test-results/
+playwright-report/
+
 # OS files
 .DS_Store
 Thumbs.db

@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
+        // ★ EnsureSessionStartedを追加
+        $middleware->web(prepend: [
+            \App\Http\Middleware\EnsureSessionStarted::class,
+        ]);
+
         // ミドルウェアエイリアスを設定
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,

@@ -122,8 +122,9 @@ public function complete(Request $request)
     try {
         $isGuest = ! Auth::check();
 
-        // ★ 修正: answers を nullable に変更、timeoutフラグ追加
+        // ★ 修正: answers を nullable に変更、timeoutフラグ追加、_token を追加
         $validated = $request->validate([
+            '_token' => 'required|string',  // ★ CSRF トークン検証（VerifyCsrfToken ミドルウェアで既に検証済み）
             'practiceSessionId' => 'required|uuid',
             'part' => 'required|integer|in:1,2,3',
             'answers' => 'nullable|array',
@@ -143,6 +144,8 @@ public function complete(Request $request)
             'answers_count' => count($validated['answers'] ?? []),
             'is_empty' => empty($validated['answers']) ? 'yes' : 'no',
             'is_timeout' => $isTimeout ? 'yes' : 'no',
+            'answers_data' => $validated['answers'] ?? [],  // ★ 実際の回答内容をログ
+            'request_body' => $request->all(),  // ★ リクエスト全体をログ
         ]);
 
         // セッション検証
@@ -166,7 +169,7 @@ public function complete(Request $request)
 
             $redirectRoute = $isGuest ? 'guest.practice.show' : 'practice.show';
             return redirect()->route($redirectRoute, ['section' => $part])
-                ->with('error', 'セッションが無効です。練習を最初からやり直してください。');
+                ->with('error', 'セッションが無効です。練習を最初からやり直してください');
         }
 
         // ★ 時間切れの場合は解説をスキップして次のパートへ
@@ -335,6 +338,7 @@ public function complete(Request $request)
     {
         try {
             $validated = $request->validate([
+                '_token' => 'required|string',  // ★ CSRF トークン検証
                 'practiceSessionId' => 'required|uuid',
                 'part' => 'required|integer|in:1,2,3',
                 'answers' => 'nullable|array',

@@ -429,9 +429,7 @@ public function part(Request $request, $part)
 public function completePart(Request $request)
 {
     $validated = $request->validate([
-        'examSessionId' => 'required|uuid',
-        'part' => 'required|integer|in:1,2,3',
-        'answers' => 'nullable|array',
+            '_token' => 'required|string',  // ★ CSRF トークン検証
         'timeSpent' => 'nullable|integer|min:0',
         'startTime' => 'nullable|integer',
         'endTime' => 'nullable|integer',
@@ -1435,10 +1433,7 @@ public function guestCompletePart(Request $request)
 {
     // ★ 修正: answers を nullable に変更、timeSpent も柔軟に
     $validated = $request->validate([
-        'examSessionId' => 'required|uuid',
-        'part' => 'required|integer|in:1,2,3',
-        'answers' => 'nullable|array',  // ★ required を nullable に変更
-        'timeSpent' => 'nullable|integer|min:0',  // ★ min:1 → min:0 に変更、nullable追加
+            '_token' => 'required|string',  // ★ CSRF トークン検証
     ]);
 
     $guestId = session()->getId();

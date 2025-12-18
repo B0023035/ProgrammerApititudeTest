@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from "@inertiajs/vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import { computed } from "vue";
 
 interface User {
@@ -31,8 +31,23 @@ const userName = computed(() => {
     return props.auth?.user?.name || "管理者";
 });
 
+// ★ hidden form でログアウト（セッション cookie を確実に含める）
 const logout = () => {
-    router.post(route("admin.logout"));
+    const form_element = document.createElement('form');
+    form_element.method = 'POST';
+    form_element.action = route("admin.logout");
+    form_element.style.display = 'none';
+
+    // CSRF トークンを追加
+    const tokenInput = document.createElement('input');
+    tokenInput.type = 'hidden';
+    tokenInput.name = '_token';
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    tokenInput.value = csrfToken;
+    form_element.appendChild(tokenInput);
+
+    document.body.appendChild(form_element);
+    form_element.submit();
 };
 </script>
 

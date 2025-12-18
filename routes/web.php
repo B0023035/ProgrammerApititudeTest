@@ -270,7 +270,7 @@ Route::middleware(['check.session.code'])->group(function () {
                 ->where('section', '[1-3]');
 
             // 練習問題完了処理
-            Route::match(['post', 'get'], '/complete', [PracticeController::class, 'guestComplete'])->name('complete');
+            Route::post('/complete', [PracticeController::class, 'guestComplete'])->name('complete');
 
             // ゲスト用解説ページ表示用のGETルート(念のため残す)
             Route::get('/explanation/{part}', [PracticeController::class, 'showGuestExplanation'])
@@ -311,7 +311,7 @@ Route::middleware(['check.session.code'])->group(function () {
                 ->where('section', '[1-3]');
 
             // 練習問題完了処理
-            Route::match(['post', 'get'], '/complete', [PracticeController::class, 'complete'])->name('complete');
+            Route::post('/complete', [PracticeController::class, 'complete'])->name('complete');
 
             // 解説ページ表示用のGETルート(念のため残す)
             Route::get('/explanation/{part}', [PracticeController::class, 'showExplanation'])

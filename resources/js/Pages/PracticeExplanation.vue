@@ -154,7 +154,8 @@ function goToExam() {
     console.log("isGuest:", isGuest.value);
 
     // ★ 重要: 毎回新しいフォームインスタンスを作成してCSRFトークンを更新
-    const freshForm = useForm({});
+    const csrfToken = (page.value.props as any).csrf_token || document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    const freshForm = useForm({ _token: csrfToken });
 
     if (isGuest.value) {
         console.log(`ゲスト第${currentPart}部: guest.exam.start (form.post) で遷移`);

@@ -1,6 +1,8 @@
 import axios from "axios";
 window.axios = axios;
 
+// ★ 重要: credentialsを含めることでセッションCookieがリクエストに含まれる
+window.axios.defaults.withCredentials = true;
 window.axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
 
 // CSRF トークンをメタタグから取得してデフォルトヘッダーに設定

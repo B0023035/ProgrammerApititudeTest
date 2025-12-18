@@ -1,13 +1,11 @@
 <?php
-// ========================================
-// 1. app/Http/Middleware/VerifyCsrfToken.php
-// これを完全に置き換えて419の原因を特定
-// ========================================
 
 namespace App\Http\Middleware;
 
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as Middleware;
-use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
+use Illuminate\Support\Facades\Log;
 
 class VerifyCsrfToken extends Middleware
 {
@@ -21,48 +19,33 @@ class VerifyCsrfToken extends Middleware
     ];
 
     /**
-     * Handle an incoming request.
+     * Handle the request, catching CSRF token mismatches.
      */
-    public function handle($request, Closure $next)
+    public function handle(Request $request, \Closure $next)
     {
-        // デバッグ情報をログに出力
-        \Log::info('CSRF Debug', [
-            'url' => $request->fullUrl(),
-            'method' => $request->method(),
-            'session_token' => $request->session()->token(),
-            'request_token' => $request->input('_token'),
-            'header_token' => $request->header('X-CSRF-TOKEN'),
-            'session_id' => $request->session()->getId(),
-            'has_session' => $request->hasSession(),
-            'cookies' => $request->cookies->all(),
-        ]);
+        try {
+            return parent::handle($request, $next);
+        } catch (TokenMismatchException $e) {
+            // ★ 詳細ログ出力
+            $method = $request->method();
+            $path = $request->path();
+            $requestToken = $request->input('_token') || $request->header('X-CSRF-TOKEN') || 'NONE';
+            $sessionToken = $request->session()->token();
 
-        return parent::handle($request, $next);
-    }
-
-    /**
-     * Determine if the session and input CSRF tokens match.
-     */
-    protected function tokensMatch($request)
-    {
-        $token = $this->getTokenFromRequest($request);
-        $sessionToken = $request->session()->token();
-
-        $match = is_string($sessionToken) &&
-                 is_string($token) &&
-                 hash_equals($sessionToken, $token);
-
-        // マッチしない場合の詳細をログ
-        if (!$match) {
-            \Log::error('CSRF Token Mismatch', [
-                'session_token' => $sessionToken,
-                'request_token' => $token,
-                'session_token_length' => strlen($sessionToken ?? ''),
-                'request_token_length' => strlen($token ?? ''),
-                'url' => $request->fullUrl(),
+            Log::error("🚨 CSRF Token Mismatch", [
+                'method' => $method,
+                'path' => $path,
+                'request_token' => substr($requestToken, 0, 20) . '...',
+                'session_token' => substr($sessionToken, 0, 20) . '...',
+                'headers' => [
+                    'X-CSRF-TOKEN' => $request->header('X-CSRF-TOKEN') ? 'SET' : 'NOT_SET',
+                    'X-Requested-With' => $request->header('X-Requested-With') || 'NOT_SET',
+                ],
+                'body_has_token' => $request->has('_token') ? 'YES' : 'NO',
+                'session_id' => $request->session()->getId(),
             ]);
-        }
 
-        return $match;
+            throw $e;
+        }
     }
 }

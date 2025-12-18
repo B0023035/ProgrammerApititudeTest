@@ -633,7 +633,7 @@ button {
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useForm, usePage, Head } from "@inertiajs/vue3";
+import { useForm, usePage, Head, router } from "@inertiajs/vue3";
 
 // 型定義
 type ChoiceType = {
@@ -775,6 +775,7 @@ const isGuest = computed(() => !page.props.auth?.user || page.props.isGuest === 
 // Practice.vue の form 定義を以下のように修正
 
 const form = useForm({
+    _token: page.props.csrf_token || "", // ★ CSRF トークンを明示的に追加
     answers: {} as Record<number, string>,
     practiceSessionId: page.props.practiceSessionId || "",
     part: currentPart.value,
@@ -862,7 +863,7 @@ const timerDisplay = computed(() => {
     return `${minutes}:${seconds}`;
 });
 
-let timer: number | undefined;
+let timer: ReturnType<typeof setInterval> | undefined;
 
 // 画像パス生成
 const getImagePath = (imageName: any, imageType: "questions" | "choices"): string => {
@@ -981,11 +982,16 @@ const completePractice = () => {
     form.endTime = Date.now();
     form.timeSpent = Math.floor((Date.now() - form.startTime) / 1000);
 
+    // ★ CSRF トークンを明示的に設定（meta タグから取得）
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    form._token = csrfToken;
+
     updateFormAnswers();
 
     console.log("=== 送信データの最終確認 ===");
     console.log("practiceSessionId:", form.practiceSessionId);
     console.log("part:", form.part);
+    console.log("_token:", form._token?.substring(0, 20) + "...");
     console.log("answers:", form.answers);
     console.log("answersCount:", Object.keys(form.answers).length);
     console.log("timeSpent:", form.timeSpent);
@@ -1008,60 +1014,98 @@ const completePractice = () => {
     }
 
     const routeName = isGuest.value ? "guest.practice.complete" : "practice.complete";
+    const url = route(routeName);
 
+    console.log("=== POST送信直前 ===");
+    console.log("Route:", routeName);
+    console.log("Data:", form.data());
+    console.log("🔐 Inertia form.post() で送信");
+
+    // ★ セッションクッキーが存在するか確認
+    const cookies = document.cookie;
+    const sessionCookie = cookies.split(';').find(c => c.includes('XSRF-TOKEN') || c.includes('laravel_session'));
+    console.log("🍪 Session Cookie:", sessionCookie ? "✅ PRESENT" : "❌ MISSING");
+    console.log("Cookies:", cookies.substring(0, 100));
+
+    // ★ CSRF トークン確保（ページ props から取得）
+    const currentCsrfToken = page.props.csrf_token || '';
+    form._token = currentCsrfToken;
+    console.log("🔑 CSRF Token:", currentCsrfToken.substring(0, 20) + "...");
+
+    // form.post() を使用（credentials は自動的に include）
     form.post(route(routeName), {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
         preserveState: false,
-        preserveScroll: false,
-        replace: false,
-        forceFormData: false,
-        onBefore: () => {
-            console.log("=== POST送信直前 ===");
-            console.log("Route:", routeName);
-            console.log("Data:", form.data());
+        onSuccess: (page) => {
+            console.log("✅ Practice completion successful");
+            // PracticeExplanation ページへ移動（Inertia が自動リダイレクト）
         },
-        onSuccess: response => {
-            console.log("練習完了データ送信完了");
-            console.log("Response:", response);
-        },
-        onError: errors => {
-            showConfirm.value = false;
-            console.error("練習完了エラー:", errors);
-
-            if (errors.practiceSessionId) {
-                alert(`セッションエラー: ${errors.practiceSessionId}`);
-            } else if (errors.totalQuestions) {
-                alert(`エラー: totalQuestionsの検証に失敗しました。\n値: ${form.totalQuestions}`);
-            } else {
-                const errorMessages = Object.keys(errors)
-                    .map(key => `${key}: ${errors[key]}`)
-                    .join("\n");
-                alert(`エラーが発生しました:\n${errorMessages}`);
-            }
+        onError: (errors) => {
+            console.error("❌ Validation errors:", errors);
+            const errorMessages = Object.values(errors).join(', ');
+            alert(`バリデーションエラー: ${errorMessages}`);
         },
         onFinish: () => {
-            console.log("リクエスト処理完了");
+            console.log("Request finished");
         },
     });
+
+    showConfirm.value = false;
 };
 
 // 回答処理
 function handleAnswer(label: string) {
     const sanitizedLabel = String(label).trim().slice(0, 5);
-    if (!/^[A-E]$/.test(sanitizedLabel)) return;
+    if (!/^[A-E]$/.test(sanitizedLabel)) {
+        console.warn("Invalid answer label:", label);
+        return;
+    }
 
+    console.log("=== handleAnswer ===");
+    console.log("currentIndex:", currentIndex.value);
+    console.log("selected answer:", sanitizedLabel);
+    console.log("answerStatus length:", answerStatus.value.length);
+    console.log("currentQuestion:", currentQuestion.value);
+    
+    if (currentIndex.value >= answerStatus.value.length) {
+        console.error("Invalid currentIndex!");
+        return;
+    }
+    
     answerStatus.value[currentIndex.value].selected = sanitizedLabel;
+    console.log("Updated answerStatus[" + currentIndex.value + "]:", answerStatus.value[currentIndex.value]);
+    
     updateFormAnswers();
 }
 
 function updateFormAnswers() {
     const answers: Record<number, string> = {};
+    
+    // デバッグ: 回答状態の確認
+    console.log("=== updateFormAnswers debug ===");
+    console.log("answerStatus length:", answerStatus.value.length);
+    console.log("questions length:", questions.value.length);
+    
     answerStatus.value.forEach((ans, index) => {
         if (ans.selected) {
-            answers[questions.value[index].id] = ans.selected;
+            const questionId = questions.value[index]?.id;
+            if (questionId !== undefined) {
+                answers[questionId] = ans.selected;
+                console.log(`Question ${index}: ID=${questionId}, Answer=${ans.selected}`);
+            } else {
+                console.warn(`Question ${index}: ID is undefined!`);
+            }
         }
     });
+    
     form.answers = answers;
     form.totalQuestions = questions.value.length;
+    
+    console.log("Final answers object:", answers);
+    console.log("Total questions:", form.totalQuestions);
+    console.log("=== end debug ===");
 }
 
 function getAnsweredCount(): number {
@@ -1112,6 +1156,10 @@ function handleTimeUp() {
         timer = undefined;
     }
 
+    // ★ CSRF トークンを明示的に設定
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    form._token = csrfToken;
+    
     // ★ 重要: isTimeout フラグを true に設定
     form.isTimeout = true;
     form.practiceSessionId = props.practiceSessionId || page.props.practiceSessionId || "";
@@ -1125,6 +1173,7 @@ function handleTimeUp() {
 
     console.log("=== タイムアップ時の送信データ ===");
     console.log("isTimeout:", form.isTimeout);
+    console.log("_token:", form._token?.substring(0, 20) + "...");
     console.log("part:", form.part);
     console.log("practiceSessionId:", form.practiceSessionId);
     console.log("timeSpent:", form.timeSpent);
