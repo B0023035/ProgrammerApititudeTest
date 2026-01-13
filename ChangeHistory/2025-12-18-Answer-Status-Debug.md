@@ -3,14 +3,17 @@
 ## Problems Reported
 
 ### 1. CSRF Token Error Still Occurring
+
 - Despite previous fixes, 419 Page Expired errors persist
 - Need to re-verify entire token flow
 
 ### 2. localhost:9323 Connection Refused
+
 - Playwright browser context connection issue
 - Previous sessions connected successfully
 
 ### 3. Answer Status Judgment Error
+
 - **Issue**: User reports answering questions correctly but system shows "not answered"
 - **Symptom**: Form submission may fail or answers not being saved
 - **Impact**: Practice completion affected
@@ -18,9 +21,11 @@
 ## Root Cause Analysis
 
 ### Problem 3: Answer Status Not Being Saved
+
 Located potential issues in answer handling:
 
 **Practice.vue - updateFormAnswers():**
+
 ```javascript
 // ISSUE: Using questions.value[index].id without null check
 answers[questions.value[index].id] = ans.selected;
@@ -28,6 +33,7 @@ answers[questions.value[index].id] = ans.selected;
 ```
 
 **Potential Causes:**
+
 1. questions.value and answerStatus.value length mismatch
 2. Question ID (id field) missing or undefined
 3. IndexOutOfBounds when accessing questions array
@@ -36,20 +42,23 @@ answers[questions.value[index].id] = ans.selected;
 ## Fixes Applied
 
 ### Fix 1: Added Comprehensive Debug Logging to Practice.vue
+
 - Added detailed logging in `updateFormAnswers()` function
-- Added validation in `handleAnswer()` function  
+- Added validation in `handleAnswer()` function
 - Logs now show:
-  - answerStatus array length
-  - questions array length
-  - Each question ID and answer value
-  - Array index validation
+    - answerStatus array length
+    - questions array length
+    - Each question ID and answer value
+    - Array index validation
 
 ### Fix 2: Added Debug Logging to Part.vue (Exam)
+
 - Similar logging added to exam answer handling
 - Now logs all question IDs and their answers
 - Helps identify if questions are missing ID field
 
 ### Fix 3: Fixed Potential Null Reference
+
 - Practice.vue: Added null-safety check
 - Part.vue: Already had check, but logging enhanced
 
@@ -76,6 +85,7 @@ Total questions: 20
 ```
 
 If there's a mismatch or missing ID:
+
 ```
 Question 0: ID is undefined!
 ```
@@ -85,10 +95,10 @@ Question 0: ID is undefined!
 1. **Reproduce the issue** with debug logging enabled
 2. **Check browser console** for the debug output
 3. **Verify** that:
-   - Questions are being loaded (questions.length > 0)
-   - Each question has an ID field
-   - Answers are being registered in answerStatus
-   - Form answers object contains all answered questions
+    - Questions are being loaded (questions.length > 0)
+    - Each question has an ID field
+    - Answers are being registered in answerStatus
+    - Form answers object contains all answered questions
 4. **Check Laravel logs** for any validation errors
 
 ## Testing the Fix
@@ -100,10 +110,10 @@ To reproduce and test:
 3. Click on an answer
 4. Look for `=== handleAnswer ===` and `=== updateFormAnswers debug ===` logs
 5. Verify:
-   - currentIndex matches what you clicked
-   - answerStatus and questions lengths match
-   - Question IDs are present and valid
-   - Form answers include the selected questions
+    - currentIndex matches what you clicked
+    - answerStatus and questions lengths match
+    - Question IDs are present and valid
+    - Form answers include the selected questions
 
 ## Related Files Modified
 
@@ -115,4 +125,3 @@ To reproduce and test:
 - Logs only appear in browser console, not in terminal
 - Debug logging will help identify exact point of failure
 - Once reproduced, the issue becomes much easier to fix
-

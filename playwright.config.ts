@@ -16,8 +16,9 @@ export default defineConfig({
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 1 : undefined,
+    timeout: 60 * 1000,
 
-    reporter: [["html"], ["list"]],
+    reporter: [["html", { host: "0.0.0.0", port: 8888 }], ["list"]],
 
     use: {
         baseURL: process.env.TEST_BASE_URL || "http://localhost:80",
@@ -35,10 +36,5 @@ export default defineConfig({
         },
     ],
 
-    webServer: {
-        command: "php artisan serve",
-        url: "http://localhost:80",
-        reuseExistingServer: true,
-        timeout: 120 * 1000,
-    },
+    // Docker で既に起動しているので webServer は不要
 });

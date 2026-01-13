@@ -28,10 +28,11 @@ export const test = base.extend<AuthFixtures>({
         await page.waitForURL("**/test-start", { timeout: 10000 });
         await page.waitForTimeout(500);
 
-        // ★ 4. Cookie を出力（デバッグ用）
-        const cookies = await context.cookies();
-        const sessionCookie = cookies.find(c => c.name.toLowerCase().includes("laravel_session") || c.name.toLowerCase().includes("session"));
-        console.log("🍪 Session Cookie:", sessionCookie?.name, sessionCookie?.value?.substring(0, 20) + "...");
+        // ★ 4. ログイン後にCSRF Cookieを再取得（セッションが変わるため）
+        await page.goto("/sanctum/csrf-cookie");
+        await page.waitForTimeout(300);
+        await page.goto("/test-start");
+        await page.waitForTimeout(500);
 
         await use(page);
     },
@@ -46,6 +47,14 @@ export const test = base.extend<AuthFixtures>({
         await page.fill("input#password", testAccounts.admin.password);
         await page.click('button[type="submit"]');
         await page.waitForURL("**/admin/dashboard", { timeout: 10000 });
+        await page.waitForTimeout(500);
+
+        // ★ ログイン後にCSRF Cookieを再取得（セッションが変わるため）
+        await page.goto("/sanctum/csrf-cookie");
+        await page.waitForTimeout(300);
+        
+        // ダッシュボードに戻る
+        await page.goto("/admin/dashboard");
         await page.waitForTimeout(500);
 
         await use(page);
@@ -68,7 +77,9 @@ export const test = base.extend<AuthFixtures>({
         await page.fill("input#school_name", testAccounts.guest.school);
         await page.fill("input#guest_name", testAccounts.guest.name);
         await page.click('button:has-text("始める")');
-        await page.waitForURL("**/guest/practice/1", { timeout: 10000 });
+
+        // ExamInstructions ページが表示されるまで待機
+        await page.waitForSelector('text=第1部の練習を始める', { timeout: 10000 });
         await page.waitForTimeout(500);
 
         await use(page);

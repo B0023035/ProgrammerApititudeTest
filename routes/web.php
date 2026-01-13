@@ -27,11 +27,6 @@ Route::get('/sanctum/csrf-cookie', function () {
     // CSRFトークンを生成(セッションに保存)
     $token = Session::token();
     
-    \Log::info('CSRF Cookie設定', [
-        'token' => $token,
-        'session_id' => Session::getId(),
-    ]);
-    
     return response()->json([
         'message' => 'CSRF cookie set',
         'token' => $token
@@ -140,7 +135,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             return Inertia::render('Admin/Login');
         })->name('login');
 
-        Route::post('/login', [AdminAuthController::class, 'login'])->name('login');
+        Route::post('/login', [AdminAuthController::class, 'login'])->name('login.store');
     });
 
     // 認証済み管理者のみアクセス可能

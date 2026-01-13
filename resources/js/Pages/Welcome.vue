@@ -5,7 +5,7 @@ import { onMounted } from "vue";
 const page = usePage();
 
 const goBack = async () => {
-    console.log("戻るボタンがクリックされました");
+    // console.log("戻るボタンがクリックされました");
     try {
         // セッションクリア用のエンドポイントを呼び出す
         const response = await fetch("/session/clear", {
@@ -18,7 +18,7 @@ const goBack = async () => {
             },
         });
 
-        console.log("セッションクリアのレスポンス:", response.status);
+        // console.log("セッションクリアのレスポンス:", response.status);
 
         // セッションクリア後にトップページへ
         window.location.href = "/";
@@ -32,9 +32,9 @@ const goBack = async () => {
 onMounted(() => {
     const currentPath = window.location.pathname;
 
-    console.log("Current path:", currentPath);
-    console.log("Auth user:", page.props.auth?.user);
-    console.log("Is admin:", page.props.auth?.isAdmin);
+    // console.log("Current path:", currentPath);
+    // console.log("Auth user:", page.props.auth?.user);
+    // console.log("Is admin:", page.props.auth?.isAdmin);
 
     // Welcomeページ(/welcome)以外ではリダイレクトしない
     if (currentPath !== "/welcome") {

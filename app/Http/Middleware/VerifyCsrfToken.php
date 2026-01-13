@@ -29,20 +29,38 @@ class VerifyCsrfToken extends Middleware
             // ★ 詳細ログ出力
             $method = $request->method();
             $path = $request->path();
-            $requestToken = $request->input('_token') || $request->header('X-CSRF-TOKEN') || 'NONE';
+            
+            // リクエストからトークンを取得（複数のソースを確認）
+            $bodyToken = $request->input('_token');
+            $headerToken = $request->header('X-CSRF-TOKEN');
+            $xsrfToken = $request->cookie('XSRF-TOKEN');
+            $requestToken = $bodyToken ?: $headerToken ?: 'NONE';
+            
+            // セッショントークンを取得
             $sessionToken = $request->session()->token();
+            $sessionId = $request->session()->getId();
+            
+            // セッションCookieが存在するか確認
+            $sessionCookie = $request->cookie(config('session.cookie'));
 
-            Log::error("🚨 CSRF Token Mismatch", [
+            Log::error("🚨 CSRF Token Mismatch - DETAILED", [
                 'method' => $method,
                 'path' => $path,
-                'request_token' => substr($requestToken, 0, 20) . '...',
-                'session_token' => substr($sessionToken, 0, 20) . '...',
-                'headers' => [
-                    'X-CSRF-TOKEN' => $request->header('X-CSRF-TOKEN') ? 'SET' : 'NOT_SET',
-                    'X-Requested-With' => $request->header('X-Requested-With') || 'NOT_SET',
+                'tokens' => [
+                    'body_token' => $bodyToken ? substr($bodyToken, 0, 20) . '...' : 'NOT_SET',
+                    'header_token' => $headerToken ? substr($headerToken, 0, 20) . '...' : 'NOT_SET',
+                    'xsrf_cookie' => $xsrfToken ? substr($xsrfToken, 0, 20) . '...' : 'NOT_SET',
+                    'session_token' => substr($sessionToken, 0, 20) . '...',
                 ],
-                'body_has_token' => $request->has('_token') ? 'YES' : 'NO',
-                'session_id' => $request->session()->getId(),
+                'session' => [
+                    'id' => $sessionId,
+                    'cookie_present' => $sessionCookie ? 'YES' : 'NO',
+                    'cookie_name' => config('session.cookie'),
+                ],
+                'match_check' => [
+                    'body_matches' => $bodyToken === $sessionToken ? 'YES' : 'NO',
+                    'header_matches' => $headerToken === $sessionToken ? 'YES' : 'NO',
+                ],
             ]);
 
             throw $e;

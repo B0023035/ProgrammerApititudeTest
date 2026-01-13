@@ -3,12 +3,15 @@
 ## 実施した修正
 
 ### 修正1: routes/web.php - ゲスト用練習問題完了ルート
+
 **変更前**:
+
 ```php
 Route::match(['post', 'get'], '/complete', [PracticeController::class, 'guestComplete'])->name('complete');
 ```
 
 **変更後**:
+
 ```php
 Route::post('/complete', [PracticeController::class, 'guestComplete'])->name('complete');
 ```
@@ -20,12 +23,15 @@ Route::post('/complete', [PracticeController::class, 'guestComplete'])->name('co
 ---
 
 ### 修正2: routes/web.php - 認証ユーザー用練習問題完了ルート
+
 **変更前**:
+
 ```php
 Route::match(['post', 'get'], '/complete', [PracticeController::class, 'complete'])->name('complete');
 ```
 
 **変更後**:
+
 ```php
 Route::post('/complete', [PracticeController::class, 'complete'])->name('complete');
 ```
@@ -37,6 +43,7 @@ Route::post('/complete', [PracticeController::class, 'complete'])->name('complet
 ---
 
 ### 修正3: キャッシュクリア
+
 ```bash
 rm -rf bootstrap/cache/*
 ```
@@ -46,6 +53,7 @@ rm -rf bootstrap/cache/*
 ---
 
 ### 修正4: Laravel サーバー再起動
+
 ```bash
 pkill -f "php artisan serve"
 php artisan serve --host=0.0.0.0 --port=8000
@@ -60,19 +68,20 @@ php artisan serve --host=0.0.0.0 --port=8000
 ### CSRF トークンエラーが解消される仕組み
 
 1. **GET リクエストの排除**
-   - POST のみに限定することで、CSRF 検証が一貫して適用される
+    - POST のみに限定することで、CSRF 検証が一貫して適用される
 
 2. **Inertia.js の CSRF 処理**
-   - POST リクエストのみを受け付けることで、Inertia.js の自動 CSRF トークン処理が正常に機能
+    - POST リクエストのみを受け付けることで、Inertia.js の自動 CSRF トークン処理が正常に機能
 
 3. **セッション一貫性**
-   - 同じエンドポイントでの異なるメソッドによるセッション重複がなくなる
+    - 同じエンドポイントでの異なるメソッドによるセッション重複がなくなる
 
 ---
 
 ## 検証方法
 
 ### 1. ブラウザでのテスト
+
 ```
 1. http://localhost:8000/ にアクセス
 2. セッションコードを入力
@@ -82,6 +91,7 @@ php artisan serve --host=0.0.0.0 --port=8000
 ```
 
 ### 2. Playwright テスト実行
+
 ```bash
 npx playwright test
 ```
@@ -89,6 +99,7 @@ npx playwright test
 期待結果: すべてのテストが合格
 
 ### 3. ネットワークインスペクタの確認
+
 ```
 1. ブラウザの開発者ツールを開く
 2. Network タブで練習完了ボタン押下時のリクエストを確認

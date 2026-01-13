@@ -1,58 +1,60 @@
 {
-  "$schema": "https://json.schemastore.org/package.json",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "vite build && vite build --ssr",
-    "dev": "vite"
-  },
-  "devDependencies": {
-    "@babel/eslint-parser": "^7.28.5",
-    "@inertiajs/vue3": "^2.2.15",
-    "@playwright/test": "^1.57.0",
-    "@tailwindcss/forms": "^0.5.3",
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/node": "^25.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.46.3",
-    "@typescript-eslint/parser": "^8.46.3",
-    "@vitejs/plugin-vue": "^5.0.0",
-    "@vue/eslint-config-prettier": "^10.2.0",
-    "@vue/server-renderer": "^3.4.0",
-    "autoprefixer": "^10.4.12",
-    "axios": "^1.13.2",
-    "concurrently": "^9.0.1",
-    "dotenv": "^17.2.3",
-    "eslint": "^9.39.1",
-    "eslint-plugin-vue": "^10.5.1",
-    "laravel-vite-plugin": "^1.2.0",
-    "postcss": "^8.4.31",
-    "prettier": "^3.6.2",
-    "tailwindcss": "^3.2.1",
-    "typescript": "^5.9.3",
-    "vite": "^6.2.4",
-    "vue": "^3.5.20",
-    "vue-eslint-parser": "^10.2.0",
-    "vue-tsc": "^2.0.24"
-  },
-  "dependencies": {
-    "@inertiajs/inertia": "^0.11.1"
-  },
-  "name": "programmeraptitudetest",
-  "version": "1.0.0",
-  "description": "",
-  "main": "eslint.config.js",
-  "directories": {
-    "test": "tests"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/B0023035/ProgrammerApititudeTest.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/B0023035/ProgrammerApititudeTest/issues"
-  },
-  "homepage": "https://github.com/B0023035/ProgrammerApititudeTest#readme"
+    "$schema": "https://json.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build && vite build --ssr",
+        "dev": "vite",
+        "test": "npx playwright test && npx playwright show-report --host 0.0.0.0 --port 8888"
+    },
+    "devDependencies": {
+        "@babel/eslint-parser": "^7.28.5",
+        "@inertiajs/vue3": "^2.2.15",
+        "@playwright/test": "^1.57.0",
+        "@tailwindcss/forms": "^0.5.3",
+        "@tailwindcss/vite": "^4.0.0",
+        "@types/node": "^25.0.0",
+        "@typescript-eslint/eslint-plugin": "^8.46.3",
+        "@typescript-eslint/parser": "^8.46.3",
+        "@vitejs/plugin-vue": "^5.0.0",
+        "@vue/eslint-config-prettier": "^10.2.0",
+        "@vue/server-renderer": "^3.4.0",
+        "autoprefixer": "^10.4.12",
+        "axios": "^1.13.2",
+        "concurrently": "^9.0.1",
+        "dotenv": "^17.2.3",
+        "eslint": "^9.39.1",
+        "eslint-plugin-vue": "^10.5.1",
+        "laravel-vite-plugin": "^1.2.0",
+        "postcss": "^8.4.31",
+        "prettier": "^3.6.2",
+        "tailwindcss": "^3.2.1",
+        "terser": "^5.44.1",
+        "typescript": "^5.9.3",
+        "vite": "^6.2.4",
+        "vue": "^3.5.20",
+        "vue-eslint-parser": "^10.2.0",
+        "vue-tsc": "^2.0.24"
+    },
+    "dependencies": {
+        "@inertiajs/inertia": "^0.11.1"
+    },
+    "name": "programmeraptitudetest",
+    "version": "1.0.0",
+    "description": "",
+    "main": "eslint.config.js",
+    "directories": {
+        "test": "tests"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/B0023035/ProgrammerApititudeTest.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/B0023035/ProgrammerApititudeTest/issues"
+    },
+    "homepage": "https://github.com/B0023035/ProgrammerApititudeTest#readme"
 }

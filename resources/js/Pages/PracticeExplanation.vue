@@ -133,8 +133,7 @@ const handleImageError = (event: Event): void => {
 };
 
 const handleImageLoad = (event: Event) => {
-    const target = event.target as HTMLImageElement;
-    console.log(`画像読み込み成功: ${target.src}`);
+    // 画像読み込み成功
 };
 
 function getCurrentPart(): number {
@@ -144,38 +143,26 @@ function getCurrentPart(): number {
     return page.props.currentPart || 1;
 }
 
-// ★ 修正: useFormを毎回新しく作成してCSRFトークンをリフレッシュ
+// 本番試験への遷移
 function goToExam() {
     const currentPart = getCurrentPart();
     isNavigating.value = true;
 
-    console.log("=== goToExam呼び出し ===");
-    console.log("currentPart:", currentPart);
-    console.log("isGuest:", isGuest.value);
-
-    // ★ 重要: 毎回新しいフォームインスタンスを作成してCSRFトークンを更新
-    const csrfToken = (page.value.props as any).csrf_token || document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    // 毎回新しいフォームインスタンスを作成してCSRFトークンを更新
+    const csrfToken = (page.props as any).csrf_token || document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
     const freshForm = useForm({ _token: csrfToken });
 
     if (isGuest.value) {
-        console.log(`ゲスト第${currentPart}部: guest.exam.start (form.post) で遷移`);
         freshForm.post(route("guest.exam.start"), {
             preserveState: false,
             preserveScroll: false,
-            onBefore: () => {
-                console.log(`guest.exam.start POST 送信前`);
-            },
-            onSuccess: (page: any) => {
-                console.log(`guest.exam.start 成功、自動リダイレクト完了`);
-            },
             onFinish: () => {
                 isNavigating.value = false;
             },
             onError: (errors: any) => {
-                console.error("本番試験開始エラー:", errors);
                 isNavigating.value = false;
 
-                // ★ CSRFエラーの場合は明示的にメッセージを表示
+                // CSRFエラーの場合は明示的にメッセージを表示
                 if (errors.message && errors.message.includes("419")) {
                     alert("セッションの有効期限が切れました。ページを再読み込みしてください。");
                     window.location.reload();
@@ -185,24 +172,16 @@ function goToExam() {
             },
         });
     } else {
-        console.log(`認証ユーザー第${currentPart}部: exam.start (form.post) で遷移`);
         freshForm.post(route("exam.start"), {
             preserveState: false,
             preserveScroll: false,
-            onBefore: () => {
-                console.log(`exam.start POST 送信前`);
-            },
-            onSuccess: (page: any) => {
-                console.log(`exam.start 成功、自動リダイレクト完了`);
-            },
             onFinish: () => {
                 isNavigating.value = false;
             },
             onError: (errors: any) => {
-                console.error("本番試験開始エラー:", errors);
                 isNavigating.value = false;
 
-                // ★ CSRFエラーの場合は明示的にメッセージを表示
+                // CSRFエラーの場合は明示的にメッセージを表示
                 if (errors.message && errors.message.includes("419")) {
                     alert("セッションの有効期限が切れました。ページを再読み込みしてください。");
                     window.location.reload();

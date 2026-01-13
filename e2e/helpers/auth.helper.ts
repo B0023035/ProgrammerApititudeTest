@@ -25,8 +25,11 @@ export class AuthHelper {
         await this.page.click('button:has-text("Log in")');
         await this.page.waitForURL("**/test-start", { timeout: 10000 });
 
-        // 認証完了まで待機
-        await this.page.waitForTimeout(1000);
+        // ★ ログイン後にCSRF Cookieを再取得（セッションが変わるため）
+        await this.page.goto("/sanctum/csrf-cookie");
+        await this.page.waitForTimeout(300);
+        await this.page.goto("/test-start");
+        await this.page.waitForTimeout(500);
     }
 
     async loginAsAdmin() {
@@ -49,17 +52,27 @@ export class AuthHelper {
         await this.page.fill("input#guest_name", name || testAccounts.guest.name);
         await this.page.click('button:has-text("始める")');
 
-        // 練習ページに遷移するのを待つ
-        await this.page.waitForURL(url => url.pathname.includes("/guest/practice/1"), {
-            timeout: 10000,
-        });
+        // ExamInstructions ページが表示されるまで待機
+        await this.page.waitForSelector('text=第1部の練習を始める', { timeout: 10000 });
 
         await this.page.waitForTimeout(1000);
     }
 
     async logout() {
-        await this.page.click('[data-testid="user-menu"]');
-        await this.page.click("text=ログアウト");
-        await this.page.waitForURL("**/login", { timeout: 10000 });
+        // ユーザーメニュー（名前が表示されたドロップダウンボタン）をクリック
+        // ResponsiveUserProfile.vue のドロップダウントリガー - SVG付きのボタン
+        const userDropdown = this.page.locator('button:has(svg[stroke="currentColor"])').first();
+        await userDropdown.click();
+        await this.page.waitForTimeout(500);
+        
+        // ドロップダウンが開くのを待つ - DropdownLink内のボタン（px-4クラスを持つもの）
+        // レスポンシブナビゲーション（sm:hidden）内のボタンではなく、Dropdown内のボタンを選択
+        const logoutButton = this.page.locator('button.px-4:has-text("Log Out")').first();
+        await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
+        
+        // ログアウトリンクをクリック
+        await logoutButton.click();
+        // ユーザーのログアウトは / にリダイレクトされる（セッションコード入力画面）
+        await this.page.waitForURL("**/", { timeout: 10000 });
     }
 }

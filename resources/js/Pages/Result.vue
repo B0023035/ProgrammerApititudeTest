@@ -110,7 +110,7 @@ const cleanupGuestData = async () => {
 
         if (response.ok) {
             hasCleanedUp.value = true;
-            console.log("ゲストデータをクリーンアップしました");
+            // console.log("ゲストデータをクリーンアップしました");
         } else {
             console.warn("クリーンアップに失敗しました:", response.status);
         }
@@ -246,16 +246,16 @@ const downloadAsPDF = () => {
 };
 
 onMounted(() => {
-    console.log("=== Result.vue データ確認 ===");
-    console.log("page.props:", page.props);
-    console.log("results:", page.props.results);
-    console.log("rankName:", page.props.rankName);
-    console.log("totalScore:", page.props.totalScore);
-    console.log("part1Stars:", part1Stars.value);
-    console.log("part2Stars:", part2Stars.value);
-    console.log("part3Stars:", part3Stars.value);
-    console.log("isGuest:", isGuest.value);
-    console.log("========================");
+    // console.log("=== Result.vue データ確認 ===");
+    // console.log("page.props:", page.props);
+    // console.log("results:", page.props.results);
+    // console.log("rankName:", page.props.rankName);
+    // console.log("totalScore:", page.props.totalScore);
+    // console.log("part1Stars:", part1Stars.value);
+    // console.log("part2Stars:", part2Stars.value);
+    // console.log("part3Stars:", part3Stars.value);
+    // console.log("isGuest:", isGuest.value);
+    // console.log("========================");
 });
 
 onBeforeUnmount(() => {

@@ -338,26 +338,18 @@ class ResultsManagementController extends Controller
         $grade = $request->input('grade'); // 例: 1,2,3 または 'all'
         $eventId = $request->input('event_id'); // イベントを直接選択する場合のID
 
-        Log::info('Statistics filter inputs', [
-            'grade' => $grade,
-            'event_id' => $eventId,
-        ]);
-
         $baseQuery = ExamSession::whereNotNull('finished_at')
             ->whereNull('disqualified_at');
 
         if ($grade !== null && $grade !== '' && $grade !== 'all') {
-            Log::info('Applying grade filter', ['grade' => (int) $grade]);
             $baseQuery = $baseQuery->where('grade', (int) $grade);
         }
 
         if ($eventId) {
-            Log::info('Applying event_id filter', ['event_id' => (int) $eventId]);
             $baseQuery = $baseQuery->where('event_id', (int) $eventId);
         }
 
         $totalSessions = (clone $baseQuery)->count();
-        Log::info('Total sessions after filter', ['count' => $totalSessions]);
 
         $totalUsers = User::count();
 
@@ -470,13 +462,6 @@ class ResultsManagementController extends Controller
             1 => $academicYear + 3,  // 1年生の卒業年
         ];
         
-        Log::info('Academic year calculation', [
-            'currentYear' => $currentYear,
-            'currentMonth' => $currentMonth,
-            'academicYear' => $academicYear,
-            'gradeGraduationYears' => $gradeGraduationYears
-        ]);
-        
         // exam_sessions.grade ごとのセッション数を集計
         $gradeCountsRaw = ExamSession::whereNotNull('finished_at')
             ->whereNull('disqualified_at')
@@ -487,7 +472,7 @@ class ResultsManagementController extends Controller
             ->pluck('count', 'grade')
             ->toArray();
 
-        Log::info('Grade counts raw data', ['gradeCountsRaw' => $gradeCountsRaw]);
+        // Log::info('Grade counts raw data', ['gradeCountsRaw' => $gradeCountsRaw]);
 
         $gradeCounts = [];
 
@@ -545,7 +530,7 @@ class ResultsManagementController extends Controller
             ];
         }
 
-        Log::info('Final grade counts', ['gradeCounts' => $gradeCounts]);
+        // Log::info('Final grade counts', ['gradeCounts' => $gradeCounts]);
         
         // フィルター処理の修正
         $validGrade = null;

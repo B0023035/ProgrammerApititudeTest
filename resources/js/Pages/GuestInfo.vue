@@ -19,10 +19,9 @@ const handleSubmit = () => {
 
     form.post(route("guest.info.store"), {
         onSuccess: () => {
-            console.log("ゲスト情報登録完了");
+            // 登録完了
         },
         onError: errors => {
-            console.error("エラー:", errors);
             alert("登録に失敗しました。もう一度お試しください。");
             isSubmitting.value = false;
         },

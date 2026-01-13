@@ -1355,7 +1355,9 @@ const completePractice = () => {
 
     const routeName = isGuest.value ? "guest.exam.complete-part" : "exam.complete-part";
 
-    form.post(route(routeName), {
+    // ★ 試験終了前にCSRFトークンを強制更新
+    const submitForm = () => {
+        form.post(route(routeName), {
         onSuccess: () => {
             console.log("試験パート完了データ送信完了");
             if (currentPart.value === 3) {
@@ -1392,7 +1394,23 @@ const completePractice = () => {
         onFinish: () => {
             console.log("リクエスト処理完了");
         },
-    });
+        });
+    };
+
+    // CSRFトークンを更新してから送信
+    if (typeof (window as any).forceRefreshCSRF === 'function') {
+        (window as any).forceRefreshCSRF()
+            .then(() => {
+                console.log("CSRFトークン更新完了、フォーム送信開始");
+                submitForm();
+            })
+            .catch(() => {
+                console.log("CSRFトークン更新失敗、そのまま送信");
+                submitForm();
+            });
+    } else {
+        submitForm();
+    }
 };
 
 function updateFormAnswers() {

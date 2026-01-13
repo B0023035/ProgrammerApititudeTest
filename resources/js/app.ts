@@ -34,25 +34,22 @@ class CSRFTokenManager {
         const meta = document.querySelector('meta[name="csrf-token"]');
         if (meta) {
             this.currentToken = meta.getAttribute("content") || "";
-            console.log("✅ [CSRF] 初期トークン取得:", this.currentToken.substring(0, 20) + "...");
         }
 
-        // 定期更新を開始（90秒ごと）
+        // 定期更新を開始（5分ごと）
         this.startPeriodicRefresh();
 
         // ページ可視化時に更新
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden) {
-                console.log("👁️ [CSRF] ページ表示 - トークン更新");
                 this.refreshTokenAsync();
             }
         });
 
-        // ウィンドウフォーカス時に更新（30秒以上経過している場合）
+        // ウィンドウフォーカス時に更新（60秒以上経過している場合）
         window.addEventListener("focus", () => {
             const elapsed = Date.now() - this.lastRefreshTime;
-            if (elapsed > 30000) {
-                console.log("🎯 [CSRF] フォーカス復帰 - トークン更新");
+            if (elapsed > 60000) {
                 this.refreshTokenAsync();
             }
         });
@@ -63,24 +60,21 @@ class CSRFTokenManager {
             clearInterval(this.refreshInterval);
         }
 
-        // 90秒ごとに定期更新
+        // 5分ごとに定期更新（軽量化）
         this.refreshInterval = window.setInterval(() => {
-            console.log("⏰ [CSRF] 定期更新実行");
             this.refreshTokenAsync();
-        }, 90000);
+        }, 300000);
     }
 
     public async ensureFreshToken(): Promise<string> {
         // 既に更新中の場合は、その更新を待つ
         if (this.refreshPromise) {
-            console.log("⏳ [CSRF] 更新待機中...");
             return this.refreshPromise;
         }
 
-        // 最後の更新から5秒以内の場合はスキップ
+        // 最後の更新から30秒以内の場合はスキップ（軽量化）
         const elapsed = Date.now() - this.lastRefreshTime;
-        if (elapsed < 5000 && this.lastRefreshTime > 0 && this.currentToken) {
-            console.log(`✓ [CSRF] 更新スキップ (${Math.floor(elapsed / 1000)}秒前に更新済み)`);
+        if (elapsed < 30000 && this.lastRefreshTime > 0 && this.currentToken) {
             return Promise.resolve(this.currentToken);
         }
 
@@ -101,8 +95,6 @@ class CSRFTokenManager {
         }
 
         this.isRefreshing = true;
-        const startTime = Date.now();
-        console.log("🔄 [CSRF] トークン更新開始...", new Date().toLocaleTimeString());
 
         try {
             // ステップ1: CSRFクッキーを更新
@@ -142,10 +134,6 @@ class CSRFTokenManager {
 
             // ステップ3: トークンを更新
             this.updateToken(newToken);
-
-            const elapsed = Date.now() - startTime;
-            console.log(`✅ [CSRF] 更新成功 (${elapsed}ms)`, new Date().toLocaleTimeString());
-
             this.lastRefreshTime = Date.now();
 
             // カスタムイベントを発行
@@ -157,10 +145,7 @@ class CSRFTokenManager {
 
             return newToken;
         } catch (error) {
-            console.error("❌ [CSRF] 更新失敗:", error);
             this.lastRefreshTime = 0; // 次回すぐ再試行
-
-            // 既存のトークンを返す
             return this.currentToken;
         } finally {
             this.isRefreshing = false;
@@ -190,13 +175,10 @@ class CSRFTokenManager {
             (window as any).axios.defaults.headers.common["X-CSRF-TOKEN"] = token;
         }
 
-        console.log("📝 [CSRF] トークン適用完了:", token.substring(0, 20) + "...");
     }
 
     private refreshTokenAsync(): void {
-        this.ensureFreshToken().catch(error => {
-            console.error("[CSRF] 非同期更新エラー:", error);
-        });
+        this.ensureFreshToken().catch(() => {});
     }
 
     public getCurrentToken(): string {
@@ -251,8 +233,8 @@ axios.interceptors.request.use(async config => {
             const freshToken = await tokenManager.ensureFreshToken();
             // ヘッダーに設定
             config.headers["X-CSRF-TOKEN"] = freshToken;
-        } catch (error) {
-            console.error("❌ [axios] CSRF更新失敗:", error);
+        } catch {
+            // エラー時は既存トークンを使用
         }
     }
     return config;
@@ -262,29 +244,19 @@ axios.interceptors.request.use(async config => {
 
 // ★ Inertia リクエスト前：credentials を「include」に設定
 router.on("before", event => {
-    const method = event.detail.visit.method.toLowerCase();
-    const url = event.detail.visit.url;
-
-    console.log(`🚀 [Inertia] ${method.toUpperCase()} ${url.pathname}`);
-    
     // ★ すべてのリクエストに credentials を含める
     if (!event.detail.visit.options) {
         event.detail.visit.options = {};
     }
     (event.detail.visit.options as any).credentials = "include";
-    console.log(`🔐 [Inertia] credentials='include' を設定`);
 });
 
 // ページ遷移成功時
-router.on("success", event => {
-    console.log("✅ [Inertia] ページ遷移成功");
-});
+router.on("success", () => {});
 
 // エラー発生時
 router.on("error", event => {
     const errors = event.detail.errors;
-    console.error("❌ [Inertia] エラー:", errors);
-
     // 419エラー（CSRF token mismatch）の検出
     if (errors) {
         const errorString = JSON.stringify(errors);
@@ -293,7 +265,6 @@ router.on("error", event => {
             errorString.includes("expired") ||
             errorString.includes("CSRF")
         ) {
-            console.error("🚨 [CSRF] 419エラー検出 - ページリロード");
             alert("セッションの有効期限が切れました。ページを再読み込みします。");
             window.location.reload();
         }
@@ -301,9 +272,7 @@ router.on("error", event => {
 });
 
 // リクエスト完了時（成功・失敗問わず）
-router.on("finish", event => {
-    console.log("🏁 [Inertia] リクエスト完了");
-});
+router.on("finish", () => {});
 
 // ★★★ グローバルに公開（Vueコンポーネント・デバッグ用）★★★
 (window as any).refreshCSRFToken = () => tokenManager.ensureFreshToken();
@@ -316,11 +285,3 @@ router.on("finish", event => {
     return `${elapsed}秒前`;
 };
 (window as any).csrfTokenManager = tokenManager;
-
-// デバッグ情報を表示
-console.log("✅ [CSRF] Token Manager initialized");
-console.log("📌 [CSRF] デバッグコマンド:");
-console.log("   - window.getCurrentCSRFToken()  : 現在のトークン取得");
-console.log("   - window.getCSRFLastRefresh()   : 最終更新時刻");
-console.log("   - window.refreshCSRFToken()     : トークン更新");
-console.log("   - window.forceRefreshCSRF()     : 強制更新");

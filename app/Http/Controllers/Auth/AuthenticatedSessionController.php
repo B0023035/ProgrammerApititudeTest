@@ -29,10 +29,22 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        // ★ ログイン前にセッションコード情報を保存
+        $verifiedSessionCode = session('verified_session_code');
+        $sessionCodeId = session('session_code_id');
+        
         // webガード（一般ユーザー）で認証
         $request->authenticate();
 
         $request->session()->regenerate();
+
+        // ★ セッションコード情報を復元
+        if ($verifiedSessionCode) {
+            session(['verified_session_code' => $verifiedSessionCode]);
+        }
+        if ($sessionCodeId) {
+            session(['session_code_id' => $sessionCodeId]);
+        }
 
         // test-startページへリダイレクト
         return redirect()->intended(route('test.start'));

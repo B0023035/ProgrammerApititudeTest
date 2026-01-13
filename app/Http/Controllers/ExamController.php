@@ -429,7 +429,10 @@ public function part(Request $request, $part)
 public function completePart(Request $request)
 {
     $validated = $request->validate([
-            '_token' => 'required|string',  // ★ CSRF トークン検証
+        '_token' => 'required|string',  // ★ CSRF トークン検証
+        'part' => 'required|integer|min:1|max:3',
+        'examSessionId' => 'required|string',
+        'answers' => 'nullable|array',
         'timeSpent' => 'nullable|integer|min:0',
         'startTime' => 'nullable|integer',
         'endTime' => 'nullable|integer',

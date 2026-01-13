@@ -9,6 +9,11 @@ class EnsureSessionStarted
 {
     public function handle(Request $request, Closure $next)
     {
+        // ★ セッションが既に開始されていれば何もしない
+        if ($request->hasSession() && $request->session()->isStarted()) {
+            return $next($request);
+        }
+        
         // セッションが開始されていなければ開始
         if (!$request->hasSession()) {
             $request->setLaravelSession(app('session.store'));
@@ -18,16 +23,10 @@ class EnsureSessionStarted
             $request->session()->start();
         }
         
-        // CSRFトークンを確実にセッションに保存
+        // CSRFトークンを確実にセッションに保存（存在しない場合のみ）
         if (!$request->session()->has('_token')) {
-            $request->session()->put('_token', $request->session()->token());
+            $request->session()->regenerateToken();
         }
-        
-        \Log::info('Session ensured', [
-            'session_id' => $request->session()->getId(),
-            'has_token' => $request->session()->has('_token'),
-            'token' => $request->session()->token(),
-        ]);
         
         return $next($request);
     }

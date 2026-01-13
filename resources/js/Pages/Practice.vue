@@ -1032,25 +1032,42 @@ const completePractice = () => {
     form._token = currentCsrfToken;
     console.log("🔑 CSRF Token:", currentCsrfToken.substring(0, 20) + "...");
 
-    // form.post() を使用（credentials は自動的に include）
-    form.post(route(routeName), {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-        preserveState: false,
-        onSuccess: (page) => {
-            console.log("✅ Practice completion successful");
-            // PracticeExplanation ページへ移動（Inertia が自動リダイレクト）
-        },
-        onError: (errors) => {
-            console.error("❌ Validation errors:", errors);
-            const errorMessages = Object.values(errors).join(', ');
-            alert(`バリデーションエラー: ${errorMessages}`);
-        },
-        onFinish: () => {
-            console.log("Request finished");
-        },
-    });
+    // ★ フォーム送信関数
+    const submitForm = () => {
+        form.post(route(routeName), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            preserveState: false,
+            onSuccess: (page) => {
+                console.log("✅ Practice completion successful");
+                // PracticeExplanation ページへ移動（Inertia が自動リダイレクト）
+            },
+            onError: (errors) => {
+                console.error("❌ Validation errors:", errors);
+                const errorMessages = Object.values(errors).join(', ');
+                alert(`バリデーションエラー: ${errorMessages}`);
+            },
+            onFinish: () => {
+                console.log("Request finished");
+            },
+        });
+    };
+
+    // ★ CSRFトークンを更新してから送信（419エラー対策）
+    if (typeof (window as any).forceRefreshCSRF === 'function') {
+        (window as any).forceRefreshCSRF()
+            .then(() => {
+                console.log("CSRFトークン更新完了、フォーム送信開始");
+                submitForm();
+            })
+            .catch(() => {
+                console.log("CSRFトークン更新失敗、そのまま送信");
+                submitForm();
+            });
+    } else {
+        submitForm();
+    }
 
     showConfirm.value = false;
 };

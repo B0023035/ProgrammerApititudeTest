@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { Head, useForm, usePage } from "@inertiajs/vue3";
+import { ref } from "vue";
+import { Head, useForm } from "@inertiajs/vue3";
 
 defineProps<{
     canResetPassword?: boolean;
     status?: string;
 }>();
-
-const page = usePage();
 
 const form = useForm({
     email: "",
@@ -17,44 +15,36 @@ const form = useForm({
 
 const serverError = ref("");
 
-onMounted(() => {
-    // CSRF トークンをコンソールに出力（デバッグ用）
-    const csrfToken =
-        page.props.csrf ||
-        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
-    console.log(
-        "CSRF Token available:",
-        !!csrfToken,
-        "Token:",
-        csrfToken?.substring(0, 20) + "..."
-    );
-});
-
 const submit = () => {
     serverError.value = "";
 
-    // CSRF トークンをデバッグ出力
-    const csrfToken =
-        page.props.csrf ||
-        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
-    console.log("Submitting login form with CSRF:", !!csrfToken);
+    // CSRFトークンを更新してからログイン
+    const doLogin = () => {
+        form.post(route("admin.login.store"), {
+            preserveScroll: true,
+            onFinish: () => {
+                form.reset("password");
+            },
+            onError: errors => {
+                if (errors.email) {
+                    serverError.value = errors.email;
+                } else if (errors.password) {
+                    serverError.value = errors.password;
+                } else {
+                    serverError.value = "ログインに失敗しました。";
+                }
+            },
+        });
+    };
 
-    form.post(route("admin.login"), {
-        preserveScroll: true,
-        onFinish: () => {
-            form.reset("password");
-        },
-        onError: errors => {
-            console.error("Admin login errors:", errors);
-            if (errors.email) {
-                serverError.value = errors.email;
-            } else if (errors.password) {
-                serverError.value = errors.password;
-            } else {
-                serverError.value = "ログインに失敗しました。";
-            }
-        },
-    });
+    // CSRFトークンを強制更新
+    if (typeof (window as any).forceRefreshCSRF === 'function') {
+        (window as any).forceRefreshCSRF()
+            .then(() => doLogin())
+            .catch(() => doLogin());
+    } else {
+        doLogin();
+    }
 };
 </script>
 
