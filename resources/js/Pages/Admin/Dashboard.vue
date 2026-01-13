@@ -33,10 +33,14 @@ const userName = computed(() => {
 
 // ★ Inertia router.post でログアウト（CSRFトークンは自動送信）
 const logout = () => {
-    router.post(route("admin.logout"), {}, {
-        preserveState: false,
-        preserveScroll: false,
-    });
+    router.post(
+        route("admin.logout"),
+        {},
+        {
+            preserveState: false,
+            preserveScroll: false,
+        }
+    );
 };
 </script>
 
@@ -181,7 +185,7 @@ const logout = () => {
                     <p class="text-gray-600 text-sm">詳細な統計データとグラフ表示</p>
                 </Link>
 
-                <!-- 学年別一覧 -->
+                <!-- 卒業年度別一覧 -->
                 <Link
                     :href="route('admin.results.grade-list')"
                     class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-105 cursor-pointer group"
@@ -190,7 +194,7 @@ const logout = () => {
                         <h3
                             class="text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors"
                         >
-                            🎓 学年別一覧
+                            🎓 卒業年度別一覧
                         </h3>
                         <svg
                             class="w-6 h-6 text-gray-400 group-hover:text-indigo-600 transition-colors"
@@ -206,7 +210,7 @@ const logout = () => {
                             />
                         </svg>
                     </div>
-                    <p class="text-gray-600 text-sm">学年ごとの成績データ</p>
+                    <p class="text-gray-600 text-sm">卒業年度ごとの成績データ</p>
                 </Link>
 
                 <!-- ユーザー管理 -->

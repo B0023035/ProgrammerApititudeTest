@@ -40,6 +40,11 @@ interface Session {
         name: string;
         email: string;
     };
+    event?: {
+        id: number;
+        name: string;
+        passphrase: string;
+    } | null;
     started_at: string;
     finished_at: string;
     total_score: number;
@@ -207,7 +212,19 @@ const getChoiceImagePath = (image: string | null) => {
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="border rounded-lg p-4">
+                            <p class="text-sm text-gray-600 mb-1">イベント</p>
+                            <p class="text-sm font-medium">
+                                <template v-if="session.event">
+                                    {{ session.event.name }}
+                                    <span class="text-xs text-gray-500 block">({{ session.event.passphrase }})</span>
+                                </template>
+                                <template v-else>
+                                    <span class="text-gray-400">-</span>
+                                </template>
+                            </p>
+                        </div>
                         <div class="border rounded-lg p-4">
                             <p class="text-sm text-gray-600 mb-1">開始日時</p>
                             <p class="text-sm font-medium">

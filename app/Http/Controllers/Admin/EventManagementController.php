@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Models\Question;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -38,6 +39,7 @@ class EventManagementController extends Controller
                 'begin' => $event->begin->toIso8601String(),
                 'end' => $event->end->toIso8601String(),
                 'exam_type' => $event->exam_type,
+                'question_selection_mode' => $event->question_selection_mode ?? 'random',
                 'part1_questions' => $event->part1_questions,
                 'part1_time' => $event->part1_time,
                 'part2_questions' => $event->part2_questions,
@@ -62,8 +64,23 @@ class EventManagementController extends Controller
     {
         $randomPassphrase = $this->generatePassphrase();
 
+        // 全問題を取得（パートごとにグループ化）
+        $questions = Question::with('choices')
+            ->orderBy('part')
+            ->orderBy('number')
+            ->get()
+            ->map(function ($q) {
+                return [
+                    'id' => $q->id,
+                    'part' => $q->part,
+                    'number' => $q->number,
+                    'text' => mb_substr($q->text, 0, 50) . (mb_strlen($q->text) > 50 ? '...' : ''),
+                ];
+            });
+
         return Inertia::render('Admin/Events/Create', [
             'randomPassphrase' => $randomPassphrase,
+            'allQuestions' => $questions,
         ]);
     }
 
@@ -81,6 +98,7 @@ class EventManagementController extends Controller
             'begin' => 'required|date',
             'end' => 'required|date|after:begin',
             'exam_type' => 'required|in:30min,45min,full,custom',
+            'question_selection_mode' => 'required|in:sequential,random,custom',
             // すべての試験タイプで必須
             'part1_questions' => 'required|integer|min:1|max:40',
             'part1_time' => 'required|integer|min:0',
@@ -88,6 +106,9 @@ class EventManagementController extends Controller
             'part2_time' => 'required|integer|min:0',
             'part3_questions' => 'required|integer|min:1|max:25',
             'part3_time' => 'required|integer|min:0',
+            // カスタム問題IDの配列（オプション）
+            'custom_question_ids' => 'nullable|array',
+            'custom_question_ids.*' => 'integer|exists:questions,id',
         ], [
             'name.required' => 'イベント名を入力してください',
             'passphrase.required' => 'パスフレーズを入力してください',
@@ -113,7 +134,20 @@ class EventManagementController extends Controller
         $validated['part2_time'] = (int)$validated['part2_time'];
         $validated['part3_time'] = (int)$validated['part3_time'];
 
-        Event::create($validated);
+        // カスタム問題IDを一旦取り出す
+        $customQuestionIds = $validated['custom_question_ids'] ?? [];
+        unset($validated['custom_question_ids']);
+
+        $event = Event::create($validated);
+
+        // カスタム問題モードの場合、問題を関連付け
+        if ($validated['question_selection_mode'] === 'custom' && !empty($customQuestionIds)) {
+            $syncData = [];
+            foreach ($customQuestionIds as $order => $questionId) {
+                $syncData[$questionId] = ['order' => $order];
+            }
+            $event->customQuestions()->sync($syncData);
+        }
 
         return redirect()->route('admin.events.index')
             ->with('success', 'イベントを作成しました');
@@ -126,6 +160,24 @@ class EventManagementController extends Controller
     {
         $event = Event::findOrFail($id);
 
+        // 全問題を取得
+        $questions = Question::with('choices')
+            ->orderBy('part')
+            ->orderBy('number')
+            ->get()
+            ->map(function ($q) {
+                return [
+                    'id' => $q->id,
+                    'part' => $q->part,
+                    'number' => $q->number,
+                    'text' => mb_substr($q->text, 0, 50) . (mb_strlen($q->text) > 50 ? '...' : ''),
+                    'image' => $q->image,
+                ];
+            });
+
+        // 選択済みの問題IDを取得
+        $selectedQuestionIds = $event->customQuestions()->pluck('questions.id')->toArray();
+
         return Inertia::render('Admin/Events/Edit', [
             'event' => [
                 'id' => $event->id,
@@ -134,13 +186,16 @@ class EventManagementController extends Controller
                 'begin' => $event->begin->format('Y-m-d\TH:i'),
                 'end' => $event->end->format('Y-m-d\TH:i'),
                 'exam_type' => $event->exam_type,
+                'question_selection_mode' => $event->question_selection_mode ?? 'random',
                 'part1_questions' => $event->part1_questions,
                 'part1_time' => $event->part1_time, // 秒単位のまま渡す（Vueで分に変換）
                 'part2_questions' => $event->part2_questions,
                 'part2_time' => $event->part2_time,
                 'part3_questions' => $event->part3_questions,
                 'part3_time' => $event->part3_time,
+                'custom_question_ids' => $selectedQuestionIds,
             ],
+            'allQuestions' => $questions,
         ]);
     }
 
@@ -157,12 +212,16 @@ class EventManagementController extends Controller
             'begin' => 'required|date',
             'end' => 'required|date|after:begin',
             'exam_type' => 'required|in:30min,45min,full,custom',
+            'question_selection_mode' => 'required|in:sequential,random,custom',
             'part1_questions' => 'required|integer|min:1|max:40',
             'part1_time' => 'required|integer|min:0',
             'part2_questions' => 'required|integer|min:1|max:30',
             'part2_time' => 'required|integer|min:0',
             'part3_questions' => 'required|integer|min:1|max:25',
             'part3_time' => 'required|integer|min:0',
+            // カスタム問題IDの配列（オプション）
+            'custom_question_ids' => 'nullable|array',
+            'custom_question_ids.*' => 'integer|exists:questions,id',
         ], [
             'name.required' => 'イベント名を入力してください',
             'passphrase.required' => 'パスフレーズを入力してください',
@@ -179,7 +238,23 @@ class EventManagementController extends Controller
         $validated['part2_time'] = (int)$validated['part2_time'];
         $validated['part3_time'] = (int)$validated['part3_time'];
 
+        // カスタム問題IDを一旦取り出す
+        $customQuestionIds = $validated['custom_question_ids'] ?? [];
+        unset($validated['custom_question_ids']);
+
         $event->update($validated);
+
+        // カスタム問題を更新
+        if ($validated['question_selection_mode'] === 'custom' && !empty($customQuestionIds)) {
+            $syncData = [];
+            foreach ($customQuestionIds as $order => $questionId) {
+                $syncData[$questionId] = ['order' => $order];
+            }
+            $event->customQuestions()->sync($syncData);
+        } else {
+            // ランダムモードの場合、カスタム問題をクリア
+            $event->customQuestions()->detach();
+        }
 
         return redirect()->route('admin.events.index')
             ->with('success', 'イベントを更新しました');

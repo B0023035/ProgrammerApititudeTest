@@ -58,7 +58,7 @@ const isActive = (routeName: string) => {
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
                 ]"
             >
-                🎓 学年別一覧
+                🎓 卒業年度別一覧
             </Link>
         </div>
     </div>

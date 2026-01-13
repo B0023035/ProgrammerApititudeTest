@@ -3,6 +3,14 @@ import { Head, Link, router } from "@inertiajs/vue3";
 import { ref, computed, watch, reactive } from "vue";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 
+interface QuestionItem {
+    id: number;
+    part: number;
+    number: number;
+    text: string;
+    image: string | null;
+}
+
 interface Event {
     id: number;
     name: string;
@@ -10,16 +18,19 @@ interface Event {
     begin: string;
     end: string;
     exam_type: string;
+    question_selection_mode: string;
     part1_questions: number | null;
     part1_time: number | null;
     part2_questions: number | null;
     part2_time: number | null;
     part3_questions: number | null;
     part3_time: number | null;
+    custom_question_ids?: number[];
 }
 
 const props = defineProps<{
     event: Event;
+    allQuestions?: QuestionItem[];
 }>();
 
 // 各試験タイプのデフォルト設定(秒単位)
@@ -74,26 +85,166 @@ const getInitialValues = () => {
 
 const initialValues = getInitialValues();
 
+// 既存のカスタム問題IDを取得
+const getInitialCustomQuestionIds = () => {
+    if (props.event.custom_question_ids && props.event.custom_question_ids.length > 0) {
+        return [...props.event.custom_question_ids];
+    }
+    return [];
+};
+
 const form = reactive({
     name: props.event.name,
     passphrase: props.event.passphrase,
     begin: props.event.begin,
     end: props.event.end,
     exam_type: props.event.exam_type as "30min" | "45min" | "full" | "custom",
+    question_selection_mode: (props.event.question_selection_mode || "sequential") as "sequential" | "random" | "custom",
     part1_questions: initialValues.part1_questions,
     part1_time: initialValues.part1_time / 60, // 秒→分に変換して表示
     part2_questions: initialValues.part2_questions,
     part2_time: initialValues.part2_time / 60, // 秒→分に変換して表示
     part3_questions: initialValues.part3_questions,
     part3_time: initialValues.part3_time / 60, // 秒→分に変換して表示
+    custom_question_ids: getInitialCustomQuestionIds(),
 });
 
 const errors = reactive<Record<string, string>>({});
 const isGenerating = ref(false);
 const processing = ref(false);
 
+// モーダル表示状態
+const showQuestionModal = ref(false);
+// モーダル内での一時的な選択状態
+const tempSelectedIds = ref<number[]>([]);
+
 // カスタム形式が選択されているかどうか
 const isCustom = computed(() => form.exam_type === "custom");
+
+// カスタム問題選択モードかどうか（exam_typeがcustomかつquestion_selection_modeがcustom）
+const isCustomQuestionMode = computed(() => form.exam_type === "custom" && form.question_selection_mode === "custom");
+
+// パートごとの問題一覧
+const questionsByPart = computed(() => {
+    const questions = props.allQuestions || [];
+    return {
+        1: questions.filter(q => q.part === 1),
+        2: questions.filter(q => q.part === 2),
+        3: questions.filter(q => q.part === 3),
+    };
+});
+
+// パートごとの選択数
+const selectedCountByPart = computed(() => {
+    const questions = props.allQuestions || [];
+    const selectedSet = new Set(form.custom_question_ids);
+    return {
+        1: questions.filter(q => q.part === 1 && selectedSet.has(q.id)).length,
+        2: questions.filter(q => q.part === 2 && selectedSet.has(q.id)).length,
+        3: questions.filter(q => q.part === 3 && selectedSet.has(q.id)).length,
+    };
+});
+
+// モーダル内での一時選択数
+const tempSelectedCountByPart = computed(() => {
+    const questions = props.allQuestions || [];
+    const selectedSet = new Set(tempSelectedIds.value);
+    return {
+        1: questions.filter(q => q.part === 1 && selectedSet.has(q.id)).length,
+        2: questions.filter(q => q.part === 2 && selectedSet.has(q.id)).length,
+        3: questions.filter(q => q.part === 3 && selectedSet.has(q.id)).length,
+    };
+});
+
+// 問題の選択/解除（モーダル内で使用）
+const toggleQuestion = (questionId: number) => {
+    const index = tempSelectedIds.value.indexOf(questionId);
+    if (index === -1) {
+        tempSelectedIds.value.push(questionId);
+    } else {
+        tempSelectedIds.value.splice(index, 1);
+    }
+};
+
+// 問題が選択されているか（モーダル内で使用）
+const isQuestionSelected = (questionId: number) => {
+    return tempSelectedIds.value.includes(questionId);
+};
+
+// 画像パス生成関数
+const getImagePath = (imageName: string | null): string => {
+    if (!imageName || imageName.trim() === "") {
+        return "";
+    }
+    const trimmedName = imageName.trim();
+    const validExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+    const hasValidExtension = validExtensions.some(ext => trimmedName.toLowerCase().endsWith(ext));
+    if (!hasValidExtension) {
+        return "";
+    }
+    // public/images/questions/ から取得
+    return `/images/questions/${trimmedName}`;
+};
+
+// パートの全問題を選択/解除（モーダル内で使用）
+const toggleAllInPart = (part: number) => {
+    const partQuestions = questionsByPart.value[part as 1 | 2 | 3];
+    const partIds = partQuestions.map(q => q.id);
+    const allSelected = partIds.every(id => tempSelectedIds.value.includes(id));
+    
+    if (allSelected) {
+        // 全解除
+        tempSelectedIds.value = tempSelectedIds.value.filter(id => !partIds.includes(id));
+    } else {
+        // 全選択
+        const newIds = partIds.filter(id => !tempSelectedIds.value.includes(id));
+        tempSelectedIds.value.push(...newIds);
+    }
+};
+
+// ランダム出題ボタン押下
+const selectRandomMode = () => {
+    form.question_selection_mode = "random";
+    form.custom_question_ids = [];
+};
+
+// 順番通り出題ボタン押下
+const selectSequentialMode = () => {
+    form.question_selection_mode = "sequential";
+    form.custom_question_ids = [];
+};
+
+// 問題選択モーダルを開く
+const openQuestionModal = () => {
+    // 現在の選択状態をコピー
+    tempSelectedIds.value = [...form.custom_question_ids];
+    showQuestionModal.value = true;
+};
+
+// モーダルの保存ボタン押下
+const saveQuestionSelection = () => {
+    form.question_selection_mode = "custom";
+    form.custom_question_ids = [...tempSelectedIds.value];
+    
+    // 選択した問題数に合わせてカスタムの出題数を更新
+    const countByPart: { [key: number]: number } = { 1: 0, 2: 0, 3: 0 };
+    tempSelectedIds.value.forEach(id => {
+        const question = props.allQuestions?.find(q => q.id === id);
+        if (question) {
+            countByPart[question.part]++;
+        }
+    });
+    form.part1_questions = countByPart[1] || 1;
+    form.part2_questions = countByPart[2] || 1;
+    form.part3_questions = countByPart[3] || 1;
+    
+    showQuestionModal.value = false;
+};
+
+// モーダルのキャンセル
+const cancelQuestionModal = () => {
+    showQuestionModal.value = false;
+};
 
 // 試験タイプが変更されたら自動で値を設定
 watch(
@@ -130,7 +281,7 @@ const submit = () => {
     Object.keys(errors).forEach(key => delete errors[key]);
 
     // フォームデータをコピーして時間を変換
-    const submitData = {
+    const submitData: Record<string, any> = {
         name: form.name,
         passphrase: form.passphrase,
         begin: form.begin,
@@ -142,7 +293,13 @@ const submit = () => {
         part2_time: Math.round(form.part2_time * 60),
         part3_questions: form.part3_questions,
         part3_time: Math.round(form.part3_time * 60),
+        question_selection_mode: form.question_selection_mode,
     };
+
+    // カスタム問題選択モードの場合、選択した問題IDを追加
+    if (form.question_selection_mode === 'custom') {
+        submitData.custom_question_ids = form.custom_question_ids;
+    }
 
     console.log("送信するデータ:", submitData);
 
@@ -558,6 +715,134 @@ const submit = () => {
                                     💡 制限時間に0を設定すると無制限になります
                                 </p>
                             </div>
+
+                            <!-- カスタム時のみ: 出題方法選択 -->
+                            <div class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    出題方法
+                                </label>
+                                <div class="flex flex-wrap gap-3">
+                                    <button
+                                        type="button"
+                                        @click="selectSequentialMode"
+                                        class="px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2"
+                                        :class="form.question_selection_mode === 'sequential' 
+                                            ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                                            : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'"
+                                    >
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                        </svg>
+                                        <span class="font-medium">順番通りに出題する</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="selectRandomMode"
+                                        class="px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2"
+                                        :class="form.question_selection_mode === 'random' 
+                                            ? 'border-green-500 bg-green-50 text-green-700' 
+                                            : 'border-gray-300 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50'"
+                                    >
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        <span class="font-medium">ランダムに出題する</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="openQuestionModal"
+                                        class="px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2"
+                                        :class="form.question_selection_mode === 'custom' 
+                                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                            : 'border-gray-300 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'"
+                                    >
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                        </svg>
+                                        <span class="font-medium">出題する問題を選択する</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- 現在の選択状態を表示 -->
+                                <div v-if="form.question_selection_mode === 'sequential'" class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                    <p class="text-sm text-purple-700">
+                                        ✓ 問題番号順に出題されます
+                                    </p>
+                                </div>
+                                <div v-else-if="form.question_selection_mode === 'random'" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <p class="text-sm text-green-700">
+                                        ✓ 各パートの設定問題数分、ランダムに出題されます（同じ問題は出題されません）
+                                    </p>
+                                </div>
+                                <div v-else-if="form.question_selection_mode === 'custom'" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-blue-700">
+                                                選択済み: {{ form.custom_question_ids.length }}問
+                                            </p>
+                                            <p class="text-xs text-blue-600 mt-1">
+                                                第一部: {{ selectedCountByPart[1] }}問 / 
+                                                第二部: {{ selectedCountByPart[2] }}問 / 
+                                                第三部: {{ selectedCountByPart[3] }}問
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            @click="openQuestionModal"
+                                            class="text-sm text-blue-600 hover:text-blue-800 underline"
+                                        >
+                                            変更する
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 通常時（非カスタム）: 出題方法選択 -->
+                        <div v-if="!isCustom">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                出題方法
+                            </label>
+                            <div class="flex flex-wrap gap-3">
+                                <button
+                                    type="button"
+                                    @click="selectSequentialMode"
+                                    class="px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2"
+                                    :class="form.question_selection_mode === 'sequential' 
+                                        ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                                        : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                    </svg>
+                                    <span class="font-medium">順番通りに出題する</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="selectRandomMode"
+                                    class="px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2"
+                                    :class="form.question_selection_mode === 'random' 
+                                        ? 'border-green-500 bg-green-50 text-green-700' 
+                                        : 'border-gray-300 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50'"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    <span class="font-medium">ランダムに出題する</span>
+                                </button>
+                            </div>
+                            
+                            <!-- 現在の選択状態を表示 -->
+                            <div v-if="form.question_selection_mode === 'sequential'" class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                <p class="text-sm text-purple-700">
+                                    ✓ 問題番号順に出題されます
+                                </p>
+                            </div>
+                            <div v-else-if="form.question_selection_mode === 'random'" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <p class="text-sm text-green-700">
+                                    ✓ ランダムに出題されます（同じ問題は出題されません）
+                                </p>
+                            </div>
                         </div>
 
                         <!-- ボタン -->
@@ -581,5 +866,210 @@ const submit = () => {
                 </div>
             </div>
         </div>
+
+        <!-- 問題選択モーダル -->
+        <Teleport to="body">
+            <div
+                v-if="showQuestionModal"
+                class="fixed inset-0 z-50 overflow-y-auto"
+                @click.self="cancelQuestionModal"
+            >
+                <!-- オーバーレイ -->
+                <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"></div>
+
+                <!-- モーダル本体 -->
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+                        <!-- ヘッダー -->
+                        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-900">出題する問題を選択</h2>
+                                <p class="text-sm text-gray-500 mt-1">
+                                    問題をクリックして選択してください（選択中: {{ tempSelectedIds.length }}問）
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                @click="cancelQuestionModal"
+                                class="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- コンテンツ -->
+                        <div class="overflow-y-auto px-6 py-4" style="max-height: calc(90vh - 140px);">
+                            <div v-if="!props.allQuestions || props.allQuestions.length === 0" class="text-center py-8">
+                                <p class="text-gray-500">問題データが読み込まれていません</p>
+                            </div>
+
+                            <div v-else class="space-y-6">
+                                <!-- 第一部 -->
+                                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                    <div class="bg-gray-100 px-4 py-3 flex items-center justify-between">
+                                        <h3 class="font-semibold text-gray-900">
+                                            第一部 
+                                            <span class="text-blue-600 ml-2">
+                                                ({{ tempSelectedCountByPart[1] }}/{{ questionsByPart[1].length }}問選択中)
+                                            </span>
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            @click="toggleAllInPart(1)"
+                                            class="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                        >
+                                            全選択/解除
+                                        </button>
+                                    </div>
+                                    <div class="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+                                        <div
+                                            v-for="question in questionsByPart[1]"
+                                            :key="question.id"
+                                            @click="toggleQuestion(question.id)"
+                                            class="flex items-center p-3 cursor-pointer transition-colors"
+                                            :class="isQuestionSelected(question.id) ? 'bg-blue-50' : 'hover:bg-gray-50'"
+                                        >
+                                            <div class="flex-shrink-0 mr-3">
+                                                <div
+                                                    class="w-5 h-5 border-2 rounded flex items-center justify-center transition-colors"
+                                                    :class="isQuestionSelected(question.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'"
+                                                >
+                                                    <svg v-if="isQuestionSelected(question.id)" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-900">問{{ question.number }}</p>
+                                                <p class="text-sm text-gray-600 truncate">{{ question.text }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 第二部 -->
+                                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                    <div class="bg-gray-100 px-4 py-3 flex items-center justify-between">
+                                        <h3 class="font-semibold text-gray-900">
+                                            第二部 
+                                            <span class="text-blue-600 ml-2">
+                                                ({{ tempSelectedCountByPart[2] }}/{{ questionsByPart[2].length }}問選択中)
+                                            </span>
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            @click="toggleAllInPart(2)"
+                                            class="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                        >
+                                            全選択/解除
+                                        </button>
+                                    </div>
+                                    <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                                        <div
+                                            v-for="question in questionsByPart[2]"
+                                            :key="question.id"
+                                            @click="toggleQuestion(question.id)"
+                                            class="flex items-center p-3 cursor-pointer transition-colors"
+                                            :class="isQuestionSelected(question.id) ? 'bg-blue-50' : 'hover:bg-gray-50'"
+                                        >
+                                            <div class="flex-shrink-0 mr-3">
+                                                <div
+                                                    class="w-5 h-5 border-2 rounded flex items-center justify-center transition-colors"
+                                                    :class="isQuestionSelected(question.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'"
+                                                >
+                                                    <svg v-if="isQuestionSelected(question.id)" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-w-0 mr-3">
+                                                <p class="text-sm font-medium text-gray-900">問{{ question.number }}</p>
+                                                <p class="text-sm text-gray-600 truncate">{{ question.text }}</p>
+                                            </div>
+                                            <!-- 画像を横に表示 -->
+                                            <div v-if="question.image" class="flex-shrink-0">
+                                                <img
+                                                    :src="getImagePath(question.image)"
+                                                    :alt="`問${question.number}`"
+                                                    class="h-20 w-auto border rounded bg-white"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 第三部 -->
+                                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                    <div class="bg-gray-100 px-4 py-3 flex items-center justify-between">
+                                        <h3 class="font-semibold text-gray-900">
+                                            第三部 
+                                            <span class="text-blue-600 ml-2">
+                                                ({{ tempSelectedCountByPart[3] }}/{{ questionsByPart[3].length }}問選択中)
+                                            </span>
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            @click="toggleAllInPart(3)"
+                                            class="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                        >
+                                            全選択/解除
+                                        </button>
+                                    </div>
+                                    <div class="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+                                        <div
+                                            v-for="question in questionsByPart[3]"
+                                            :key="question.id"
+                                            @click="toggleQuestion(question.id)"
+                                            class="flex items-center p-3 cursor-pointer transition-colors"
+                                            :class="isQuestionSelected(question.id) ? 'bg-blue-50' : 'hover:bg-gray-50'"
+                                        >
+                                            <div class="flex-shrink-0 mr-3">
+                                                <div
+                                                    class="w-5 h-5 border-2 rounded flex items-center justify-center transition-colors"
+                                                    :class="isQuestionSelected(question.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'"
+                                                >
+                                                    <svg v-if="isQuestionSelected(question.id)" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-900">問{{ question.number }}</p>
+                                                <p class="text-sm text-gray-600 truncate">{{ question.text }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- フッター -->
+                        <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+                            <p class="text-sm text-gray-600">
+                                合計 <span class="font-bold text-blue-600">{{ tempSelectedIds.length }}</span> 問選択中
+                            </p>
+                            <div class="flex space-x-3">
+                                <button
+                                    type="button"
+                                    @click="cancelQuestionModal"
+                                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                    キャンセル
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="saveQuestionSelection"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    保存する
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </AdminLayout>
 </template>

@@ -11,7 +11,7 @@ const form = useForm({
     email: "",
     password: "",
     password_confirmation: "",
-    admission_year: String(new Date().getFullYear()),
+    graduation_year: String(new Date().getFullYear() + 3),
 });
 
 const submit = () => {
@@ -90,19 +90,19 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="admission_year" value="入学年度" />
+                <InputLabel for="graduation_year" value="卒業年度" />
 
                 <TextInput
-                    id="admission_year"
+                    id="graduation_year"
                     type="number"
                     class="mt-1 block w-full"
-                    v-model="form.admission_year"
+                    v-model="form.graduation_year"
                     required
-                    :min="String(new Date().getFullYear() - 10)"
-                    :max="String(new Date().getFullYear())"
+                    :min="String(new Date().getFullYear())"
+                    :max="String(new Date().getFullYear() + 10)"
                 />
 
-                <InputError class="mt-2" :message="form.errors.admission_year" />
+                <InputError class="mt-2" :message="form.errors.graduation_year" />
             </div>
 
             <div class="mt-4 flex items-center justify-end">

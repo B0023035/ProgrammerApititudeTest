@@ -83,10 +83,11 @@ public function start()
         return redirect()->route('exam.part', ['part' => $existingSession->current_part]);
     }
 
-    // セッション実施時の学年を計算して保存
+    // セッション実施時の学年を計算して保存（卒業年度から計算）
     $currentYear = (int) date('Y');
-    $admissionYear = (int) ($user->admission_year ?? 0);
-    $grade = $admissionYear > 0 ? max(1, min(($currentYear - $admissionYear + 1), 10)) : null;
+    $graduationYear = (int) ($user->graduation_year ?? 0);
+    // 卒業年度 - 現在年 + 1 = 学年（例: 2028年卒業, 2026年現在 → 2028-2026+1=3年生）
+    $grade = $graduationYear > 0 ? max(1, min(($graduationYear - $currentYear + 1), 10)) : null;
 
     // 新規セッション作成
     $session = ExamSession::create([
@@ -232,8 +233,9 @@ public function part(Request $request, $part)
         ]);
 
         $currentYear = (int) date('Y');
-        $admissionYear = (int) ($user->admission_year ?? 0);
-        $grade = $admissionYear > 0 ? max(1, min(($currentYear - $admissionYear + 1), 10)) : null;
+        $graduationYear = (int) ($user->graduation_year ?? 0);
+        // 卒業年度 - 現在年 + 1 = 学年
+        $grade = $graduationYear > 0 ? max(1, min(($graduationYear - $currentYear + 1), 10)) : null;
 
         $session = ExamSession::create([
             'user_id' => $user->id,
@@ -371,33 +373,61 @@ public function part(Request $request, $part)
         'question_count' => $questionCount,
     ]);
 
-    // 問題を取得
-    $questions = Question::with(['choices' => function ($query) use ($part) {
-        $query->where('part', $part)->orderBy('label');
-    }])
-        ->where('part', $part)
-        ->orderBy('number')
-        ->take($questionCount)
-        ->get()
-        ->map(function ($q) use ($savedAnswers) {
-            return [
-                'id' => $q->id,
-                'number' => $q->number,
-                'part' => $q->part,
-                'text' => $q->text,
-                'image' => $q->image,
-                'choices' => $q->choices->map(function ($c) {
-                    return [
-                        'id' => $c->id,
-                        'label' => $c->label,
-                        'text' => $c->text,
-                        'image' => $c->image,
-                        'part' => $c->part,
-                    ];
-                }),
-                'selected' => isset($savedAnswers[$q->id]) ? $savedAnswers[$q->id] : null,
-            ];
-        });
+    // 問題を取得（カスタム問題モードの場合は選択された問題のみ）
+    if ($event->isCustomQuestionMode()) {
+        // カスタム問題モード: イベントに紐付けられた問題のみを取得
+        $questions = $event->getCustomQuestionsForPart($part)
+            ->load(['choices' => function ($query) use ($part) {
+                $query->where('part', $part)->orderBy('label');
+            }])
+            ->map(function ($q) use ($savedAnswers) {
+                return [
+                    'id' => $q->id,
+                    'number' => $q->number,
+                    'part' => $q->part,
+                    'text' => $q->text,
+                    'image' => $q->image,
+                    'choices' => $q->choices->map(function ($c) {
+                        return [
+                            'id' => $c->id,
+                            'label' => $c->label,
+                            'text' => $c->text,
+                            'image' => $c->image,
+                            'part' => $c->part,
+                        ];
+                    }),
+                    'selected' => isset($savedAnswers[$q->id]) ? $savedAnswers[$q->id] : null,
+                ];
+            });
+    } else {
+        // ランダムモード: 従来通り問題をランダムに取得
+        $questions = Question::with(['choices' => function ($query) use ($part) {
+            $query->where('part', $part)->orderBy('label');
+        }])
+            ->where('part', $part)
+            ->orderBy('number')
+            ->take($questionCount)
+            ->get()
+            ->map(function ($q) use ($savedAnswers) {
+                return [
+                    'id' => $q->id,
+                    'number' => $q->number,
+                    'part' => $q->part,
+                    'text' => $q->text,
+                    'image' => $q->image,
+                    'choices' => $q->choices->map(function ($c) {
+                        return [
+                            'id' => $c->id,
+                            'label' => $c->label,
+                            'text' => $c->text,
+                            'image' => $c->image,
+                            'part' => $c->part,
+                        ];
+                    }),
+                    'selected' => isset($savedAnswers[$q->id]) ? $savedAnswers[$q->id] : null,
+                ];
+            });
+    }
 
     Log::info('問題データの生成完了', [
         'user_id' => $user->id,

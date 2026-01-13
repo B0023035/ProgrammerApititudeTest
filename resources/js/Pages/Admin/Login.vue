@@ -38,8 +38,9 @@ const submit = () => {
     };
 
     // CSRFトークンを強制更新
-    if (typeof (window as any).forceRefreshCSRF === 'function') {
-        (window as any).forceRefreshCSRF()
+    if (typeof (window as any).forceRefreshCSRF === "function") {
+        (window as any)
+            .forceRefreshCSRF()
             .then(() => doLogin())
             .catch(() => doLogin());
     } else {

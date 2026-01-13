@@ -149,7 +149,10 @@ function goToExam() {
     isNavigating.value = true;
 
     // 毎回新しいフォームインスタンスを作成してCSRFトークンを更新
-    const csrfToken = (page.props as any).csrf_token || document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    const csrfToken =
+        (page.props as any).csrf_token ||
+        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
+        "";
     const freshForm = useForm({ _token: csrfToken });
 
     if (isGuest.value) {

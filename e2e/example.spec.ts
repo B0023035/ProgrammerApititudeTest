@@ -71,7 +71,7 @@ test.describe("認証機能", () => {
         // まずセッションコードを入力
         const auth = new AuthHelper(page);
         await auth.enterSessionCode();
-        
+
         await page.goto("/login");
         await page.fill('input[type="email"]', "wrong@example.com");
         await page.fill('input[type="password"]', "wrongpassword");
@@ -93,7 +93,7 @@ test.describe("認証機能", () => {
 
         // ユーザーログアウト後はセッションコード入力画面(/)にリダイレクトされる
         // URLが / または セッションコード入力ページであることを確認
-        await expect(page.locator('input#session_code')).toBeVisible({ timeout: 5000 });
+        await expect(page.locator("input#session_code")).toBeVisible({ timeout: 5000 });
     });
 });
 
@@ -140,9 +140,11 @@ test.describe("ゲストユーザーフロー", () => {
     test("ゲストで練習問題を開始できる", async ({ guestPage }) => {
         // フィクスチャを使用して、すでにゲスト情報入力済み（ExamInstructionsページにいる）
         await guestPage.click("text=第1部の練習を始める");
-        
+
         // 練習開始ポップアップが表示される（練習を開始するボタンを待つ）
-        await expect(guestPage.locator('button:has-text("練習を開始する")')).toBeVisible({ timeout: 10000 });
+        await expect(guestPage.locator('button:has-text("練習を開始する")')).toBeVisible({
+            timeout: 10000,
+        });
         await guestPage.click('button:has-text("練習を開始する")');
 
         // 問題が表示される
@@ -160,7 +162,7 @@ test.describe("練習問題機能", () => {
         await authenticatedPage.click('button:has-text("練習を開始する")');
 
         // 選択肢ボタンをクリック（最初の選択肢）
-        const answerButton = authenticatedPage.locator('button.flex-1.min-w-\\[100px\\]').first();
+        const answerButton = authenticatedPage.locator("button.flex-1.min-w-\\[100px\\]").first();
         await answerButton.click();
 
         // 選択されたことを確認(青色背景)
@@ -172,7 +174,7 @@ test.describe("練習問題機能", () => {
         await authenticatedPage.click("text=第1部の練習を始める");
         await authenticatedPage.click('button:has-text("練習を開始する")');
 
-        await authenticatedPage.locator('button.flex-1.min-w-\\[100px\\]').first().click();
+        await authenticatedPage.locator("button.flex-1.min-w-\\[100px\\]").first().click();
         await authenticatedPage.click('button:has-text("次の問題")');
 
         await expect(authenticatedPage.locator("text=問 2")).toBeVisible();
@@ -222,9 +224,11 @@ test.describe("練習問題機能", () => {
         // 数問に回答
         for (let i = 0; i < 2; i++) {
             // 選択肢ボタン（最初のもの）をクリック
-            const answerButton = authenticatedPage.locator('button.flex-1.min-w-\\[100px\\]').first();
+            const answerButton = authenticatedPage
+                .locator("button.flex-1.min-w-\\[100px\\]")
+                .first();
             await answerButton.click({ timeout: 10000 });
-            
+
             // 次の問題へ進む（最後の問題でない場合）
             if (i < 1) {
                 await authenticatedPage.click('button:has-text("次の問題")', { timeout: 10000 });
@@ -235,7 +239,9 @@ test.describe("練習問題機能", () => {
         await authenticatedPage.click('button:has-text("練習完了")', { timeout: 10000 });
 
         // 確認ダイアログで「確定」または「OK」をクリック
-        const confirmButton = authenticatedPage.locator('button:has-text("確定"), button:has-text("OK")').first();
+        const confirmButton = authenticatedPage
+            .locator('button:has-text("確定"), button:has-text("OK")')
+            .first();
         await confirmButton.click({ timeout: 5000 });
     });
 
@@ -263,7 +269,7 @@ test.describe("練習問題機能", () => {
 // ====================================
 test.describe("解説ページ機能", () => {
     test.setTimeout(45000);
-    
+
     test("解説が正しく表示される", async ({ authenticatedPage }) => {
         await authenticatedPage.click("text=始める");
         await authenticatedPage.click("text=第1部の練習を始める");
@@ -272,9 +278,11 @@ test.describe("解説ページ機能", () => {
         // 4問に回答（第1部は4問）
         for (let i = 0; i < 4; i++) {
             // 選択肢ボタンをクリック
-            const answerButton = authenticatedPage.locator('button.flex-1.min-w-\\[100px\\]').first();
+            const answerButton = authenticatedPage
+                .locator("button.flex-1.min-w-\\[100px\\]")
+                .first();
             await answerButton.click({ timeout: 10000 });
-            
+
             // 最後の問題でなければ次へ
             if (i < 3) {
                 const nextButton = authenticatedPage.locator('button:has-text("次の問題")');
@@ -284,16 +292,20 @@ test.describe("解説ページ機能", () => {
 
         // 練習完了
         await authenticatedPage.click('button:has-text("練習完了")', { timeout: 10000 });
-        
+
         // 確認ダイアログで「確定」または「OK」をクリック
-        const confirmButton = authenticatedPage.locator('button:has-text("確定"), button:has-text("OK")').first();
+        const confirmButton = authenticatedPage
+            .locator('button:has-text("確定"), button:has-text("OK")')
+            .first();
         await confirmButton.click({ timeout: 5000 });
 
         // 解説ページへ遷移するのを待つ（URLは /practice/complete のまま PracticeExplanation がレンダリングされる）
         await expect(authenticatedPage).toHaveURL(/.*practice\/complete/, { timeout: 15000 });
-        
+
         // 解説ページの要素を確認（本番試験へ進むボタン）
-        await expect(authenticatedPage.locator('button:has-text("本番試験へ進む")')).toBeVisible({ timeout: 10000 });
+        await expect(authenticatedPage.locator('button:has-text("本番試験へ進む")')).toBeVisible({
+            timeout: 10000,
+        });
     });
 
     test("本番試験へ進むボタンが機能する", async ({ authenticatedPage }) => {
@@ -304,9 +316,11 @@ test.describe("解説ページ機能", () => {
         // 4問に回答して完了（第1部は4問）
         for (let i = 0; i < 4; i++) {
             // 選択肢ボタンをクリック
-            const answerButton = authenticatedPage.locator('button.flex-1.min-w-\\[100px\\]').first();
+            const answerButton = authenticatedPage
+                .locator("button.flex-1.min-w-\\[100px\\]")
+                .first();
             await answerButton.click({ timeout: 10000 });
-            
+
             // 最後の問題でなければ次へ
             if (i < 3) {
                 const nextButton = authenticatedPage.locator('button:has-text("次の問題")');
@@ -315,13 +329,17 @@ test.describe("解説ページ機能", () => {
         }
 
         await authenticatedPage.click('button:has-text("練習完了")', { timeout: 10000 });
-        
+
         // 確認ダイアログで「確定」または「OK」をクリック
-        const confirmButton = authenticatedPage.locator('button:has-text("確定"), button:has-text("OK")').first();
+        const confirmButton = authenticatedPage
+            .locator('button:has-text("確定"), button:has-text("OK")')
+            .first();
         await confirmButton.click({ timeout: 5000 });
 
         // 解説ページで「本番試験へ進む」ボタンをクリック
-        await expect(authenticatedPage.locator('button:has-text("本番試験へ進む")')).toBeVisible({ timeout: 10000 });
+        await expect(authenticatedPage.locator('button:has-text("本番試験へ進む")')).toBeVisible({
+            timeout: 10000,
+        });
         await authenticatedPage.click('button:has-text("本番試験へ進む")', { timeout: 10000 });
 
         // 本番試験ページに遷移
@@ -334,7 +352,7 @@ test.describe("解説ページ機能", () => {
 // ====================================
 test.describe("本番試験機能", () => {
     test.setTimeout(60000);
-    
+
     test("本番試験ページに遷移できる", async ({ authenticatedPage }) => {
         // 練習を完了
         await authenticatedPage.click("text=始める");
@@ -343,7 +361,9 @@ test.describe("本番試験機能", () => {
 
         // 4問回答（第1部は4問）
         for (let i = 0; i < 4; i++) {
-            const answerButton = authenticatedPage.locator('button.flex-1.min-w-\\[100px\\]').first();
+            const answerButton = authenticatedPage
+                .locator("button.flex-1.min-w-\\[100px\\]")
+                .first();
             await answerButton.click({ timeout: 10000 });
             if (i < 3) {
                 await authenticatedPage.click('button:has-text("次の問題")', { timeout: 10000 });
@@ -352,11 +372,15 @@ test.describe("本番試験機能", () => {
 
         // 練習完了
         await authenticatedPage.click('button:has-text("練習完了")', { timeout: 10000 });
-        const confirmBtn = authenticatedPage.locator('button:has-text("確定"), button:has-text("OK")').first();
+        const confirmBtn = authenticatedPage
+            .locator('button:has-text("確定"), button:has-text("OK")')
+            .first();
         await confirmBtn.click({ timeout: 5000 });
 
         // 本番試験へ進む
-        await expect(authenticatedPage.locator('button:has-text("本番試験へ進む")')).toBeVisible({ timeout: 10000 });
+        await expect(authenticatedPage.locator('button:has-text("本番試験へ進む")')).toBeVisible({
+            timeout: 10000,
+        });
         await authenticatedPage.click('button:has-text("本番試験へ進む")', { timeout: 10000 });
 
         // 本番試験ページへ遷移
@@ -369,7 +393,7 @@ test.describe("本番試験機能", () => {
 // ====================================
 test.describe("結果ページ機能", () => {
     test.setTimeout(60000);
-    
+
     test("結果ページにアクセスするとレスポンスが返る", async ({ authenticatedPage }) => {
         // 試験未完了の場合は404またはリダイレクトされる
         const response = await authenticatedPage.goto("/result");
@@ -407,12 +431,15 @@ test.describe("管理者機能", () => {
 
         // ランダム生成ボタンをクリック
         await adminPage.click('button:has-text("ランダム生成")');
-        
+
         // パスフレーズが入力されるまで待機
-        await adminPage.waitForFunction(() => {
-            const input = document.querySelector('input#passphrase') as HTMLInputElement;
-            return input && input.value.length > 0;
-        }, { timeout: 5000 });
+        await adminPage.waitForFunction(
+            () => {
+                const input = document.querySelector("input#passphrase") as HTMLInputElement;
+                return input && input.value.length > 0;
+            },
+            { timeout: 5000 }
+        );
 
         // パスフレーズが自動入力されたことを確認
         const passphrase = await adminPage.inputValue("input#passphrase");
@@ -449,7 +476,7 @@ test.describe("管理者機能", () => {
 
         // ログインページにリダイレクト（ナビゲーション待機）
         await adminPage.waitForURL(/.*admin\/login/, { timeout: 10000 });
-        
+
         // URLの確認
         await expect(adminPage).toHaveURL(/.*admin\/login/);
     });

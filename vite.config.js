@@ -20,7 +20,7 @@ export default defineConfig({
     ],
     build: {
         // 本番ビルドでconsole.logを自動削除
-        minify: 'terser',
+        minify: "terser",
         terserOptions: {
             compress: {
                 drop_console: true,

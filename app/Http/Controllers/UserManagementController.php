@@ -10,7 +10,23 @@ class UserManagementController extends Controller
 {
     public function index()
     {
-        $users = User::orderBy('created_at', 'desc')->paginate(20);
+        $users = User::withCount('examSessions')
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        // 各ユーザーに学年情報を追加
+        $users->getCollection()->transform(function ($user) {
+            $grade = $user->getCurrentGrade();
+            if ($grade !== null && $grade >= 1 && $grade <= 3) {
+                $user->grade = $grade . '年';
+            } elseif ($grade !== null && $grade >= 4) {
+                // 学年が4以上 = 卒業生
+                $user->grade = $user->graduation_year . '年卒';
+            } else {
+                $user->grade = null;
+            }
+            return $user;
+        });
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,

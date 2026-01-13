@@ -8,7 +8,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    grade: string;
+    graduation_year: string;
     exam_sessions: any[];
 }
 
@@ -24,6 +24,10 @@ const grades = Object.keys(props.usersByGrade).sort();
 const selectGrade = (grade: string | number) => {
     const gradeStr = String(grade);
     selectedGrade.value = selectedGrade.value === gradeStr ? null : gradeStr;
+};
+
+const isSelected = (grade: string | number) => {
+    return selectedGrade.value === String(grade);
 };
 
 const getAverageScore = (user: User) => {
@@ -43,21 +47,21 @@ const getBestScore = (user: User) => {
 
 <template>
     <AdminLayout>
-        <Head title="学年別一覧" />
+        <Head title="卒業年度別一覧" />
 
         <div class="py-8">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- ヘッダー -->
                 <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-gray-900">🎓 学年別一覧</h1>
-                    <p class="mt-2 text-gray-600">学年ごとのユーザーと受験履歴を確認できます</p>
+                    <h1 class="text-3xl font-bold text-gray-900">🎓 卒業年度別一覧</h1>
+                    <p class="mt-2 text-gray-600">卒業年度ごとのユーザーと受験履歴を確認できます</p>
                 </div>
 
                 <!-- タブナビゲーション -->
                 <AdminResultsTabs />
 
                 <!-- 学年カード -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                     <div
                         v-for="(users, grade) in usersByGrade"
                         :key="grade"
@@ -65,17 +69,17 @@ const getBestScore = (user: User) => {
                     >
                         <div
                             class="p-6 cursor-pointer"
-                            :class="selectedGrade === grade ? 'bg-blue-50' : 'bg-white'"
+                            :class="isSelected(grade) ? 'bg-blue-50' : 'bg-white'"
                             @click="selectGrade(grade)"
                         >
                             <div class="flex items-center justify-between mb-4">
                                 <h2 class="text-2xl font-bold text-gray-900">
-                                    {{ grade || "未設定" }}
+                                    {{ grade }}
                                 </h2>
                                 <svg
                                     class="w-6 h-6 text-gray-400 transition-transform"
                                     :class="{
-                                        'transform rotate-180': selectedGrade === grade,
+                                        'transform rotate-180': isSelected(grade),
                                     }"
                                     fill="none"
                                     stroke="currentColor"
@@ -112,7 +116,7 @@ const getBestScore = (user: User) => {
 
                         <!-- 展開コンテンツ -->
                         <div
-                            v-if="selectedGrade === grade"
+                            v-if="isSelected(grade)"
                             class="border-t border-gray-200 bg-gray-50"
                         >
                             <div class="p-6">

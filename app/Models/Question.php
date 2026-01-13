@@ -37,4 +37,13 @@ class Question extends Model
     {
         return $this->hasOne(Choice::class)->where('is_correct', true);
     }
+
+    /**
+     * この問題を使用するイベント（多対多）
+     */
+    public function events()
+    {
+        return $this->belongsToMany(Event::class, 'event_questions')
+            ->withPivot('order');
+    }
 }

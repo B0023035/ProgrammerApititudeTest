@@ -53,7 +53,7 @@ export class AuthHelper {
         await this.page.click('button:has-text("始める")');
 
         // ExamInstructions ページが表示されるまで待機
-        await this.page.waitForSelector('text=第1部の練習を始める', { timeout: 10000 });
+        await this.page.waitForSelector("text=第1部の練習を始める", { timeout: 10000 });
 
         await this.page.waitForTimeout(1000);
     }
@@ -64,12 +64,12 @@ export class AuthHelper {
         const userDropdown = this.page.locator('button:has(svg[stroke="currentColor"])').first();
         await userDropdown.click();
         await this.page.waitForTimeout(500);
-        
+
         // ドロップダウンが開くのを待つ - DropdownLink内のボタン（px-4クラスを持つもの）
         // レスポンシブナビゲーション（sm:hidden）内のボタンではなく、Dropdown内のボタンを選択
         const logoutButton = this.page.locator('button.px-4:has-text("Log Out")').first();
-        await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
-        
+        await logoutButton.waitFor({ state: "visible", timeout: 5000 });
+
         // ログアウトリンクをクリック
         await logoutButton.click();
         // ユーザーのログアウトは / にリダイレクトされる（セッションコード入力画面）

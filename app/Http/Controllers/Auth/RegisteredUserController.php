@@ -35,14 +35,15 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'admission_year' => 'nullable|integer|min:'.($currentYear - 10).'|max:'.$currentYear,
+            // graduation_yearは卒業年度として使用（現在年〜現在年+10の範囲）
+            'graduation_year' => 'nullable|integer|min:'.$currentYear.'|max:'.($currentYear + 10),
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'admission_year' => $request->input('admission_year'),
+            'graduation_year' => $request->input('graduation_year'),
         ]);
 
         event(new Registered($user));

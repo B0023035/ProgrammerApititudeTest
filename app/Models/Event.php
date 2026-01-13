@@ -16,6 +16,7 @@ class Event extends Model
         'begin',
         'end',
         'exam_type',
+        'question_selection_mode', // 追加: random または custom
         // カスタム設定を追加
         'part1_questions',
         'part1_time',
@@ -36,6 +37,32 @@ class Event extends Model
         'part3_questions' => 'integer',
         'part3_time' => 'integer',
     ];
+
+    /**
+     * イベントで出題するカスタム問題（多対多）
+     */
+    public function customQuestions()
+    {
+        return $this->belongsToMany(Question::class, 'event_questions')
+            ->withPivot('order')
+            ->orderByPivot('order');
+    }
+
+    /**
+     * 指定したパートのカスタム問題を取得
+     */
+    public function getCustomQuestionsForPart(int $part)
+    {
+        return $this->customQuestions()->where('part', $part)->get();
+    }
+
+    /**
+     * カスタム問題モードかどうか
+     */
+    public function isCustomQuestionMode(): bool
+    {
+        return $this->question_selection_mode === 'custom';
+    }
 
     /**
      * イベントが現在有効かどうかを判定

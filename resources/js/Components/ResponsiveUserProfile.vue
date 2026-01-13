@@ -96,9 +96,13 @@ import Dropdown from "@/Components/Dropdown.vue";
 import DropdownLink from "@/Components/DropdownLink.vue";
 
 const logout = () => {
-    router.post(route("logout"), {}, {
-        preserveState: false,
-        preserveScroll: false,
-    });
+    router.post(
+        route("logout"),
+        {},
+        {
+            preserveState: false,
+            preserveScroll: false,
+        }
+    );
 };
 </script>

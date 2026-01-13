@@ -52,7 +52,7 @@ export const test = base.extend<AuthFixtures>({
         // ★ ログイン後にCSRF Cookieを再取得（セッションが変わるため）
         await page.goto("/sanctum/csrf-cookie");
         await page.waitForTimeout(300);
-        
+
         // ダッシュボードに戻る
         await page.goto("/admin/dashboard");
         await page.waitForTimeout(500);
@@ -79,7 +79,7 @@ export const test = base.extend<AuthFixtures>({
         await page.click('button:has-text("始める")');
 
         // ExamInstructions ページが表示されるまで待機
-        await page.waitForSelector('text=第1部の練習を始める', { timeout: 10000 });
+        await page.waitForSelector("text=第1部の練習を始める", { timeout: 10000 });
         await page.waitForTimeout(500);
 
         await use(page);

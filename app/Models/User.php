@@ -21,7 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'admission_year',
+        'graduation_year',
     ];
 
     /**
@@ -88,15 +88,27 @@ class User extends Authenticatable
     }
 
     /**
-     * 現在の学年を計算
+     * 現在の学年を計算（卒業年度から逆算）
+     * 年度は4月1日に切り替わる
      * @return int|null
      */
     public function getCurrentGrade()
     {
-        if (!$this->admission_year) {
+        if (!$this->graduation_year) {
             return null;
         }
+        
         $currentYear = (int) date('Y');
-        return $currentYear - $this->admission_year + 1;
+        $currentMonth = (int) date('n');
+        
+        // 4月以降なら現在の年度、1-3月なら前年度
+        $academicYear = $currentMonth >= 4 ? $currentYear : $currentYear - 1;
+        
+        // 学年を計算
+        // 例: 2025年度で2026年卒 → 4 - (2026 - 2025) = 3年生
+        // 例: 2025年度で2027年卒 → 4 - (2027 - 2025) = 2年生
+        // 例: 2025年度で2028年卒 → 4 - (2028 - 2025) = 1年生
+        // 例: 2025年度で2025年卒 → 4 - (2025 - 2025) = 4 → 卒業生
+        return 4 - ($this->graduation_year - $academicYear);
     }
 }

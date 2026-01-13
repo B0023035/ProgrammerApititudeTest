@@ -3,7 +3,8 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import DeleteUserForm from "./Partials/DeleteUserForm.vue";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm.vue";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm.vue";
-import { Head } from "@inertiajs/vue3";
+import PrimaryButton from "@/Components/PrimaryButton.vue";
+import { Head, Link } from "@inertiajs/vue3";
 
 defineProps<{
     mustVerifyEmail?: boolean;
@@ -12,11 +13,11 @@ defineProps<{
 </script>
 
 <template>
-    <Head title="Profile" />
+    <Head title="プロフィール" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Profile</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">プロフィール</h2>
         </template>
 
         <div class="py-12">
@@ -35,6 +36,14 @@ defineProps<{
 
                 <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                     <DeleteUserForm class="max-w-xl" />
+                </div>
+
+                <div class="flex justify-center">
+                    <Link :href="route('test.start')">
+                        <PrimaryButton>
+                            前のページに戻る
+                        </PrimaryButton>
+                    </Link>
                 </div>
             </div>
         </div>

@@ -983,7 +983,8 @@ const completePractice = () => {
     form.timeSpent = Math.floor((Date.now() - form.startTime) / 1000);
 
     // ★ CSRF トークンを明示的に設定（meta タグから取得）
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    const csrfToken =
+        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
     form._token = csrfToken;
 
     updateFormAnswers();
@@ -1023,12 +1024,14 @@ const completePractice = () => {
 
     // ★ セッションクッキーが存在するか確認
     const cookies = document.cookie;
-    const sessionCookie = cookies.split(';').find(c => c.includes('XSRF-TOKEN') || c.includes('laravel_session'));
+    const sessionCookie = cookies
+        .split(";")
+        .find(c => c.includes("XSRF-TOKEN") || c.includes("laravel_session"));
     console.log("🍪 Session Cookie:", sessionCookie ? "✅ PRESENT" : "❌ MISSING");
     console.log("Cookies:", cookies.substring(0, 100));
 
     // ★ CSRF トークン確保（ページ props から取得）
-    const currentCsrfToken = page.props.csrf_token || '';
+    const currentCsrfToken = page.props.csrf_token || "";
     form._token = currentCsrfToken;
     console.log("🔑 CSRF Token:", currentCsrfToken.substring(0, 20) + "...");
 
@@ -1036,16 +1039,16 @@ const completePractice = () => {
     const submitForm = () => {
         form.post(route(routeName), {
             headers: {
-                'X-Requested-With': 'XMLHttpRequest',
+                "X-Requested-With": "XMLHttpRequest",
             },
             preserveState: false,
-            onSuccess: (page) => {
+            onSuccess: page => {
                 console.log("✅ Practice completion successful");
                 // PracticeExplanation ページへ移動（Inertia が自動リダイレクト）
             },
-            onError: (errors) => {
+            onError: errors => {
                 console.error("❌ Validation errors:", errors);
-                const errorMessages = Object.values(errors).join(', ');
+                const errorMessages = Object.values(errors).join(", ");
                 alert(`バリデーションエラー: ${errorMessages}`);
             },
             onFinish: () => {
@@ -1055,8 +1058,9 @@ const completePractice = () => {
     };
 
     // ★ CSRFトークンを更新してから送信（419エラー対策）
-    if (typeof (window as any).forceRefreshCSRF === 'function') {
-        (window as any).forceRefreshCSRF()
+    if (typeof (window as any).forceRefreshCSRF === "function") {
+        (window as any)
+            .forceRefreshCSRF()
             .then(() => {
                 console.log("CSRFトークン更新完了、フォーム送信開始");
                 submitForm();
@@ -1085,26 +1089,29 @@ function handleAnswer(label: string) {
     console.log("selected answer:", sanitizedLabel);
     console.log("answerStatus length:", answerStatus.value.length);
     console.log("currentQuestion:", currentQuestion.value);
-    
+
     if (currentIndex.value >= answerStatus.value.length) {
         console.error("Invalid currentIndex!");
         return;
     }
-    
+
     answerStatus.value[currentIndex.value].selected = sanitizedLabel;
-    console.log("Updated answerStatus[" + currentIndex.value + "]:", answerStatus.value[currentIndex.value]);
-    
+    console.log(
+        "Updated answerStatus[" + currentIndex.value + "]:",
+        answerStatus.value[currentIndex.value]
+    );
+
     updateFormAnswers();
 }
 
 function updateFormAnswers() {
     const answers: Record<number, string> = {};
-    
+
     // デバッグ: 回答状態の確認
     console.log("=== updateFormAnswers debug ===");
     console.log("answerStatus length:", answerStatus.value.length);
     console.log("questions length:", questions.value.length);
-    
+
     answerStatus.value.forEach((ans, index) => {
         if (ans.selected) {
             const questionId = questions.value[index]?.id;
@@ -1116,10 +1123,10 @@ function updateFormAnswers() {
             }
         }
     });
-    
+
     form.answers = answers;
     form.totalQuestions = questions.value.length;
-    
+
     console.log("Final answers object:", answers);
     console.log("Total questions:", form.totalQuestions);
     console.log("=== end debug ===");
@@ -1174,9 +1181,10 @@ function handleTimeUp() {
     }
 
     // ★ CSRF トークンを明示的に設定
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    const csrfToken =
+        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
     form._token = csrfToken;
-    
+
     // ★ 重要: isTimeout フラグを true に設定
     form.isTimeout = true;
     form.practiceSessionId = props.practiceSessionId || page.props.practiceSessionId || "";

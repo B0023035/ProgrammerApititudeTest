@@ -56,49 +56,6 @@ interface PropsWithFilters {
 
 const { stats, filters, events, gradeCounts } = defineProps<PropsWithFilters>();
 
-// フィルターの状態を管理
-const selectedGrade = ref<string>("all");
-const selectedEventId = ref<string>("");
-
-// propsからの初期値設定
-watch(
-    () => filters,
-    newFilters => {
-        console.log("Filters changed:", newFilters);
-
-        if (
-            newFilters?.grade !== null &&
-            newFilters?.grade !== undefined &&
-            newFilters?.grade !== ""
-        ) {
-            const gradeValue = String(newFilters.grade);
-            // 選択肢に存在するかチェック
-            const gradeExists = gradeOptions.value.some(opt => opt.value === gradeValue);
-
-            if (gradeExists) {
-                selectedGrade.value = gradeValue;
-                console.log("Grade set to:", gradeValue);
-            } else {
-                // 選択肢に存在しない場合は「すべて」に戻す
-                console.warn(`Grade ${gradeValue} not found in options, resetting to 'all'`);
-                selectedGrade.value = "all";
-            }
-        } else {
-            console.log("No grade filter, setting to all");
-            selectedGrade.value = "all";
-        }
-
-        if (newFilters?.event_id) {
-            selectedEventId.value = String(newFilters.event_id);
-            console.log("Event ID set to:", newFilters.event_id);
-        } else {
-            console.log("No event filter");
-            selectedEventId.value = "";
-        }
-    },
-    { immediate: true }
-);
-
 // 学年選択肢を生成(データが存在する grade のみを表示)
 const gradeOptions = computed(() => {
     if (!gradeCounts || gradeCounts.length === 0) {
@@ -111,6 +68,29 @@ const gradeOptions = computed(() => {
         label: gc.label,
     }));
 });
+
+// フィルターの状態を管理 - 初期値をfiltersから設定
+const getInitialGrade = () => {
+    if (filters?.grade !== null && filters?.grade !== undefined && filters?.grade !== "") {
+        const gradeValue = String(filters.grade);
+        // gradeCountsから直接チェック（computedプロパティの前に実行されるため）
+        const gradeExists = gradeCounts && gradeCounts.some(gc => String(gc.grade) === gradeValue);
+        if (gradeExists) {
+            return gradeValue;
+        }
+    }
+    return "all";
+};
+
+const getInitialEventId = () => {
+    if (filters?.event_id) {
+        return String(filters.event_id);
+    }
+    return "";
+};
+
+const selectedGrade = ref<string>(getInitialGrade());
+const selectedEventId = ref<string>(getInitialEventId());
 
 const rankPercentages = computed(() => {
     const total = stats.total_sessions;
@@ -148,30 +128,30 @@ const maxMonthlyCount = computed(() => {
     return Math.max(...(Object.values(stats.monthly_data) as number[]), 1);
 });
 
-// デバッグ用ログ
-console.log("Statistics component props:", {
-    gradeCounts,
-    gradeOptions: gradeOptions.value,
-    filters,
-    selectedGrade: selectedGrade.value,
-    selectedEventId: selectedEventId.value,
-});
+// Part別平均点のグラフ幅を計算（マイナス値対応）
+// 各パートの問題数: Part1=40問, Part2=30問, Part3=25問
+// 最低点: 問題数 × -0.25
+const partScoreConfig = {
+    1: { max: 40, min: -10 }, // Part1: -10 〜 40
+    2: { max: 30, min: -7.5 }, // Part2: -7.5 〜 30
+    3: { max: 25, min: -6.25 }, // Part3: -6.25 〜 25
+};
 
-// フォーム送信時のデバッグ
-const handleSubmit = (event: Event) => {
-    console.log("Form submitting with:", {
-        selectedGrade: selectedGrade.value,
-        selectedEventId: selectedEventId.value,
-    });
+const getPartBarWidth = (part: number, score: number) => {
+    const config = partScoreConfig[part as keyof typeof partScoreConfig];
+    if (!config) return 0;
+    // スコアを最低点〜最高点の範囲でパーセンテージに変換
+    const range = config.max - config.min;
+    const adjusted = score - config.min;
+    return Math.max(0, Math.min(100, (adjusted / range) * 100));
+};
 
-    // selectedGrade が 'all' の場合は送信しない（allは指定なしと同じ）
-    if (selectedGrade.value === "all") {
-        const form = event.target as HTMLFormElement;
-        const gradeInput = form.querySelector('select[name="grade"]') as HTMLSelectElement;
-        if (gradeInput) {
-            gradeInput.removeAttribute("name");
-        }
-    }
+// 0点の位置を計算（グラフ上のゼロライン表示用）
+const getZeroLinePosition = (part: number) => {
+    const config = partScoreConfig[part as keyof typeof partScoreConfig];
+    if (!config) return 0;
+    const range = config.max - config.min;
+    return ((0 - config.min) / range) * 100;
 };
 </script>
 
@@ -229,24 +209,6 @@ const handleSubmit = (event: Event) => {
                         </button>
                     </div>
                 </form>
-
-                <!-- デバッグ情報(開発時のみ表示 - 本番環境では削除またはコメントアウト) -->
-                <div class="mb-4 p-4 bg-gray-100 rounded text-xs font-mono">
-                    <p><strong>Debug Info:</strong></p>
-                    <p>filters: {{ filters }}</p>
-                    <p>filters.grade: {{ filters?.grade }}</p>
-                    <p>filters.grade type: {{ typeof filters?.grade }}</p>
-                    <p>gradeCounts: {{ gradeCounts }}</p>
-                    <p>gradeOptions: {{ gradeOptions }}</p>
-                    <p>
-                        Current select value:
-                        {{
-                            filters?.grade !== null && filters?.grade !== undefined
-                                ? String(filters.grade)
-                                : "all"
-                        }}
-                    </p>
-                </div>
 
                 <!-- 主要統計カード -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -531,60 +493,105 @@ const handleSubmit = (event: Event) => {
                     <!-- Part別平均点 -->
                     <div class="bg-white rounded-lg shadow-lg p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">
-                            Part別平均点 (95点満点)
+                            Part別平均点 (マイナス点あり)
                         </h2>
                         <div class="space-y-6">
+                            <!-- Part 1 -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm font-medium text-gray-700"
-                                        >Part 1 - 規則発見力</span
+                                        >Part 1 - 規則発見力 (-10〜40点)</span
                                     >
-                                    <span class="text-lg font-bold text-blue-600"
+                                    <span
+                                        class="text-lg font-bold"
+                                        :class="
+                                            (stats.part_averages[1] || 0) >= 0
+                                                ? 'text-blue-600'
+                                                : 'text-red-600'
+                                        "
                                         >{{ stats.part_averages[1] || 0 }}点</span
                                     >
                                 </div>
-                                <div class="bg-gray-200 rounded-full h-4">
+                                <div class="relative bg-gray-200 rounded-full h-4">
+                                    <!-- ゼロライン -->
                                     <div
-                                        class="bg-blue-500 h-4 rounded-full transition-all"
-                                        :style="`width: ${
-                                            ((stats.part_averages[1] || 0) / 40) * 100
-                                        }%`"
+                                        class="absolute top-0 bottom-0 w-0.5 bg-gray-500 z-10"
+                                        :style="`left: ${getZeroLinePosition(1)}%`"
+                                    ></div>
+                                    <div
+                                        class="h-4 rounded-full transition-all"
+                                        :class="
+                                            (stats.part_averages[1] || 0) >= 0
+                                                ? 'bg-blue-500'
+                                                : 'bg-red-400'
+                                        "
+                                        :style="`width: ${getPartBarWidth(1, stats.part_averages[1] || 0)}%`"
                                     ></div>
                                 </div>
                             </div>
+                            <!-- Part 2 -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm font-medium text-gray-700"
-                                        >Part 2 - 空間把握力</span
+                                        >Part 2 - 空間把握力 (-7.5〜30点)</span
                                     >
-                                    <span class="text-lg font-bold text-green-600"
+                                    <span
+                                        class="text-lg font-bold"
+                                        :class="
+                                            (stats.part_averages[2] || 0) >= 0
+                                                ? 'text-green-600'
+                                                : 'text-red-600'
+                                        "
                                         >{{ stats.part_averages[2] || 0 }}点</span
                                     >
                                 </div>
-                                <div class="bg-gray-200 rounded-full h-4">
+                                <div class="relative bg-gray-200 rounded-full h-4">
+                                    <!-- ゼロライン -->
                                     <div
-                                        class="bg-green-500 h-4 rounded-full transition-all"
-                                        :style="`width: ${
-                                            ((stats.part_averages[2] || 0) / 30) * 100
-                                        }%`"
+                                        class="absolute top-0 bottom-0 w-0.5 bg-gray-500 z-10"
+                                        :style="`left: ${getZeroLinePosition(2)}%`"
+                                    ></div>
+                                    <div
+                                        class="h-4 rounded-full transition-all"
+                                        :class="
+                                            (stats.part_averages[2] || 0) >= 0
+                                                ? 'bg-green-500'
+                                                : 'bg-red-400'
+                                        "
+                                        :style="`width: ${getPartBarWidth(2, stats.part_averages[2] || 0)}%`"
                                     ></div>
                                 </div>
                             </div>
+                            <!-- Part 3 -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm font-medium text-gray-700"
-                                        >Part 3 - 問題解決力</span
+                                        >Part 3 - 問題解決力 (-6.25〜25点)</span
                                     >
-                                    <span class="text-lg font-bold text-purple-600"
+                                    <span
+                                        class="text-lg font-bold"
+                                        :class="
+                                            (stats.part_averages[3] || 0) >= 0
+                                                ? 'text-purple-600'
+                                                : 'text-red-600'
+                                        "
                                         >{{ stats.part_averages[3] || 0 }}点</span
                                     >
                                 </div>
-                                <div class="bg-gray-200 rounded-full h-4">
+                                <div class="relative bg-gray-200 rounded-full h-4">
+                                    <!-- ゼロライン -->
                                     <div
-                                        class="bg-purple-500 h-4 rounded-full transition-all"
-                                        :style="`width: ${
-                                            ((stats.part_averages[3] || 0) / 25) * 100
-                                        }%`"
+                                        class="absolute top-0 bottom-0 w-0.5 bg-gray-500 z-10"
+                                        :style="`left: ${getZeroLinePosition(3)}%`"
+                                    ></div>
+                                    <div
+                                        class="h-4 rounded-full transition-all"
+                                        :class="
+                                            (stats.part_averages[3] || 0) >= 0
+                                                ? 'bg-purple-500'
+                                                : 'bg-red-400'
+                                        "
+                                        :style="`width: ${getPartBarWidth(3, stats.part_averages[3] || 0)}%`"
                                     ></div>
                                 </div>
                             </div>

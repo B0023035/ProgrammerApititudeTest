@@ -64,10 +64,7 @@ return new class extends Migration
      */
     private function indexExists(string $table, string $index): bool
     {
-        $indexes = Schema::getConnection()
-            ->getDoctrineSchemaManager()
-            ->listTableIndexes($table);
-        
-        return isset($indexes[$index]);
+        $indexes = Schema::getIndexListing($table);
+        return in_array($index, $indexes);
     }
 };
