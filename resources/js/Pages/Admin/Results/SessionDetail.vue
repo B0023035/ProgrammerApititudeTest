@@ -218,7 +218,9 @@ const getChoiceImagePath = (image: string | null) => {
                             <p class="text-sm font-medium">
                                 <template v-if="session.event">
                                     {{ session.event.name }}
-                                    <span class="text-xs text-gray-500 block">({{ session.event.passphrase }})</span>
+                                    <span class="text-xs text-gray-500 block"
+                                        >({{ session.event.passphrase }})</span
+                                    >
                                 </template>
                                 <template v-else>
                                     <span class="text-gray-400">-</span>

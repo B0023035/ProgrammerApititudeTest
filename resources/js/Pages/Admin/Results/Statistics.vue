@@ -10,16 +10,15 @@ interface RankDistribution {
     Bronze: number;
 }
 
-interface ScoreDistribution {
-    "90-95": number;
-    "80-89": number;
-    "70-79": number;
-    "60-69": number;
-    "0-59": number;
+interface PartAverageInfo {
+    average: number;
+    question_count: number;
+    min_score: number;
+    max_score: number;
 }
 
 interface PartAverages {
-    [key: number]: number;
+    [key: number]: PartAverageInfo;
 }
 
 interface MonthlyData {
@@ -31,7 +30,6 @@ interface Stats {
     total_users: number;
     average_score: number;
     rank_distribution: RankDistribution;
-    score_distribution: ScoreDistribution;
     part_averages: PartAverages;
     monthly_data: MonthlyData;
 }
@@ -106,52 +104,42 @@ const rankPercentages = computed(() => {
     };
 });
 
-// 得点分布のパーセンテージを計算
-const scorePercentages = computed(() => {
-    const total = stats.total_sessions;
-    if (total === 0 || !stats.score_distribution) {
-        return { "90-95": 0, "80-89": 0, "70-79": 0, "60-69": 0, "0-59": 0 };
-    }
-
-    return {
-        "90-95": Math.round((stats.score_distribution["90-95"] / total) * 100),
-        "80-89": Math.round((stats.score_distribution["80-89"] / total) * 100),
-        "70-79": Math.round((stats.score_distribution["70-79"] / total) * 100),
-        "60-69": Math.round((stats.score_distribution["60-69"] / total) * 100),
-        "0-59": Math.round((stats.score_distribution["0-59"] / total) * 100),
-    };
-});
-
 // 月別データの最大値を取得(グラフのスケール用)
 const maxMonthlyCount = computed(() => {
     if (!stats.monthly_data) return 1;
     return Math.max(...(Object.values(stats.monthly_data) as number[]), 1);
 });
 
-// Part別平均点のグラフ幅を計算（マイナス値対応）
-// 各パートの問題数: Part1=40問, Part2=30問, Part3=25問
-// 最低点: 問題数 × -0.25
-const partScoreConfig = {
-    1: { max: 40, min: -10 }, // Part1: -10 〜 40
-    2: { max: 30, min: -7.5 }, // Part2: -7.5 〜 30
-    3: { max: 25, min: -6.25 }, // Part3: -6.25 〜 25
+// パート別情報を取得するヘルパー
+const getPartInfo = (part: number): PartAverageInfo => {
+    const info = stats.part_averages?.[part];
+    if (info && typeof info === 'object') {
+        return info;
+    }
+    // フォールバック（古い形式の場合）
+    return {
+        average: typeof info === 'number' ? info : 0,
+        question_count: part === 1 ? 40 : part === 2 ? 30 : 25,
+        min_score: part === 1 ? -10 : part === 2 ? -7.5 : -6.25,
+        max_score: part === 1 ? 40 : part === 2 ? 30 : 25,
+    };
 };
 
+// Part別平均点のグラフ幅を計算（動的な問題数に対応）
 const getPartBarWidth = (part: number, score: number) => {
-    const config = partScoreConfig[part as keyof typeof partScoreConfig];
-    if (!config) return 0;
-    // スコアを最低点〜最高点の範囲でパーセンテージに変換
-    const range = config.max - config.min;
-    const adjusted = score - config.min;
+    const info = getPartInfo(part);
+    const range = info.max_score - info.min_score;
+    if (range === 0) return 0;
+    const adjusted = score - info.min_score;
     return Math.max(0, Math.min(100, (adjusted / range) * 100));
 };
 
 // 0点の位置を計算（グラフ上のゼロライン表示用）
 const getZeroLinePosition = (part: number) => {
-    const config = partScoreConfig[part as keyof typeof partScoreConfig];
-    if (!config) return 0;
-    const range = config.max - config.min;
-    return ((0 - config.min) / range) * 100;
+    const info = getPartInfo(part);
+    const range = info.max_score - info.min_score;
+    if (range === 0) return 0;
+    return ((0 - info.min_score) / range) * 100;
 };
 </script>
 
@@ -383,113 +371,6 @@ const getZeroLinePosition = (part: number) => {
                         </div>
                     </div>
 
-                    <!-- 得点分布 -->
-                    <div class="bg-white rounded-lg shadow-lg p-6">
-                        <h2 class="text-xl font-bold text-gray-900 mb-4">得点分布 (95点満点)</h2>
-                        <div class="space-y-4">
-                            <div class="flex items-center">
-                                <div class="w-24 text-sm font-medium text-gray-700">90-95点</div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-6">
-                                        <div
-                                            class="bg-green-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
-                                            :style="`width: ${scorePercentages['90-95']}%`"
-                                        >
-                                            <span
-                                                v-if="scorePercentages['90-95'] > 0"
-                                                class="text-xs text-white font-semibold"
-                                            >
-                                                {{ stats.score_distribution["90-95"] }}人 ({{
-                                                    scorePercentages["90-95"]
-                                                }}%)
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-24 text-sm font-medium text-gray-700">80-89点</div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-6">
-                                        <div
-                                            class="bg-blue-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
-                                            :style="`width: ${scorePercentages['80-89']}%`"
-                                        >
-                                            <span
-                                                v-if="scorePercentages['80-89'] > 0"
-                                                class="text-xs text-white font-semibold"
-                                            >
-                                                {{ stats.score_distribution["80-89"] }}人 ({{
-                                                    scorePercentages["80-89"]
-                                                }}%)
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-24 text-sm font-medium text-gray-700">70-79点</div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-6">
-                                        <div
-                                            class="bg-yellow-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
-                                            :style="`width: ${scorePercentages['70-79']}%`"
-                                        >
-                                            <span
-                                                v-if="scorePercentages['70-79'] > 0"
-                                                class="text-xs text-white font-semibold"
-                                            >
-                                                {{ stats.score_distribution["70-79"] }}人 ({{
-                                                    scorePercentages["70-79"]
-                                                }}%)
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-24 text-sm font-medium text-gray-700">60-69点</div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-6">
-                                        <div
-                                            class="bg-orange-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
-                                            :style="`width: ${scorePercentages['60-69']}%`"
-                                        >
-                                            <span
-                                                v-if="scorePercentages['60-69'] > 0"
-                                                class="text-xs text-white font-semibold"
-                                            >
-                                                {{ stats.score_distribution["60-69"] }}人 ({{
-                                                    scorePercentages["60-69"]
-                                                }}%)
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-24 text-sm font-medium text-gray-700">0-59点</div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-6">
-                                        <div
-                                            class="bg-red-500 h-6 rounded-full flex items-center justify-end pr-2 transition-all"
-                                            :style="`width: ${scorePercentages['0-59']}%`"
-                                        >
-                                            <span
-                                                v-if="scorePercentages['0-59'] > 0"
-                                                class="text-xs text-white font-semibold"
-                                            >
-                                                {{ stats.score_distribution["0-59"] }}人 ({{
-                                                    scorePercentages["0-59"]
-                                                }}%)
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Part別平均点 -->
                     <div class="bg-white rounded-lg shadow-lg p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">
@@ -500,16 +381,16 @@ const getZeroLinePosition = (part: number) => {
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm font-medium text-gray-700"
-                                        >Part 1 - 規則発見力 (-10〜40点)</span
+                                        >Part 1 - 規則発見力 ({{ getPartInfo(1).min_score }}〜{{ getPartInfo(1).max_score }}点)</span
                                     >
                                     <span
                                         class="text-lg font-bold"
                                         :class="
-                                            (stats.part_averages[1] || 0) >= 0
+                                            getPartInfo(1).average >= 0
                                                 ? 'text-blue-600'
                                                 : 'text-red-600'
                                         "
-                                        >{{ stats.part_averages[1] || 0 }}点</span
+                                        >{{ getPartInfo(1).average }}点</span
                                     >
                                 </div>
                                 <div class="relative bg-gray-200 rounded-full h-4">
@@ -521,11 +402,11 @@ const getZeroLinePosition = (part: number) => {
                                     <div
                                         class="h-4 rounded-full transition-all"
                                         :class="
-                                            (stats.part_averages[1] || 0) >= 0
+                                            getPartInfo(1).average >= 0
                                                 ? 'bg-blue-500'
                                                 : 'bg-red-400'
                                         "
-                                        :style="`width: ${getPartBarWidth(1, stats.part_averages[1] || 0)}%`"
+                                        :style="`width: ${getPartBarWidth(1, getPartInfo(1).average)}%`"
                                     ></div>
                                 </div>
                             </div>
@@ -533,16 +414,16 @@ const getZeroLinePosition = (part: number) => {
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm font-medium text-gray-700"
-                                        >Part 2 - 空間把握力 (-7.5〜30点)</span
+                                        >Part 2 - 空間把握力 ({{ getPartInfo(2).min_score }}〜{{ getPartInfo(2).max_score }}点)</span
                                     >
                                     <span
                                         class="text-lg font-bold"
                                         :class="
-                                            (stats.part_averages[2] || 0) >= 0
+                                            getPartInfo(2).average >= 0
                                                 ? 'text-green-600'
                                                 : 'text-red-600'
                                         "
-                                        >{{ stats.part_averages[2] || 0 }}点</span
+                                        >{{ getPartInfo(2).average }}点</span
                                     >
                                 </div>
                                 <div class="relative bg-gray-200 rounded-full h-4">
@@ -554,11 +435,11 @@ const getZeroLinePosition = (part: number) => {
                                     <div
                                         class="h-4 rounded-full transition-all"
                                         :class="
-                                            (stats.part_averages[2] || 0) >= 0
+                                            getPartInfo(2).average >= 0
                                                 ? 'bg-green-500'
                                                 : 'bg-red-400'
                                         "
-                                        :style="`width: ${getPartBarWidth(2, stats.part_averages[2] || 0)}%`"
+                                        :style="`width: ${getPartBarWidth(2, getPartInfo(2).average)}%`"
                                     ></div>
                                 </div>
                             </div>
@@ -566,16 +447,16 @@ const getZeroLinePosition = (part: number) => {
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm font-medium text-gray-700"
-                                        >Part 3 - 問題解決力 (-6.25〜25点)</span
+                                        >Part 3 - 問題解決力 ({{ getPartInfo(3).min_score }}〜{{ getPartInfo(3).max_score }}点)</span
                                     >
                                     <span
                                         class="text-lg font-bold"
                                         :class="
-                                            (stats.part_averages[3] || 0) >= 0
+                                            getPartInfo(3).average >= 0
                                                 ? 'text-purple-600'
                                                 : 'text-red-600'
                                         "
-                                        >{{ stats.part_averages[3] || 0 }}点</span
+                                        >{{ getPartInfo(3).average }}点</span
                                     >
                                 </div>
                                 <div class="relative bg-gray-200 rounded-full h-4">
@@ -587,11 +468,11 @@ const getZeroLinePosition = (part: number) => {
                                     <div
                                         class="h-4 rounded-full transition-all"
                                         :class="
-                                            (stats.part_averages[3] || 0) >= 0
+                                            getPartInfo(3).average >= 0
                                                 ? 'bg-purple-500'
                                                 : 'bg-red-400'
                                         "
-                                        :style="`width: ${getPartBarWidth(3, stats.part_averages[3] || 0)}%`"
+                                        :style="`width: ${getPartBarWidth(3, getPartInfo(3).average)}%`"
                                     ></div>
                                 </div>
                             </div>

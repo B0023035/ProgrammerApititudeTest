@@ -341,6 +341,10 @@ Route::middleware(['check.session.code'])->group(function () {
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+        // 過去の試験結果一覧
+        Route::get('/my-results', [ExamController::class, 'myResults'])->name('my-results');
+        Route::get('/my-results/{sessionId}', [ExamController::class, 'myResultDetail'])->name('my-results.detail');
     });
 
     // 認証ルート(ログイン・登録など)

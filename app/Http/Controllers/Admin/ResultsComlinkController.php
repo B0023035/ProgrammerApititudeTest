@@ -11,6 +11,79 @@ use Inertia\Inertia;
 
 class ResultsComlinkController extends Controller
 {
+    /**
+     * セッションの実際の問題数を取得（security_logから）
+     */
+    private function getSessionQuestionCount($session)
+    {
+        if (!$session) {
+            return 95; // デフォルト
+        }
+        
+        // security_logからquestion_idsを取得
+        $securityLog = $session->security_log ?? [];
+        if (isset($securityLog['question_ids']) && is_array($securityLog['question_ids'])) {
+            $questionIds = $securityLog['question_ids'];
+            return count($questionIds['1'] ?? []) + count($questionIds['2'] ?? []) + count($questionIds['3'] ?? []);
+        }
+        
+        // イベントから取得
+        if ($session->event) {
+            $event = $session->event;
+            $mode = $event->question_selection_mode ?? 'sequential';
+            
+            // パート別問題数が設定されている場合
+            if ($event->part1_questions !== null || $event->part2_questions !== null || $event->part3_questions !== null) {
+                $part1 = $event->part1_questions ?? 40;
+                $part2 = $event->part2_questions ?? 30;
+                $part3 = $event->part3_questions ?? 25;
+                return $part1 + $part2 + $part3;
+            }
+            
+            // customモード、または問題数が未設定の場合は実際の回答数をカウント
+            if ($mode === 'custom' || $mode === 'random') {
+                $answerCount = Answer::where('exam_session_id', $session->id)->count();
+                if ($answerCount > 0) {
+                    return $answerCount;
+                }
+            }
+        }
+        
+        // 最終手段: 実際に回答された問題数をカウント
+        $answerCount = Answer::where('exam_session_id', $session->id)->count();
+        if ($answerCount > 0) {
+            return $answerCount;
+        }
+        
+        return 95; // デフォルト
+    }
+
+    /**
+     * ランク計算（問題数に応じてスケーリング）
+     * 95問基準: Platinum≥61, Gold≥51, Silver≥36, Bronze<36
+     */
+    private function calculateRank($score, $actualQuestionCount = 95)
+    {
+        $baseQuestions = 95;
+        $scaleFactor = $actualQuestionCount / $baseQuestions;
+        
+        $platinumThreshold = 61 * $scaleFactor;
+        $goldThreshold = 51 * $scaleFactor;
+        $silverThreshold = 36 * $scaleFactor;
+        
+        if ($score >= $platinumThreshold) {
+            return 'Platinum';
+        }
+        if ($score >= $goldThreshold) {
+            return 'Gold';
+        }
+        if ($score >= $silverThreshold) {
+            return 'Silver';
+        }
+
+        return 'Bronze';
+    }
+
     public function index()
     {
         // 完了したセッションを取得（イベント情報も含む）
@@ -38,20 +111,11 @@ class ResultsComlinkController extends Controller
                     }
                 }
 
-                $totalQuestions = Question::count();
-
-                // ResultsManagementController と同じランク判定基準を使用
-                $percentage = $totalQuestions > 0 ? ($score / $totalQuestions) * 100 : 0;
-                $rank = 'Bronze';
-                if ($score >= 61) {
-                    $rank = 'Platinum';
-                } elseif ($score >= 51) {
-                    $rank = 'Gold';
-                } elseif ($score >= 36) {
-                    $rank = 'Silver';
-                } else {
-                    $rank = 'Bronze';
-                }
+                // セッションの実際の問題数を取得
+                $totalQuestions = $this->getSessionQuestionCount($session);
+                
+                // 問題数に応じたスケーリングでランク計算
+                $rank = $this->calculateRank($score, $totalQuestions);
 
                 return [
                     'id' => $session->id,

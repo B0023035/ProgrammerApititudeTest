@@ -1,40 +1,95 @@
 <script setup lang="ts">
 import { Head, Link, usePage, router } from "@inertiajs/vue3";
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 
 const page = usePage();
+const isProcessing = ref(false);
+const isReady = ref(false);
 
-const goBack = async () => {
-    // console.log("戻るボタンがクリックされました");
+// CSRFトークンを強制的に更新する関数
+const refreshCsrfToken = async (): Promise<boolean> => {
     try {
-        // セッションクリア用のエンドポイントを呼び出す
-        const response = await fetch("/session/clear", {
-            method: "POST",
+        // まずCSRFクッキーを更新
+        await fetch("/sanctum/csrf-cookie", {
+            method: "GET",
+            credentials: "same-origin",
+        });
+
+        // 新しいトークンを取得
+        const response = await fetch("/csrf-token", {
+            method: "GET",
+            credentials: "same-origin",
             headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN":
-                    document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
-                    "",
+                Accept: "application/json",
             },
         });
 
-        // console.log("セッションクリアのレスポンス:", response.status);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.token) {
+                // metaタグを更新
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                if (meta) {
+                    meta.setAttribute("content", data.token);
+                }
+                // axiosヘッダーも更新
+                if ((window as any).axios) {
+                    (window as any).axios.defaults.headers.common["X-CSRF-TOKEN"] = data.token;
+                }
+                return true;
+            }
+        }
+        return false;
+    } catch (error) {
+        console.error("CSRF token refresh error:", error);
+        return false;
+    }
+};
 
-        // セッションクリア後にトップページへ
-        window.location.href = "/";
+const goBack = async () => {
+    // 二重クリック防止
+    if (isProcessing.value) {
+        return;
+    }
+    isProcessing.value = true;
+
+    try {
+        // ★★★ CSRFトークンを事前に更新 ★★★
+        await refreshCsrfToken();
+
+        // Inertia routerを使用してセッションクリアを実行
+        router.post(
+            "/session/clear",
+            {},
+            {
+                preserveState: false,
+                preserveScroll: false,
+                onSuccess: () => {
+                    // 成功時は自動的にリダイレクトされる
+                },
+                onError: () => {
+                    // エラー時も強制的にトップページへ
+                    window.location.href = "/";
+                },
+                onFinish: () => {
+                    isProcessing.value = false;
+                },
+            }
+        );
     } catch (error) {
         console.error("Session clear error:", error);
         // エラーが出ても強制的に戻る
         window.location.href = "/";
+        isProcessing.value = false;
     }
 };
 
-onMounted(() => {
-    const currentPath = window.location.pathname;
+onMounted(async () => {
+    // ★★★ ページ読み込み時にCSRFトークンを強制更新 ★★★
+    await refreshCsrfToken();
+    isReady.value = true;
 
-    // console.log("Current path:", currentPath);
-    // console.log("Auth user:", page.props.auth?.user);
-    // console.log("Is admin:", page.props.auth?.isAdmin);
+    const currentPath = window.location.pathname;
 
     // Welcomeページ(/welcome)以外ではリダイレクトしない
     if (currentPath !== "/welcome") {
@@ -73,7 +128,16 @@ onMounted(() => {
 
         <!-- 戻るボタン -->
         <div class="back-button-container">
-            <button @click="goBack" class="back-button">← 戻る</button>
+            <button
+                @click="goBack"
+                :disabled="!isReady || isProcessing"
+                class="back-button"
+                :class="{ 'opacity-50 cursor-not-allowed': !isReady || isProcessing }"
+            >
+                <span v-if="!isReady">準備中...</span>
+                <span v-else-if="isProcessing">処理中...</span>
+                <span v-else>← 戻る</span>
+            </button>
         </div>
     </div>
 

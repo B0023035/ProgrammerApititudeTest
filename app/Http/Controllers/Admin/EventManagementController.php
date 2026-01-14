@@ -75,6 +75,7 @@ class EventManagementController extends Controller
                     'part' => $q->part,
                     'number' => $q->number,
                     'text' => mb_substr($q->text, 0, 50) . (mb_strlen($q->text) > 50 ? '...' : ''),
+                    'image' => $q->image,
                 ];
             });
 

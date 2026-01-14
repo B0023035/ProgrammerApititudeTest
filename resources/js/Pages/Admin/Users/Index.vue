@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import { ref, computed } from "vue";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 
@@ -20,6 +20,8 @@ interface Props {
         per_page: number;
         total: number;
     };
+    sort: string;
+    direction: string;
 }
 
 const props = defineProps<Props>();
@@ -39,6 +41,36 @@ const filteredUsers = computed(() => {
             user.grade?.toLowerCase().includes(query)
     );
 });
+
+// ソート機能
+const sortBy = (field: string) => {
+    let direction = 'asc';
+    // 同じフィールドをクリックした場合は方向を反転
+    if (props.sort === field) {
+        direction = props.direction === 'asc' ? 'desc' : 'asc';
+    }
+    
+    router.get(route('admin.users.index'), {
+        sort: field,
+        direction: direction,
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+// ソートアイコンを取得
+const getSortIcon = (field: string) => {
+    if (props.sort !== field) {
+        return '↕';  // 未ソート
+    }
+    return props.direction === 'asc' ? '↑' : '↓';
+};
+
+// ソートヘッダーのクラス
+const getSortClass = (field: string) => {
+    return props.sort === field ? 'bg-blue-100 text-blue-700' : '';
+};
 </script>
 
 <template>
@@ -132,34 +164,46 @@ const filteredUsers = computed(() => {
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        @click="sortBy('id')"
+                                        :class="getSortClass('id')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                     >
-                                        ID
+                                        ID <span class="ml-1">{{ getSortIcon('id') }}</span>
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        @click="sortBy('name')"
+                                        :class="getSortClass('name')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                     >
-                                        ユーザー名
+                                        ユーザー名 <span class="ml-1">{{ getSortIcon('name') }}</span>
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        @click="sortBy('email')"
+                                        :class="getSortClass('email')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                     >
-                                        メールアドレス
+                                        メールアドレス <span class="ml-1">{{ getSortIcon('email') }}</span>
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        @click="sortBy('grade')"
+                                        :class="getSortClass('grade')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                     >
-                                        学年
+                                        学年 <span class="ml-1">{{ getSortIcon('grade') }}</span>
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        @click="sortBy('exam_sessions_count')"
+                                        :class="getSortClass('exam_sessions_count')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                     >
-                                        受験回数
+                                        受験回数 <span class="ml-1">{{ getSortIcon('exam_sessions_count') }}</span>
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        @click="sortBy('created_at')"
+                                        :class="getSortClass('created_at')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                     >
-                                        登録日
+                                        登録日 <span class="ml-1">{{ getSortIcon('created_at') }}</span>
                                     </th>
                                     <th
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"

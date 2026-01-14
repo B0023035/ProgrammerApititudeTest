@@ -40,9 +40,7 @@ defineProps<{
 
                 <div class="flex justify-center">
                     <Link :href="route('test.start')">
-                        <PrimaryButton>
-                            前のページに戻る
-                        </PrimaryButton>
+                        <PrimaryButton> 前のページに戻る </PrimaryButton>
                     </Link>
                 </div>
             </div>

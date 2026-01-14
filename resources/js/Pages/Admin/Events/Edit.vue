@@ -99,7 +99,10 @@ const form = reactive({
     begin: props.event.begin,
     end: props.event.end,
     exam_type: props.event.exam_type as "30min" | "45min" | "full" | "custom",
-    question_selection_mode: (props.event.question_selection_mode || "sequential") as "sequential" | "random" | "custom",
+    question_selection_mode: (props.event.question_selection_mode || "sequential") as
+        | "sequential"
+        | "random"
+        | "custom",
     part1_questions: initialValues.part1_questions,
     part1_time: initialValues.part1_time / 60, // 秒→分に変換して表示
     part2_questions: initialValues.part2_questions,
@@ -122,7 +125,9 @@ const tempSelectedIds = ref<number[]>([]);
 const isCustom = computed(() => form.exam_type === "custom");
 
 // カスタム問題選択モードかどうか（exam_typeがcustomかつquestion_selection_modeがcustom）
-const isCustomQuestionMode = computed(() => form.exam_type === "custom" && form.question_selection_mode === "custom");
+const isCustomQuestionMode = computed(
+    () => form.exam_type === "custom" && form.question_selection_mode === "custom"
+);
 
 // パートごとの問題一覧
 const questionsByPart = computed(() => {
@@ -191,7 +196,7 @@ const toggleAllInPart = (part: number) => {
     const partQuestions = questionsByPart.value[part as 1 | 2 | 3];
     const partIds = partQuestions.map(q => q.id);
     const allSelected = partIds.every(id => tempSelectedIds.value.includes(id));
-    
+
     if (allSelected) {
         // 全解除
         tempSelectedIds.value = tempSelectedIds.value.filter(id => !partIds.includes(id));
@@ -225,7 +230,7 @@ const openQuestionModal = () => {
 const saveQuestionSelection = () => {
     form.question_selection_mode = "custom";
     form.custom_question_ids = [...tempSelectedIds.value];
-    
+
     // 選択した問題数に合わせてカスタムの出題数を更新
     const countByPart: { [key: number]: number } = { 1: 0, 2: 0, 3: 0 };
     tempSelectedIds.value.forEach(id => {
@@ -237,7 +242,7 @@ const saveQuestionSelection = () => {
     form.part1_questions = countByPart[1] || 1;
     form.part2_questions = countByPart[2] || 1;
     form.part3_questions = countByPart[3] || 1;
-    
+
     showQuestionModal.value = false;
 };
 
@@ -297,7 +302,7 @@ const submit = () => {
     };
 
     // カスタム問題選択モードの場合、選択した問題IDを追加
-    if (form.question_selection_mode === 'custom') {
+    if (form.question_selection_mode === "custom") {
         submitData.custom_question_ids = form.custom_question_ids;
     }
 
@@ -726,12 +731,24 @@ const submit = () => {
                                         type="button"
                                         @click="selectSequentialMode"
                                         class="px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2"
-                                        :class="form.question_selection_mode === 'sequential' 
-                                            ? 'border-purple-500 bg-purple-50 text-purple-700' 
-                                            : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'"
+                                        :class="
+                                            form.question_selection_mode === 'sequential'
+                                                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                                : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'
+                                        "
                                     >
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                        <svg
+                                            class="w-5 h-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                                            />
                                         </svg>
                                         <span class="font-medium">順番通りに出題する</span>
                                     </button>
@@ -739,12 +756,24 @@ const submit = () => {
                                         type="button"
                                         @click="selectRandomMode"
                                         class="px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2"
-                                        :class="form.question_selection_mode === 'random' 
-                                            ? 'border-green-500 bg-green-50 text-green-700' 
-                                            : 'border-gray-300 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50'"
+                                        :class="
+                                            form.question_selection_mode === 'random'
+                                                ? 'border-green-500 bg-green-50 text-green-700'
+                                                : 'border-gray-300 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50'
+                                        "
                                     >
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        <svg
+                                            class="w-5 h-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                            />
                                         </svg>
                                         <span class="font-medium">ランダムに出題する</span>
                                     </button>
@@ -752,38 +781,60 @@ const submit = () => {
                                         type="button"
                                         @click="openQuestionModal"
                                         class="px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2"
-                                        :class="form.question_selection_mode === 'custom' 
-                                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                                            : 'border-gray-300 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'"
+                                        :class="
+                                            form.question_selection_mode === 'custom'
+                                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                                : 'border-gray-300 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                                        "
                                     >
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                        <svg
+                                            class="w-5 h-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                                            />
                                         </svg>
                                         <span class="font-medium">出題する問題を選択する</span>
                                     </button>
                                 </div>
-                                
+
                                 <!-- 現在の選択状態を表示 -->
-                                <div v-if="form.question_selection_mode === 'sequential'" class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                <div
+                                    v-if="form.question_selection_mode === 'sequential'"
+                                    class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg"
+                                >
                                     <p class="text-sm text-purple-700">
                                         ✓ 問題番号順に出題されます
                                     </p>
                                 </div>
-                                <div v-else-if="form.question_selection_mode === 'random'" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <div
+                                    v-else-if="form.question_selection_mode === 'random'"
+                                    class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg"
+                                >
                                     <p class="text-sm text-green-700">
-                                        ✓ 各パートの設定問題数分、ランダムに出題されます（同じ問題は出題されません）
+                                        ✓
+                                        各パートの設定問題数分、ランダムに出題されます（同じ問題は出題されません）
                                     </p>
                                 </div>
-                                <div v-else-if="form.question_selection_mode === 'custom'" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <div
+                                    v-else-if="form.question_selection_mode === 'custom'"
+                                    class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+                                >
                                     <div class="flex items-center justify-between">
                                         <div>
                                             <p class="text-sm font-medium text-blue-700">
                                                 選択済み: {{ form.custom_question_ids.length }}問
                                             </p>
                                             <p class="text-xs text-blue-600 mt-1">
-                                                第一部: {{ selectedCountByPart[1] }}問 / 
-                                                第二部: {{ selectedCountByPart[2] }}問 / 
-                                                第三部: {{ selectedCountByPart[3] }}問
+                                                第一部: {{ selectedCountByPart[1] }}問 / 第二部:
+                                                {{ selectedCountByPart[2] }}問 / 第三部:
+                                                {{ selectedCountByPart[3] }}問
                                             </p>
                                         </div>
                                         <button
@@ -808,12 +859,24 @@ const submit = () => {
                                     type="button"
                                     @click="selectSequentialMode"
                                     class="px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2"
-                                    :class="form.question_selection_mode === 'sequential' 
-                                        ? 'border-purple-500 bg-purple-50 text-purple-700' 
-                                        : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'"
+                                    :class="
+                                        form.question_selection_mode === 'sequential'
+                                            ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                            : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300 hover:bg-purple-50'
+                                    "
                                 >
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                    <svg
+                                        class="w-5 h-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                                        />
                                     </svg>
                                     <span class="font-medium">順番通りに出題する</span>
                                 </button>
@@ -821,24 +884,40 @@ const submit = () => {
                                     type="button"
                                     @click="selectRandomMode"
                                     class="px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2"
-                                    :class="form.question_selection_mode === 'random' 
-                                        ? 'border-green-500 bg-green-50 text-green-700' 
-                                        : 'border-gray-300 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50'"
+                                    :class="
+                                        form.question_selection_mode === 'random'
+                                            ? 'border-green-500 bg-green-50 text-green-700'
+                                            : 'border-gray-300 bg-white text-gray-700 hover:border-green-300 hover:bg-green-50'
+                                    "
                                 >
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    <svg
+                                        class="w-5 h-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                        />
                                     </svg>
                                     <span class="font-medium">ランダムに出題する</span>
                                 </button>
                             </div>
-                            
+
                             <!-- 現在の選択状態を表示 -->
-                            <div v-if="form.question_selection_mode === 'sequential'" class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                                <p class="text-sm text-purple-700">
-                                    ✓ 問題番号順に出題されます
-                                </p>
+                            <div
+                                v-if="form.question_selection_mode === 'sequential'"
+                                class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg"
+                            >
+                                <p class="text-sm text-purple-700">✓ 問題番号順に出題されます</p>
                             </div>
-                            <div v-else-if="form.question_selection_mode === 'random'" class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div
+                                v-else-if="form.question_selection_mode === 'random'"
+                                class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg"
+                            >
                                 <p class="text-sm text-green-700">
                                     ✓ ランダムに出題されます（同じ問題は出題されません）
                                 </p>
@@ -879,13 +958,18 @@ const submit = () => {
 
                 <!-- モーダル本体 -->
                 <div class="flex min-h-full items-center justify-center p-4">
-                    <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+                    <div
+                        class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+                    >
                         <!-- ヘッダー -->
-                        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                        <div
+                            class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10"
+                        >
                             <div>
                                 <h2 class="text-xl font-bold text-gray-900">出題する問題を選択</h2>
                                 <p class="text-sm text-gray-500 mt-1">
-                                    問題をクリックして選択してください（選択中: {{ tempSelectedIds.length }}問）
+                                    問題をクリックして選択してください（選択中:
+                                    {{ tempSelectedIds.length }}問）
                                 </p>
                             </div>
                             <button
@@ -893,26 +977,46 @@ const submit = () => {
                                 @click="cancelQuestionModal"
                                 class="text-gray-400 hover:text-gray-600 transition-colors"
                             >
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                <svg
+                                    class="w-6 h-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
                                 </svg>
                             </button>
                         </div>
 
                         <!-- コンテンツ -->
-                        <div class="overflow-y-auto px-6 py-4" style="max-height: calc(90vh - 140px);">
-                            <div v-if="!props.allQuestions || props.allQuestions.length === 0" class="text-center py-8">
+                        <div
+                            class="overflow-y-auto px-6 py-4"
+                            style="max-height: calc(90vh - 140px)"
+                        >
+                            <div
+                                v-if="!props.allQuestions || props.allQuestions.length === 0"
+                                class="text-center py-8"
+                            >
                                 <p class="text-gray-500">問題データが読み込まれていません</p>
                             </div>
 
                             <div v-else class="space-y-6">
                                 <!-- 第一部 -->
                                 <div class="border border-gray-200 rounded-lg overflow-hidden">
-                                    <div class="bg-gray-100 px-4 py-3 flex items-center justify-between">
+                                    <div
+                                        class="bg-gray-100 px-4 py-3 flex items-center justify-between"
+                                    >
                                         <h3 class="font-semibold text-gray-900">
-                                            第一部 
+                                            第一部
                                             <span class="text-blue-600 ml-2">
-                                                ({{ tempSelectedCountByPart[1] }}/{{ questionsByPart[1].length }}問選択中)
+                                                ({{ tempSelectedCountByPart[1] }}/{{
+                                                    questionsByPart[1].length
+                                                }}問選択中)
                                             </span>
                                         </h3>
                                         <button
@@ -929,21 +1033,42 @@ const submit = () => {
                                             :key="question.id"
                                             @click="toggleQuestion(question.id)"
                                             class="flex items-center p-3 cursor-pointer transition-colors"
-                                            :class="isQuestionSelected(question.id) ? 'bg-blue-50' : 'hover:bg-gray-50'"
+                                            :class="
+                                                isQuestionSelected(question.id)
+                                                    ? 'bg-blue-50'
+                                                    : 'hover:bg-gray-50'
+                                            "
                                         >
                                             <div class="flex-shrink-0 mr-3">
                                                 <div
                                                     class="w-5 h-5 border-2 rounded flex items-center justify-center transition-colors"
-                                                    :class="isQuestionSelected(question.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'"
+                                                    :class="
+                                                        isQuestionSelected(question.id)
+                                                            ? 'bg-blue-500 border-blue-500'
+                                                            : 'border-gray-300'
+                                                    "
                                                 >
-                                                    <svg v-if="isQuestionSelected(question.id)" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                    <svg
+                                                        v-if="isQuestionSelected(question.id)"
+                                                        class="w-3 h-3 text-white"
+                                                        fill="currentColor"
+                                                        viewBox="0 0 20 20"
+                                                    >
+                                                        <path
+                                                            fill-rule="evenodd"
+                                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                            clip-rule="evenodd"
+                                                        />
                                                     </svg>
                                                 </div>
                                             </div>
                                             <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-gray-900">問{{ question.number }}</p>
-                                                <p class="text-sm text-gray-600 truncate">{{ question.text }}</p>
+                                                <p class="text-sm font-medium text-gray-900">
+                                                    問{{ question.number }}
+                                                </p>
+                                                <p class="text-sm text-gray-600 truncate">
+                                                    {{ question.text }}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -951,11 +1076,15 @@ const submit = () => {
 
                                 <!-- 第二部 -->
                                 <div class="border border-gray-200 rounded-lg overflow-hidden">
-                                    <div class="bg-gray-100 px-4 py-3 flex items-center justify-between">
+                                    <div
+                                        class="bg-gray-100 px-4 py-3 flex items-center justify-between"
+                                    >
                                         <h3 class="font-semibold text-gray-900">
-                                            第二部 
+                                            第二部
                                             <span class="text-blue-600 ml-2">
-                                                ({{ tempSelectedCountByPart[2] }}/{{ questionsByPart[2].length }}問選択中)
+                                                ({{ tempSelectedCountByPart[2] }}/{{
+                                                    questionsByPart[2].length
+                                                }}問選択中)
                                             </span>
                                         </h3>
                                         <button
@@ -972,28 +1101,49 @@ const submit = () => {
                                             :key="question.id"
                                             @click="toggleQuestion(question.id)"
                                             class="flex items-center p-3 cursor-pointer transition-colors"
-                                            :class="isQuestionSelected(question.id) ? 'bg-blue-50' : 'hover:bg-gray-50'"
+                                            :class="
+                                                isQuestionSelected(question.id)
+                                                    ? 'bg-blue-50'
+                                                    : 'hover:bg-gray-50'
+                                            "
                                         >
                                             <div class="flex-shrink-0 mr-3">
                                                 <div
                                                     class="w-5 h-5 border-2 rounded flex items-center justify-center transition-colors"
-                                                    :class="isQuestionSelected(question.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'"
+                                                    :class="
+                                                        isQuestionSelected(question.id)
+                                                            ? 'bg-blue-500 border-blue-500'
+                                                            : 'border-gray-300'
+                                                    "
                                                 >
-                                                    <svg v-if="isQuestionSelected(question.id)" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                    <svg
+                                                        v-if="isQuestionSelected(question.id)"
+                                                        class="w-3 h-3 text-white"
+                                                        fill="currentColor"
+                                                        viewBox="0 0 20 20"
+                                                    >
+                                                        <path
+                                                            fill-rule="evenodd"
+                                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                            clip-rule="evenodd"
+                                                        />
                                                     </svg>
                                                 </div>
                                             </div>
-                                            <div class="flex-1 min-w-0 mr-3">
-                                                <p class="text-sm font-medium text-gray-900">問{{ question.number }}</p>
-                                                <p class="text-sm text-gray-600 truncate">{{ question.text }}</p>
+                                            <div class="min-w-0 mr-3">
+                                                <p class="text-sm font-medium text-gray-900">
+                                                    問{{ question.number }}
+                                                </p>
+                                                <p class="text-sm text-gray-600 truncate">
+                                                    {{ question.text }}
+                                                </p>
                                             </div>
-                                            <!-- 画像を横に表示 -->
+                                            <!-- 画像をテキストの直後に表示 -->
                                             <div v-if="question.image" class="flex-shrink-0">
                                                 <img
                                                     :src="getImagePath(question.image)"
                                                     :alt="`問${question.number}`"
-                                                    class="h-20 w-auto border rounded bg-white"
+                                                    class="h-16 w-auto border rounded bg-white"
                                                 />
                                             </div>
                                         </div>
@@ -1002,11 +1152,15 @@ const submit = () => {
 
                                 <!-- 第三部 -->
                                 <div class="border border-gray-200 rounded-lg overflow-hidden">
-                                    <div class="bg-gray-100 px-4 py-3 flex items-center justify-between">
+                                    <div
+                                        class="bg-gray-100 px-4 py-3 flex items-center justify-between"
+                                    >
                                         <h3 class="font-semibold text-gray-900">
-                                            第三部 
+                                            第三部
                                             <span class="text-blue-600 ml-2">
-                                                ({{ tempSelectedCountByPart[3] }}/{{ questionsByPart[3].length }}問選択中)
+                                                ({{ tempSelectedCountByPart[3] }}/{{
+                                                    questionsByPart[3].length
+                                                }}問選択中)
                                             </span>
                                         </h3>
                                         <button
@@ -1023,21 +1177,42 @@ const submit = () => {
                                             :key="question.id"
                                             @click="toggleQuestion(question.id)"
                                             class="flex items-center p-3 cursor-pointer transition-colors"
-                                            :class="isQuestionSelected(question.id) ? 'bg-blue-50' : 'hover:bg-gray-50'"
+                                            :class="
+                                                isQuestionSelected(question.id)
+                                                    ? 'bg-blue-50'
+                                                    : 'hover:bg-gray-50'
+                                            "
                                         >
                                             <div class="flex-shrink-0 mr-3">
                                                 <div
                                                     class="w-5 h-5 border-2 rounded flex items-center justify-center transition-colors"
-                                                    :class="isQuestionSelected(question.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'"
+                                                    :class="
+                                                        isQuestionSelected(question.id)
+                                                            ? 'bg-blue-500 border-blue-500'
+                                                            : 'border-gray-300'
+                                                    "
                                                 >
-                                                    <svg v-if="isQuestionSelected(question.id)" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                    <svg
+                                                        v-if="isQuestionSelected(question.id)"
+                                                        class="w-3 h-3 text-white"
+                                                        fill="currentColor"
+                                                        viewBox="0 0 20 20"
+                                                    >
+                                                        <path
+                                                            fill-rule="evenodd"
+                                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                            clip-rule="evenodd"
+                                                        />
                                                     </svg>
                                                 </div>
                                             </div>
                                             <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-gray-900">問{{ question.number }}</p>
-                                                <p class="text-sm text-gray-600 truncate">{{ question.text }}</p>
+                                                <p class="text-sm font-medium text-gray-900">
+                                                    問{{ question.number }}
+                                                </p>
+                                                <p class="text-sm text-gray-600 truncate">
+                                                    {{ question.text }}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -1046,9 +1221,15 @@ const submit = () => {
                         </div>
 
                         <!-- フッター -->
-                        <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+                        <div
+                            class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between"
+                        >
                             <p class="text-sm text-gray-600">
-                                合計 <span class="font-bold text-blue-600">{{ tempSelectedIds.length }}</span> 問選択中
+                                合計
+                                <span class="font-bold text-blue-600">{{
+                                    tempSelectedIds.length
+                                }}</span>
+                                問選択中
                             </p>
                             <div class="flex space-x-3">
                                 <button

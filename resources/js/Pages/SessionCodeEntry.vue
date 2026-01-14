@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm, Link } from "@inertiajs/vue3";
+import { Head, useForm, Link, router } from "@inertiajs/vue3";
 import { ref } from "vue";
 
 const form = useForm({
@@ -11,11 +11,18 @@ const errorMessage = ref("");
 const submit = () => {
     errorMessage.value = "";
     form.post(route("session.verify"), {
-        onError: errors => {
+        onError: (errors) => {
             if (errors.session_code) {
                 errorMessage.value = errors.session_code;
             } else {
                 errorMessage.value = "セッションコードの検証に失敗しました";
+            }
+        },
+        onFinish: () => {
+            // 419エラー（CSRF token mismatch）の場合、ページをリロード
+            if (form.recentlySuccessful === false && !errorMessage.value) {
+                // エラーメッセージがなく失敗している場合は419エラーの可能性
+                window.location.reload();
             }
         },
     });

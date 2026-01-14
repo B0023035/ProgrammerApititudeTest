@@ -89,6 +89,10 @@ public function start()
     // 卒業年度 - 現在年 + 1 = 学年（例: 2028年卒業, 2026年現在 → 2028-2026+1=3年生）
     $grade = $graduationYear > 0 ? max(1, min(($graduationYear - $currentYear + 1), 10)) : null;
 
+    // 問題選択モードに応じて各パートの問題を事前に決定
+    $selectionMode = $event->question_selection_mode ?? 'sequential';
+    $questionIds = $this->determineQuestionIds($event, $selectionMode, $examType);
+
     // 新規セッション作成
     $session = ExamSession::create([
         'user_id' => $user->id,
@@ -102,6 +106,8 @@ public function start()
             'exam_type' => $examType,
             'event_id' => $event->id,
             'event_name' => $event->name,
+            'selection_mode' => $selectionMode,
+            'question_ids' => $questionIds,
         ]),
     ]);
 
@@ -112,6 +118,8 @@ public function start()
         'exam_type' => $examType,
         'event_id' => $event->id,
         'starting_part' => 1,
+        'selection_mode' => $selectionMode,
+        'question_ids' => $questionIds,
     ]);
 
     return redirect()->route('exam.part', ['part' => 1]);
@@ -150,6 +158,45 @@ public function start()
             'user_id' => $userId,
             'cache_keys_deleted' => count($partSessionKeys ?? []),
         ]);
+    }
+
+    /**
+     * 問題選択モードに応じて各パートの問題IDを決定
+     */
+    private function determineQuestionIds($event, $selectionMode, $examType)
+    {
+        $questionIds = [
+            'part_1' => [],
+            'part_2' => [],
+            'part_3' => [],
+        ];
+
+        for ($part = 1; $part <= 3; $part++) {
+            $questionCount = $this->getQuestionCountByEvent($part, $examType, $event);
+
+            if ($selectionMode === 'custom' && $event->isCustomQuestionMode()) {
+                // カスタム問題モード: イベントに紐付けられた問題を使用
+                $questionIds["part_{$part}"] = $event->getCustomQuestionsForPart($part)
+                    ->pluck('id')
+                    ->toArray();
+            } elseif ($selectionMode === 'random') {
+                // ランダムモード: 問題をランダムに選択
+                $questionIds["part_{$part}"] = Question::where('part', $part)
+                    ->inRandomOrder()
+                    ->take($questionCount)
+                    ->pluck('id')
+                    ->toArray();
+            } else {
+                // シーケンシャルモード（デフォルト）: 問題番号順に選択
+                $questionIds["part_{$part}"] = Question::where('part', $part)
+                    ->orderBy('number')
+                    ->take($questionCount)
+                    ->pluck('id')
+                    ->toArray();
+            }
+        }
+
+        return $questionIds;
     }
 
 /**
@@ -356,11 +403,15 @@ public function part(Request $request, $part)
     // security_log から保存済みの解答を取得
     $securityLog = json_decode($session->security_log ?? '{}', true);
     $savedAnswers = $securityLog['part_'.$part.'_answers'] ?? [];
+    
+    // セッション作成時に決定された問題IDを取得
+    $questionIds = $securityLog['question_ids']['part_'.$part] ?? [];
 
     Log::info('保存済み解答の読み込み', [
         'user_id' => $user->id,
         'part' => $part,
         'saved_answers_count' => count($savedAnswers),
+        'saved_question_ids_count' => count($questionIds),
         'exam_type' => $examType,
     ]);
 
@@ -373,17 +424,30 @@ public function part(Request $request, $part)
         'question_count' => $questionCount,
     ]);
 
-    // 問題を取得（カスタム問題モードの場合は選択された問題のみ）
-    if ($event->isCustomQuestionMode()) {
-        // カスタム問題モード: イベントに紐付けられた問題のみを取得
-        $questions = $event->getCustomQuestionsForPart($part)
-            ->load(['choices' => function ($query) use ($part) {
-                $query->where('part', $part)->orderBy('label');
-            }])
-            ->map(function ($q) use ($savedAnswers) {
+    // セッションに問題IDが保存されている場合はそれを使用、そうでなければ問題選択モードに従う
+    if (!empty($questionIds)) {
+        // セッションに保存された問題IDを使用（ランダムでも同じ問題が出る）
+        Log::info('セッションに保存された問題IDを使用', [
+            'question_ids' => $questionIds,
+        ]);
+        
+        $displayNumber = 0;
+        $questions = Question::with(['choices' => function ($query) use ($part) {
+            $query->where('part', $part)->orderBy('label');
+        }])
+            ->whereIn('id', $questionIds)
+            ->get()
+            // 保存された順序を維持
+            ->sortBy(function($q) use ($questionIds) {
+                return array_search($q->id, $questionIds);
+            })
+            ->values()
+            ->map(function ($q) use ($savedAnswers, &$displayNumber) {
+                $displayNumber++;
                 return [
                     'id' => $q->id,
-                    'number' => $q->number,
+                    'number' => $displayNumber, // 表示用の連番
+                    'original_number' => $q->number, // DBの元の問題番号
                     'part' => $q->part,
                     'text' => $q->text,
                     'image' => $q->image,
@@ -400,33 +464,75 @@ public function part(Request $request, $part)
                 ];
             });
     } else {
-        // ランダムモード: 従来通り問題をランダムに取得
-        $questions = Question::with(['choices' => function ($query) use ($part) {
-            $query->where('part', $part)->orderBy('label');
-        }])
-            ->where('part', $part)
-            ->orderBy('number')
-            ->take($questionCount)
-            ->get()
-            ->map(function ($q) use ($savedAnswers) {
-                return [
-                    'id' => $q->id,
-                    'number' => $q->number,
-                    'part' => $q->part,
-                    'text' => $q->text,
-                    'image' => $q->image,
-                    'choices' => $q->choices->map(function ($c) {
-                        return [
-                            'id' => $c->id,
-                            'label' => $c->label,
-                            'text' => $c->text,
-                            'image' => $c->image,
-                            'part' => $c->part,
-                        ];
-                    }),
-                    'selected' => isset($savedAnswers[$q->id]) ? $savedAnswers[$q->id] : null,
-                ];
-            });
+        // 旧セッション互換: 問題選択モードを取得して問題を選択
+        $selectionMode = $event->question_selection_mode ?? 'sequential';
+
+        Log::info('問題選択モード（旧セッション互換）', [
+            'selection_mode' => $selectionMode,
+            'event_id' => $event->id,
+        ]);
+
+        // 問題を取得（モードに応じて異なる取得方法）
+        if ($selectionMode === 'custom' && $event->isCustomQuestionMode()) {
+            // カスタム問題モード: イベントに紐付けられた問題のみを取得
+            $displayNumber = 0;
+            $questions = $event->getCustomQuestionsForPart($part)
+                ->load(['choices' => function ($query) use ($part) {
+                    $query->where('part', $part)->orderBy('label');
+                }])
+                ->map(function ($q) use ($savedAnswers, &$displayNumber) {
+                    $displayNumber++;
+                    return [
+                        'id' => $q->id,
+                        'number' => $displayNumber, // 表示用の連番
+                        'original_number' => $q->number, // DBの元の問題番号
+                        'part' => $q->part,
+                        'text' => $q->text,
+                        'image' => $q->image,
+                        'choices' => $q->choices->map(function ($c) {
+                            return [
+                                'id' => $c->id,
+                                'label' => $c->label,
+                                'text' => $c->text,
+                                'image' => $c->image,
+                                'part' => $c->part,
+                            ];
+                        }),
+                        'selected' => isset($savedAnswers[$q->id]) ? $savedAnswers[$q->id] : null,
+                    ];
+                });
+        } else {
+            // シーケンシャルモード（デフォルト）: 問題番号順に取得
+            $displayNumber = 0;
+            $questions = Question::with(['choices' => function ($query) use ($part) {
+                $query->where('part', $part)->orderBy('label');
+            }])
+                ->where('part', $part)
+                ->orderBy('number')
+                ->take($questionCount)
+                ->get()
+                ->map(function ($q) use ($savedAnswers, &$displayNumber) {
+                    $displayNumber++;
+                    return [
+                        'id' => $q->id,
+                        'number' => $displayNumber, // 表示用の連番
+                        'original_number' => $q->number, // DBの元の問題番号
+                        'part' => $q->part,
+                        'text' => $q->text,
+                        'image' => $q->image,
+                        'choices' => $q->choices->map(function ($c) {
+                            return [
+                                'id' => $c->id,
+                                'label' => $c->label,
+                                'text' => $c->text,
+                                'image' => $c->image,
+                                'part' => $c->part,
+                            ];
+                        }),
+                        'selected' => isset($savedAnswers[$q->id]) ? $savedAnswers[$q->id] : null,
+                    ];
+                });
+        }
     }
 
     Log::info('問題データの生成完了', [
@@ -1390,9 +1496,17 @@ public function saveAnswersBatch(Request $request)
         // 試験タイプを取得
         $securityLog = json_decode($session->security_log ?? '{}', true);
         $examType = $securityLog['exam_type'] ?? 'full';
+        $questionIds = $securityLog['question_ids'] ?? null;
+
+        // イベント情報を取得（存在する場合）
+        $event = null;
+        if ($session->event_id) {
+            $event = \App\Models\Event::find($session->event_id);
+        }
 
         // 各部の結果を集計
         $results = [];
+        $maxScores = []; // 各パートの満点
 
         for ($part = 1; $part <= 3; $part++) {
             // 該当部の解答を取得
@@ -1401,8 +1515,14 @@ public function saveAnswersBatch(Request $request)
                 ->where('part', $part)
                 ->get();
 
-            // 試験タイプに応じた正しい問題数
-            $totalQuestions = $this->getQuestionCountByEvent($part, $examType);
+            // 実際に出題された問題数を取得
+            // 1. セッションに保存された問題IDがあればそれを使用
+            // 2. なければイベント設定、最後にフォールバック
+            if ($questionIds && isset($questionIds["part_{$part}"]) && count($questionIds["part_{$part}"]) > 0) {
+                $totalQuestions = count($questionIds["part_{$part}"]);
+            } else {
+                $totalQuestions = $this->getQuestionCountByEvent($part, $examType, $event);
+            }
 
             $correct = $answers->where('is_correct', 1)->count();
             $incorrect = $answers->where('is_correct', 0)->count();
@@ -1418,19 +1538,32 @@ public function saveAnswersBatch(Request $request)
                 'total' => $totalQuestions,
                 'score' => round($score, 2),
             ];
+
+            // 満点を記録
+            $maxScores[$part] = $totalQuestions;
         }
 
         // 総合スコア
         $totalScore = $results[1]['score'] + $results[2]['score'] + $results[3]['score'];
+        $maxTotalScore = $maxScores[1] + $maxScores[2] + $maxScores[3];
 
-        // ランク判定
-        if ($totalScore >= 61) {
+        // ランク判定（95問満点の基準を問題数に応じてスケーリング）
+        // 基準値: Platinum=61, Gold=51, Silver=36 (95問満点時)
+        $baseMax = 95;
+        $scaleFactor = $maxTotalScore / $baseMax;
+        
+        // スケーリングされた基準値
+        $platinumThreshold = 61 * $scaleFactor;
+        $goldThreshold = 51 * $scaleFactor;
+        $silverThreshold = 36 * $scaleFactor;
+
+        if ($totalScore >= $platinumThreshold) {
             $rank = 'A';
             $rankName = 'Platinum';
-        } elseif ($totalScore >= 51) {
+        } elseif ($totalScore >= $goldThreshold) {
             $rank = 'B';
             $rankName = 'Gold';
-        } elseif ($totalScore >= 36) {
+        } elseif ($totalScore >= $silverThreshold) {
             $rank = 'C';
             $rankName = 'Silver';
         } else {
@@ -1526,20 +1659,34 @@ public function guestCompletePart(Request $request)
             'guest_id' => $guestId,
         ]);
 
+        // イベント情報を取得（存在する場合）
+        $event = null;
+        $examType = $examSession['exam_type'] ?? 'full';
+        $questionIds = $examSession['question_ids'] ?? null;
+        if (isset($examSession['event_id'])) {
+            $event = \App\Models\Event::find($examSession['event_id']);
+        }
+
         // 各パートの結果を集計
         $results = [];
+        $maxScores = [];
 
         for ($p = 1; $p <= 3; $p++) {
             $partAnswersKey = "guest_exam_answers_{$guestId}_part_{$p}";
             $partAnswers = Cache::get($partAnswersKey, []);
 
-            // 各部の正しい問題数
-            if ($p == 1) {
-                $totalQuestions = 40;
-            } elseif ($p == 2) {
-                $totalQuestions = 30;
+            // 実際に出題された問題数を取得
+            if ($questionIds && isset($questionIds["part_{$p}"]) && count($questionIds["part_{$p}"]) > 0) {
+                $totalQuestions = count($questionIds["part_{$p}"]);
+            } elseif ($event) {
+                $totalQuestions = $this->getQuestionCountByEvent($p, $examType, $event);
             } else {
-                $totalQuestions = 25;
+                // フォールバック: デフォルト問題数
+                $totalQuestions = match($p) {
+                    1 => 40,
+                    2 => 30,
+                    3 => 25,
+                };
             }
 
             $correct = 0;
@@ -1572,19 +1719,31 @@ public function guestCompletePart(Request $request)
                 'total' => $totalQuestions,
                 'score' => round($score, 2),
             ];
+
+            $maxScores[$p] = $totalQuestions;
         }
 
         // 総合スコア
         $totalScore = $results[1]['score'] + $results[2]['score'] + $results[3]['score'];
+        $maxTotalScore = $maxScores[1] + $maxScores[2] + $maxScores[3];
 
-        // ランク判定
-        if ($totalScore >= 61) {
+        // ランク判定（95問満点の基準を問題数に応じてスケーリング）
+        // 基準値: Platinum=61, Gold=51, Silver=36 (95問満点時)
+        $baseMax = 95;
+        $scaleFactor = $maxTotalScore / $baseMax;
+        
+        // スケーリングされた基準値
+        $platinumThreshold = 61 * $scaleFactor;
+        $goldThreshold = 51 * $scaleFactor;
+        $silverThreshold = 36 * $scaleFactor;
+
+        if ($totalScore >= $platinumThreshold) {
             $rank = 'A';
             $rankName = 'Platinum';
-        } elseif ($totalScore >= 51) {
+        } elseif ($totalScore >= $goldThreshold) {
             $rank = 'B';
             $rankName = 'Gold';
-        } elseif ($totalScore >= 36) {
+        } elseif ($totalScore >= $silverThreshold) {
             $rank = 'C';
             $rankName = 'Silver';
         } else {
@@ -2263,6 +2422,224 @@ private function getQuestionCountByEvent($part, $examType = 'full', $event = nul
         // ExamInstructionsを直接レンダリング
         return Inertia::render('ExamInstructions', [
             'isGuest' => true,
+        ]);
+    }
+
+    /**
+     * ユーザーの過去の試験結果一覧を表示
+     */
+    public function myResults()
+    {
+        $user = Auth::user();
+
+        // 完了済みセッションを取得（失格でないもの）
+        $sessions = ExamSession::where('user_id', $user->id)
+            ->whereNotNull('finished_at')
+            ->whereNull('disqualified_at')
+            ->with('event')
+            ->orderBy('finished_at', 'desc')
+            ->get();
+
+        $results = [];
+        $eventNames = [];
+
+        foreach ($sessions as $session) {
+            // 試験タイプを取得
+            $securityLog = json_decode($session->security_log ?? '{}', true);
+            $examType = $securityLog['exam_type'] ?? 'full';
+            $questionIds = $securityLog['question_ids'] ?? null;
+
+            // イベント情報
+            $event = $session->event;
+            $eventName = $event ? $event->name : '一般試験';
+            
+            // イベント名を収集
+            if (!in_array($eventName, $eventNames)) {
+                $eventNames[] = $eventName;
+            }
+
+            // 各部の結果を集計
+            $partResults = [];
+            $maxScores = [];
+
+            for ($part = 1; $part <= 3; $part++) {
+                $answers = Answer::where('user_id', $user->id)
+                    ->where('exam_session_id', $session->id)
+                    ->where('part', $part)
+                    ->get();
+
+                // 問題数を取得
+                if ($questionIds && isset($questionIds["part_{$part}"]) && count($questionIds["part_{$part}"]) > 0) {
+                    $totalQuestions = count($questionIds["part_{$part}"]);
+                } else {
+                    $totalQuestions = $this->getQuestionCountByEvent($part, $examType, $event);
+                }
+
+                $correct = $answers->where('is_correct', 1)->count();
+                $incorrect = $answers->where('is_correct', 0)->count();
+                $unanswered = $totalQuestions - $correct - $incorrect;
+                $score = ($correct * 1) + ($incorrect * -0.25);
+
+                $partResults[$part] = [
+                    'correct' => $correct,
+                    'incorrect' => $incorrect,
+                    'unanswered' => $unanswered,
+                    'total' => $totalQuestions,
+                    'score' => round($score, 2),
+                ];
+
+                $maxScores[$part] = $totalQuestions;
+            }
+
+            // 総合スコア
+            $totalScore = $partResults[1]['score'] + $partResults[2]['score'] + $partResults[3]['score'];
+            $maxTotalScore = $maxScores[1] + $maxScores[2] + $maxScores[3];
+
+            // ランク判定
+            $baseMax = 95;
+            $scaleFactor = $maxTotalScore / $baseMax;
+            
+            $platinumThreshold = 61 * $scaleFactor;
+            $goldThreshold = 51 * $scaleFactor;
+            $silverThreshold = 36 * $scaleFactor;
+
+            if ($totalScore >= $platinumThreshold) {
+                $rank = 'A';
+                $rankName = 'Platinum';
+            } elseif ($totalScore >= $goldThreshold) {
+                $rank = 'B';
+                $rankName = 'Gold';
+            } elseif ($totalScore >= $silverThreshold) {
+                $rank = 'C';
+                $rankName = 'Silver';
+            } else {
+                $rank = 'D';
+                $rankName = 'Bronze';
+            }
+
+            $results[] = [
+                'id' => $session->id,
+                'session_uuid' => $session->session_uuid,
+                'event_name' => $eventName,
+                'finished_at' => $session->finished_at->toIso8601String(),
+                'total_score' => round($totalScore, 2),
+                'max_score' => $maxTotalScore,
+                'rank' => $rank,
+                'rank_name' => $rankName,
+                'part_results' => $partResults,
+            ];
+        }
+
+        return Inertia::render('MyResults', [
+            'results' => $results,
+            'events' => $eventNames,
+        ]);
+    }
+
+    /**
+     * ユーザーの試験結果詳細を表示
+     */
+    public function myResultDetail($sessionId)
+    {
+        $user = Auth::user();
+
+        // セッションを取得（自分のものかチェック）
+        $session = ExamSession::where('id', $sessionId)
+            ->where('user_id', $user->id)
+            ->whereNotNull('finished_at')
+            ->whereNull('disqualified_at')
+            ->with(['event'])
+            ->firstOrFail();
+
+        // 試験タイプを取得
+        $securityLog = json_decode($session->security_log ?? '{}', true);
+        $examType = $securityLog['exam_type'] ?? 'full';
+        $questionIds = $securityLog['question_ids'] ?? null;
+
+        // イベント情報
+        $event = $session->event;
+
+        // 各パートの回答詳細を取得
+        $answersByPart = [];
+        $totalQuestions = 0;
+
+        for ($part = 1; $part <= 3; $part++) {
+            $answers = Answer::where('user_id', $user->id)
+                ->where('exam_session_id', $session->id)
+                ->where('part', $part)
+                ->get();
+
+            // 問題数を取得
+            if ($questionIds && isset($questionIds["part_{$part}"]) && count($questionIds["part_{$part}"]) > 0) {
+                $partQuestionCount = count($questionIds["part_{$part}"]);
+            } else {
+                $partQuestionCount = $this->getQuestionCountByEvent($part, $examType, $event);
+            }
+
+            $correct = $answers->where('is_correct', 1)->count();
+            $incorrect = $answers->where('is_correct', 0)->count();
+            $percentage = $partQuestionCount > 0 ? round(($correct / $partQuestionCount) * 100, 1) : 0;
+
+            $answersByPart[(string)$part] = [
+                'score' => [
+                    'correct' => $correct,
+                    'total' => $partQuestionCount,
+                    'percentage' => $percentage,
+                ],
+            ];
+
+            $totalQuestions += $partQuestionCount;
+        }
+
+        // 総合スコア計算
+        $allAnswers = Answer::where('exam_session_id', $session->id)->get();
+        $score = 0;
+        foreach ($allAnswers as $answer) {
+            if ($answer->choice === null) {
+                continue;
+            } elseif ($answer->is_correct) {
+                $score += 1;
+            } else {
+                $score -= 0.25;
+            }
+        }
+
+        // ランク計算
+        $baseMax = 95;
+        $scaleFactor = $totalQuestions / $baseMax;
+        
+        $platinumThreshold = 61 * $scaleFactor;
+        $goldThreshold = 51 * $scaleFactor;
+        $silverThreshold = 36 * $scaleFactor;
+
+        if ($score >= $platinumThreshold) {
+            $rankName = 'Platinum';
+        } elseif ($score >= $goldThreshold) {
+            $rankName = 'Gold';
+        } elseif ($score >= $silverThreshold) {
+            $rankName = 'Silver';
+        } else {
+            $rankName = 'Bronze';
+        }
+
+        $percentage = $totalQuestions > 0 ? round(($score / $totalQuestions) * 100, 1) : 0;
+
+        return Inertia::render('MyResultDetail', [
+            'session' => [
+                'id' => $session->id,
+                'session_uuid' => $session->session_uuid,
+                'started_at' => $session->started_at->toIso8601String(),
+                'finished_at' => $session->finished_at->toIso8601String(),
+                'total_score' => round($score, 2),
+                'total_questions' => $totalQuestions,
+                'percentage' => $percentage,
+                'rank' => $rankName,
+                'event' => $event ? [
+                    'id' => $event->id,
+                    'name' => $event->name,
+                ] : null,
+            ],
+            'answersByPart' => $answersByPart,
         ]);
     }
 }

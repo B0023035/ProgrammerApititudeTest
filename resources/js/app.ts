@@ -240,6 +240,21 @@ axios.interceptors.request.use(async config => {
     return config;
 });
 
+// ★★★ axios 応答インターセプター：419エラー時に自動リロード ★★★
+axios.interceptors.response.use(
+    response => response,
+    async error => {
+        if (error.response && error.response.status === 419) {
+            console.warn("419 Page Expired detected - reloading page to get fresh CSRF token");
+            // 少し待ってからリロード（ユーザーが状況を把握できるよう）
+            setTimeout(() => {
+                window.location.reload();
+            }, 100);
+        }
+        return Promise.reject(error);
+    }
+);
+
 // ★★★ Inertia Router グローバルフック ★★★
 
 // ★ Inertia リクエスト前：credentials を「include」に設定
@@ -249,6 +264,16 @@ router.on("before", event => {
         event.detail.visit.options = {};
     }
     (event.detail.visit.options as any).credentials = "include";
+});
+
+// ★ 無効なレスポンス（419エラーなど）を検出
+router.on("invalid", event => {
+    const response = event.detail.response;
+    if (response && response.status === 419) {
+        console.warn("Inertia: 419 Page Expired detected - reloading page");
+        event.preventDefault();
+        window.location.reload();
+    }
 });
 
 // ページ遷移成功時

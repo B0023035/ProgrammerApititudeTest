@@ -8,11 +8,39 @@ use Inertia\Inertia;
 
 class UserManagementController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::withCount('examSessions')
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        // ソートパラメータの取得
+        $sortField = $request->input('sort', 'created_at');
+        $sortDirection = $request->input('direction', 'desc');
+
+        // 許可されたソートフィールドのバリデーション
+        $allowedSortFields = ['id', 'name', 'email', 'created_at', 'exam_sessions_count', 'grade'];
+        if (!in_array($sortField, $allowedSortFields)) {
+            $sortField = 'created_at';
+        }
+
+        // ソート方向のバリデーション
+        if (!in_array($sortDirection, ['asc', 'desc'])) {
+            $sortDirection = 'desc';
+        }
+
+        $query = User::withCount('examSessions');
+
+        // 受験回数でソートする場合
+        if ($sortField === 'exam_sessions_count') {
+            $query->orderBy('exam_sessions_count', $sortDirection);
+        }
+        // 学年でソートする場合（graduation_yearを使用）
+        elseif ($sortField === 'grade') {
+            $query->orderBy('graduation_year', $sortDirection);
+        }
+        // その他のフィールドでソート
+        else {
+            $query->orderBy($sortField, $sortDirection);
+        }
+
+        $users = $query->paginate(20)->withQueryString();
 
         // 各ユーザーに学年情報を追加
         $users->getCollection()->transform(function ($user) {
@@ -30,6 +58,8 @@ class UserManagementController extends Controller
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
+            'sort' => $sortField,
+            'direction' => $sortDirection,
         ]);
     }
 

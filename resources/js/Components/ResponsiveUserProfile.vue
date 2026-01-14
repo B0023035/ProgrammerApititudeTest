@@ -77,6 +77,7 @@ defineProps({
 
         <template #content>
             <DropdownLink :href="route('profile.edit')">Profile</DropdownLink>
+            <DropdownLink :href="route('my-results')">リザルト</DropdownLink>
 
             <button
                 type="button"

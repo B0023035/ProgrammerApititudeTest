@@ -115,10 +115,7 @@ const getBestScore = (user: User) => {
                         </div>
 
                         <!-- 展開コンテンツ -->
-                        <div
-                            v-if="isSelected(grade)"
-                            class="border-t border-gray-200 bg-gray-50"
-                        >
+                        <div v-if="isSelected(grade)" class="border-t border-gray-200 bg-gray-50">
                             <div class="p-6">
                                 <h3 class="text-lg font-semibold text-gray-900 mb-4">
                                     ユーザー一覧

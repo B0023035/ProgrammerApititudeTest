@@ -56,25 +56,143 @@ class ResultsManagementController extends Controller
     }
 
     /**
-     * ランク計算(新基準)
-     * 〜35.75: D (Bronze)
-     * 36〜50.75: C (Silver)
-     * 51〜60.75: B (Gold)
-     * 61〜: A (Platinum)
+     * ランク計算(新基準) - 問題数に応じてスケーリング
+     * 95問基準: Platinum≥61, Gold≥51, Silver≥36, Bronze<36
+     * スケーリング: 閾値 × (実際の問題数 / 95)
      */
-    private function calculateRank($score)
+    private function calculateRank($score, $actualQuestionCount = 95)
     {
-        if ($score >= 61) {
+        // 基準は95問でのスコア
+        $baseQuestions = 95;
+        $scaleFactor = $actualQuestionCount / $baseQuestions;
+        
+        $platinumThreshold = 61 * $scaleFactor;
+        $goldThreshold = 51 * $scaleFactor;
+        $silverThreshold = 36 * $scaleFactor;
+        
+        if ($score >= $platinumThreshold) {
             return 'Platinum';
         }
-        if ($score >= 51) {
+        if ($score >= $goldThreshold) {
             return 'Gold';
         }
-        if ($score >= 36) {
+        if ($score >= $silverThreshold) {
             return 'Silver';
         }
 
         return 'Bronze';
+    }
+    
+    /**
+     * セッションの実際の問題数を取得（security_logから）
+     */
+    private function getSessionQuestionCount($session)
+    {
+        if (!$session) {
+            return 95; // デフォルト
+        }
+        
+        // security_logからquestion_idsを取得
+        $securityLog = $session->security_log ?? [];
+        if (isset($securityLog['question_ids']) && is_array($securityLog['question_ids'])) {
+            $questionIds = $securityLog['question_ids'];
+            return count($questionIds['1'] ?? []) + count($questionIds['2'] ?? []) + count($questionIds['3'] ?? []);
+        }
+        
+        // イベントから取得
+        if ($session->event) {
+            $event = $session->event;
+            $mode = $event->question_selection_mode ?? 'sequential';
+            
+            // パート別問題数が設定されている場合
+            if ($event->part1_questions !== null || $event->part2_questions !== null || $event->part3_questions !== null) {
+                $part1 = $event->part1_questions ?? 40;
+                $part2 = $event->part2_questions ?? 30;
+                $part3 = $event->part3_questions ?? 25;
+                return $part1 + $part2 + $part3;
+            }
+            
+            // customモード、または問題数が未設定の場合は実際の回答数をカウント
+            if ($mode === 'custom' || $mode === 'random') {
+                $answerCount = Answer::where('exam_session_id', $session->id)->count();
+                if ($answerCount > 0) {
+                    return $answerCount;
+                }
+            }
+        }
+        
+        // 最終手段: 実際に回答された問題数をカウント
+        $answerCount = Answer::where('exam_session_id', $session->id)->count();
+        if ($answerCount > 0) {
+            return $answerCount;
+        }
+        
+        return 95; // デフォルト
+    }
+    
+    /**
+     * セッションのパート別問題数を取得
+     */
+    private function getSessionPartQuestionCounts($session)
+    {
+        if (!$session) {
+            return $this->getPartQuestionCounts(); // デフォルト
+        }
+        
+        // security_logからquestion_idsを取得
+        $securityLog = $session->security_log ?? [];
+        if (isset($securityLog['question_ids']) && is_array($securityLog['question_ids'])) {
+            $questionIds = $securityLog['question_ids'];
+            return [
+                1 => count($questionIds['1'] ?? []),
+                2 => count($questionIds['2'] ?? []),
+                3 => count($questionIds['3'] ?? []),
+            ];
+        }
+        
+        // イベントから取得
+        if ($session->event) {
+            $event = $session->event;
+            $mode = $event->question_selection_mode ?? 'sequential';
+            
+            // パート別問題数が設定されている場合
+            if ($event->part1_questions !== null || $event->part2_questions !== null || $event->part3_questions !== null) {
+                return [
+                    1 => $event->part1_questions ?? 40,
+                    2 => $event->part2_questions ?? 30,
+                    3 => $event->part3_questions ?? 25,
+                ];
+            }
+            
+            // customモード、または問題数が未設定の場合は実際の回答数をカウント
+            if ($mode === 'custom' || $mode === 'random') {
+                $counts = [1 => 0, 2 => 0, 3 => 0];
+                $answers = Answer::where('exam_session_id', $session->id)->get();
+                foreach ($answers as $answer) {
+                    if (isset($counts[$answer->part])) {
+                        $counts[$answer->part]++;
+                    }
+                }
+                // 回答がある場合のみ返す
+                if (array_sum($counts) > 0) {
+                    return $counts;
+                }
+            }
+        }
+        
+        // 最終手段: 実際に回答された問題数をパート別にカウント        // 最終手段: 実際に回答された問題数をパート別にカウント
+        $answers = Answer::where('exam_session_id', $session->id)->get();
+        if ($answers->count() > 0) {
+            $counts = [1 => 0, 2 => 0, 3 => 0];
+            foreach ($answers as $answer) {
+                if (isset($counts[$answer->part])) {
+                    $counts[$answer->part]++;
+                }
+            }
+            return $counts;
+        }
+        
+        return $this->getPartQuestionCounts();
     }
 
     /**
@@ -82,17 +200,15 @@ class ResultsManagementController extends Controller
      */
     public function index(Request $request)
     {
-        $partQuestionCounts = $this->getPartQuestionCounts();
-        $totalQuestions = array_sum($partQuestionCounts);
-
-        $sessions = ExamSession::with('user')
+        $sessions = ExamSession::with(['user', 'event'])
             ->whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->latest('finished_at')
             ->get()
-            ->map(function ($session) use ($totalQuestions) {
+            ->map(function ($session) {
                 $score = $this->calculateScore($session->id);
-                $rank = $this->calculateRank($score);
+                $totalQuestions = $this->getSessionQuestionCount($session);
+                $rank = $this->calculateRank($score, $totalQuestions);
 
                 return [
                     'id' => $session->id,
@@ -132,8 +248,8 @@ class ResultsManagementController extends Controller
     public function sessionDetail($sessionId)
     {
         $session = ExamSession::with(['user', 'event'])->findOrFail($sessionId);
-        $partQuestionCounts = $this->getPartQuestionCounts();
-        $totalQuestions = array_sum($partQuestionCounts);
+        $partQuestionCounts = $this->getSessionPartQuestionCounts($session);
+        $totalQuestions = $this->getSessionQuestionCount($session);
 
         $answers = Answer::where('exam_session_id', $sessionId)
             ->with(['question', 'question.choices'])
@@ -142,7 +258,7 @@ class ResultsManagementController extends Controller
             ->get();
 
         $totalScore = $this->calculateScore($sessionId);
-        $rank = $this->calculateRank($totalScore);
+        $rank = $this->calculateRank($totalScore, $totalQuestions);
 
         $answersByPart = [];
 
@@ -241,16 +357,17 @@ class ResultsManagementController extends Controller
     public function userDetail($userId)
     {
         $user = User::findOrFail($userId);
-        $partQuestionCounts = $this->getPartQuestionCounts();
-        $totalQuestions = array_sum($partQuestionCounts);
 
-        $sessions = ExamSession::where('user_id', $userId)
+        $sessions = ExamSession::with('event')
+            ->where('user_id', $userId)
             ->whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->orderBy('finished_at', 'desc')
             ->get()
-            ->map(function ($session) use ($partQuestionCounts, $totalQuestions) {
+            ->map(function ($session) {
                 $totalScore = $this->calculateScore($session->id);
+                $partQuestionCounts = $this->getSessionPartQuestionCounts($session);
+                $totalQuestions = $this->getSessionQuestionCount($session);
 
                 $partScores = [];
                 for ($part = 1; $part <= 3; $part++) {
@@ -280,7 +397,7 @@ class ResultsManagementController extends Controller
                     'percentage' => $totalQuestions > 0
                         ? round(($totalScore / $totalQuestions) * 100, 1)
                         : 0,
-                    'rank' => $this->calculateRank($totalScore),
+                    'rank' => $this->calculateRank($totalScore, $totalQuestions),
                     'finished_at' => $session->finished_at->toIso8601String(),
                     'part1_score' => $partScores[1]['points'],
                     'part2_score' => $partScores[2]['points'],
@@ -344,7 +461,7 @@ class ResultsManagementController extends Controller
         $grade = $request->input('grade'); // 例: 1,2,3 または 'all'
         $eventId = $request->input('event_id'); // イベントを直接選択する場合のID
 
-        $baseQuery = ExamSession::whereNotNull('finished_at')
+        $baseQuery = ExamSession::with('event')->whereNotNull('finished_at')
             ->whereNull('disqualified_at');
 
         // 現在の学年度を計算
@@ -387,6 +504,32 @@ class ResultsManagementController extends Controller
         $totalUsers = User::count();
 
         $sessions = (clone $baseQuery)->get();
+        
+        // イベントでフィルタリングしている場合、そのイベントの問題数を取得
+        $filteredEvent = null;
+        $filteredEventPartCounts = null;
+        if ($eventId) {
+            $filteredEvent = Event::find((int) $eventId);
+            if ($filteredEvent) {
+                // まずイベント自体の問題数設定を確認
+                if ($filteredEvent->part1_questions !== null || $filteredEvent->part2_questions !== null || $filteredEvent->part3_questions !== null) {
+                    $filteredEventPartCounts = [
+                        1 => $filteredEvent->part1_questions ?? 40,
+                        2 => $filteredEvent->part2_questions ?? 30,
+                        3 => $filteredEvent->part3_questions ?? 25,
+                    ];
+                } elseif ($sessions->count() > 0) {
+                    // イベントに問題数設定がない場合、回答があるセッションから取得
+                    foreach ($sessions as $s) {
+                        $answerCount = Answer::where('exam_session_id', $s->id)->count();
+                        if ($answerCount > 0) {
+                            $filteredEventPartCounts = $this->getSessionPartQuestionCounts($s);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 
         // 全セッションのスコアを計算
         $scores = [];
@@ -397,20 +540,27 @@ class ResultsManagementController extends Controller
             'Bronze' => 0,
         ];
 
+        // パート別スコアと問題数を記録
         $partScores = [1 => [], 2 => [], 3 => []];
+        $partQuestionCounts = [1 => [], 2 => [], 3 => []];
 
         foreach ($sessions as $session) {
             $totalScore = $this->calculateScore($session->id);
             $scores[] = $totalScore;
 
-            // ランク集計
-            $rank = $this->calculateRank($totalScore);
+            // セッションごとの問題数を取得してランク計算
+            $totalQuestions = $this->getSessionQuestionCount($session);
+            $rank = $this->calculateRank($totalScore, $totalQuestions);
             $rankCounts[$rank]++;
+            
+            // パート別問題数を取得
+            $sessionPartCounts = $this->getSessionPartQuestionCounts($session);
 
-            // パート別スコア集計
+            // パート別スコアと問題数を集計
             for ($part = 1; $part <= 3; $part++) {
                 $partScore = $this->calculateScore($session->id, $part);
                 $partScores[$part][] = $partScore;
+                $partQuestionCounts[$part][] = $sessionPartCounts[$part];
             }
         }
 
@@ -418,35 +568,51 @@ class ResultsManagementController extends Controller
             ? round(array_sum($scores) / count($scores), 2)
             : 0;
 
-        // 得点分布を計算 (95点満点)
-        $scoreDistribution = [
-            '90-95' => 0,
-            '80-89' => 0,
-            '70-79' => 0,
-            '60-69' => 0,
-            '0-59' => 0,
-        ];
-
-        foreach ($scores as $score) {
-            if ($score >= 90) {
-                $scoreDistribution['90-95']++;
-            } elseif ($score >= 80) {
-                $scoreDistribution['80-89']++;
-            } elseif ($score >= 70) {
-                $scoreDistribution['70-79']++;
-            } elseif ($score >= 60) {
-                $scoreDistribution['60-69']++;
-            } else {
-                $scoreDistribution['0-59']++;
-            }
-        }
-
-        // パート別平均点を計算
+        // パート別平均点と問題数情報を計算
         $partAverages = [];
         for ($part = 1; $part <= 3; $part++) {
-            $partAverages[$part] = count($partScores[$part]) > 0
+            $avgScore = count($partScores[$part]) > 0
                 ? round(array_sum($partScores[$part]) / count($partScores[$part]), 2)
                 : 0;
+            
+            // 問題数を決定
+            $questionCount = null;
+            
+            // 1. イベントフィルター時で回答があるセッションがあれば使用
+            if ($filteredEventPartCounts !== null && $filteredEventPartCounts[$part] > 0) {
+                $questionCount = $filteredEventPartCounts[$part];
+            }
+            
+            // 2. セッションから集計した問題数を確認（0以外のみ）
+            if ($questionCount === null && !empty($partQuestionCounts[$part])) {
+                $validCounts = array_filter($partQuestionCounts[$part], fn($c) => $c > 0);
+                if (!empty($validCounts)) {
+                    $uniqueCounts = array_unique($validCounts);
+                    if (count($uniqueCounts) === 1) {
+                        // 全セッションが同じ問題数
+                        $questionCount = reset($uniqueCounts);
+                    } else {
+                        // 問題数が混在 → null（後でデフォルト使用）
+                        $questionCount = null;
+                    }
+                }
+            }
+            
+            // 3. どちらも取れなければデフォルト値
+            if ($questionCount === null || $questionCount === 0) {
+                $questionCount = $part === 1 ? 40 : ($part === 2 ? 30 : 25);
+            }
+            
+            // 最低点 = 問題数 × -0.25、最高点 = 問題数
+            $minScore = round($questionCount * -0.25, 2);
+            $maxScore = $questionCount;
+            
+            $partAverages[$part] = [
+                'average' => $avgScore,
+                'question_count' => $questionCount,
+                'min_score' => $minScore,
+                'max_score' => $maxScore,
+            ];
         }
 
         // 月別受験者数を計算(フィルター後の $sessions を基にグルーピング)
@@ -570,7 +736,6 @@ class ResultsManagementController extends Controller
                 'total_users' => $totalUsers,
                 'average_score' => $averageScore,
                 'rank_distribution' => $rankCounts,
-                'score_distribution' => $scoreDistribution,
                 'part_averages' => $partAverages,
                 'monthly_data' => $monthlyData,
             ],
@@ -588,18 +753,16 @@ class ResultsManagementController extends Controller
      */
     public function comlink()
     {
-        $partQuestionCounts = $this->getPartQuestionCounts();
-        $totalQuestions = array_sum($partQuestionCounts);
-
         // イベント情報も一緒に取得
         $sessions = ExamSession::with(['user', 'event'])
             ->whereNotNull('finished_at')
             ->whereNull('disqualified_at')
             ->latest('finished_at')
             ->get()
-            ->map(function ($session) use ($totalQuestions) {
+            ->map(function ($session) {
                 $totalScore = $this->calculateScore($session->id);
-                $rank = $this->calculateRank($totalScore);
+                $totalQuestions = $this->getSessionQuestionCount($session);
+                $rank = $this->calculateRank($totalScore, $totalQuestions);
 
                 return [
                     'id' => $session->id,
