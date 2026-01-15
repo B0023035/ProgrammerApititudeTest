@@ -174,7 +174,6 @@ class CSRFTokenManager {
         if ((window as any).axios) {
             (window as any).axios.defaults.headers.common["X-CSRF-TOKEN"] = token;
         }
-
     }
 
     private refreshTokenAsync(): void {
@@ -225,7 +224,7 @@ createInertiaApp({
 axios.interceptors.request.use(async config => {
     // ★ credentialsを確保（セッションCookieをリクエストに含める）
     config.withCredentials = true;
-    
+
     // POST/PUT/PATCH/DELETE の場合のみトークンを更新
     if (config.method && ["post", "put", "patch", "delete"].includes(config.method.toLowerCase())) {
         try {

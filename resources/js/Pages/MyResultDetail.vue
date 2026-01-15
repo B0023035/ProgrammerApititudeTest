@@ -68,9 +68,7 @@ const openCertificate = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                試験結果詳細
-            </h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">試験結果詳細</h2>
         </template>
 
         <div class="py-8">
@@ -81,8 +79,18 @@ const openCertificate = () => {
                         :href="route('my-results')"
                         class="inline-flex items-center text-blue-600 hover:text-blue-800"
                     >
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        <svg
+                            class="w-5 h-5 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                            />
                         </svg>
                         一覧に戻る
                     </Link>
@@ -94,7 +102,7 @@ const openCertificate = () => {
                         <div>
                             <h1 class="text-3xl font-bold text-gray-900 mb-2">受験結果詳細</h1>
                             <p class="text-gray-600">
-                                {{ session.event?.name || '一般試験' }}
+                                {{ session.event?.name || "一般試験" }}
                             </p>
                         </div>
                         <div class="flex items-center gap-4">
@@ -117,7 +125,7 @@ const openCertificate = () => {
                         <div class="border rounded-lg p-4">
                             <p class="text-sm text-gray-600 mb-1">イベント</p>
                             <p class="text-sm font-medium">
-                                {{ session.event?.name || '一般試験' }}
+                                {{ session.event?.name || "一般試験" }}
                             </p>
                         </div>
                         <div class="border rounded-lg p-4">
@@ -141,7 +149,9 @@ const openCertificate = () => {
 
                 <!-- スコアカード -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                    <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+                    <div
+                        class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white"
+                    >
                         <div class="text-sm opacity-90 mb-2">総合得点</div>
                         <div class="text-4xl font-bold">{{ session.total_score }}</div>
                         <div class="text-sm opacity-75 mt-2">
@@ -160,8 +170,9 @@ const openCertificate = () => {
                             {{ answersByPart[part]?.score?.correct || 0 }}
                         </div>
                         <div class="text-sm opacity-75 mt-2">
-                            {{ answersByPart[part]?.score?.total || 0 }}問中 
-                            ({{ answersByPart[part]?.score?.percentage || 0 }}%)
+                            {{ answersByPart[part]?.score?.total || 0 }}問中 ({{
+                                answersByPart[part]?.score?.percentage || 0
+                            }}%)
                         </div>
                     </div>
                 </div>
@@ -177,9 +188,11 @@ const openCertificate = () => {
                         >
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-900">Part {{ part }}</h3>
+                                    <h3 class="text-lg font-semibold text-gray-900">
+                                        Part {{ part }}
+                                    </h3>
                                     <p class="text-sm text-gray-600">
-                                        正解: {{ answersByPart[part]?.score?.correct || 0 }}問 / 
+                                        正解: {{ answersByPart[part]?.score?.correct || 0 }}問 /
                                         {{ answersByPart[part]?.score?.total || 0 }}問
                                     </p>
                                 </div>
@@ -194,11 +207,17 @@ const openCertificate = () => {
                                 <div
                                     class="h-3 rounded-full transition-all duration-500"
                                     :class="{
-                                        'bg-green-500': (answersByPart[part]?.score?.percentage || 0) >= 70,
-                                        'bg-yellow-500': (answersByPart[part]?.score?.percentage || 0) >= 50 && (answersByPart[part]?.score?.percentage || 0) < 70,
-                                        'bg-red-500': (answersByPart[part]?.score?.percentage || 0) < 50,
+                                        'bg-green-500':
+                                            (answersByPart[part]?.score?.percentage || 0) >= 70,
+                                        'bg-yellow-500':
+                                            (answersByPart[part]?.score?.percentage || 0) >= 50 &&
+                                            (answersByPart[part]?.score?.percentage || 0) < 70,
+                                        'bg-red-500':
+                                            (answersByPart[part]?.score?.percentage || 0) < 50,
                                     }"
-                                    :style="{ width: (answersByPart[part]?.score?.percentage || 0) + '%' }"
+                                    :style="{
+                                        width: (answersByPart[part]?.score?.percentage || 0) + '%',
+                                    }"
                                 ></div>
                             </div>
                         </div>

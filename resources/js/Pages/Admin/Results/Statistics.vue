@@ -113,12 +113,12 @@ const maxMonthlyCount = computed(() => {
 // パート別情報を取得するヘルパー
 const getPartInfo = (part: number): PartAverageInfo => {
     const info = stats.part_averages?.[part];
-    if (info && typeof info === 'object') {
+    if (info && typeof info === "object") {
         return info;
     }
     // フォールバック（古い形式の場合）
     return {
-        average: typeof info === 'number' ? info : 0,
+        average: typeof info === "number" ? info : 0,
         question_count: part === 1 ? 40 : part === 2 ? 30 : 25,
         min_score: part === 1 ? -10 : part === 2 ? -7.5 : -6.25,
         max_score: part === 1 ? 40 : part === 2 ? 30 : 25,
@@ -381,7 +381,9 @@ const getZeroLinePosition = (part: number) => {
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm font-medium text-gray-700"
-                                        >Part 1 - 規則発見力 ({{ getPartInfo(1).min_score }}〜{{ getPartInfo(1).max_score }}点)</span
+                                        >Part 1 - 規則発見力 ({{ getPartInfo(1).min_score }}〜{{
+                                            getPartInfo(1).max_score
+                                        }}点)</span
                                     >
                                     <span
                                         class="text-lg font-bold"
@@ -414,7 +416,9 @@ const getZeroLinePosition = (part: number) => {
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm font-medium text-gray-700"
-                                        >Part 2 - 空間把握力 ({{ getPartInfo(2).min_score }}〜{{ getPartInfo(2).max_score }}点)</span
+                                        >Part 2 - 空間把握力 ({{ getPartInfo(2).min_score }}〜{{
+                                            getPartInfo(2).max_score
+                                        }}点)</span
                                     >
                                     <span
                                         class="text-lg font-bold"
@@ -447,7 +451,9 @@ const getZeroLinePosition = (part: number) => {
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm font-medium text-gray-700"
-                                        >Part 3 - 問題解決力 ({{ getPartInfo(3).min_score }}〜{{ getPartInfo(3).max_score }}点)</span
+                                        >Part 3 - 問題解決力 ({{ getPartInfo(3).min_score }}〜{{
+                                            getPartInfo(3).max_score
+                                        }}点)</span
                                     >
                                     <span
                                         class="text-lg font-bold"

@@ -541,7 +541,7 @@ onBeforeUnmount(() => {
                             d="M10 19l-7-7m0 0l7-7m-7 7h18"
                         ></path>
                     </svg>
-                    {{ isGuest ? 'ホーム画面に戻る' : '前のページに戻る' }}
+                    {{ isGuest ? "ホーム画面に戻る" : "前のページに戻る" }}
                 </button>
             </div>
         </div>

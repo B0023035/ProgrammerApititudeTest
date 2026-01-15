@@ -11,7 +11,7 @@ const errorMessage = ref("");
 const submit = () => {
     errorMessage.value = "";
     form.post(route("session.verify"), {
-        onError: (errors) => {
+        onError: errors => {
             if (errors.session_code) {
                 errorMessage.value = errors.session_code;
             } else {
