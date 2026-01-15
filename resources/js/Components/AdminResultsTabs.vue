@@ -35,9 +35,8 @@ const isActive = (routeName: string) => {
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
                 ]"
             >
-                📊 Comlink
+                📊 成績管理
             </Link>
-            <!-- 成績管理は Comlink に統一 -->
             <Link
                 :href="route('admin.results.statistics')"
                 :class="[

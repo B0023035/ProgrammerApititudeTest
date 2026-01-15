@@ -1593,6 +1593,100 @@ public function saveAnswersBatch(Request $request)
     }
 
     /**
+     * 過去の試験結果から賞状を表示（リザルト画面用）
+     */
+    public function showCertificate($sessionUuid)
+    {
+        $user = Auth::user();
+
+        // セッションを取得
+        $session = ExamSession::where('session_uuid', $sessionUuid)
+            ->where('user_id', $user->id)
+            ->whereNotNull('finished_at')
+            ->whereNull('disqualified_at')
+            ->firstOrFail();
+
+        // 試験タイプを取得
+        $securityLog = json_decode($session->security_log ?? '{}', true);
+        $examType = $securityLog['exam_type'] ?? 'full';
+        $questionIds = $securityLog['question_ids'] ?? null;
+
+        // イベント情報を取得（存在する場合）
+        $event = null;
+        if ($session->event_id) {
+            $event = \App\Models\Event::find($session->event_id);
+        }
+
+        // 各部の結果を集計
+        $results = [];
+        $maxScores = [];
+
+        for ($part = 1; $part <= 3; $part++) {
+            $answers = Answer::where('user_id', $user->id)
+                ->where('exam_session_id', $session->id)
+                ->where('part', $part)
+                ->get();
+
+            if ($questionIds && isset($questionIds["part_{$part}"]) && count($questionIds["part_{$part}"]) > 0) {
+                $totalQuestions = count($questionIds["part_{$part}"]);
+            } else {
+                $totalQuestions = $this->getQuestionCountByEvent($part, $examType, $event);
+            }
+
+            $correct = $answers->where('is_correct', 1)->count();
+            $incorrect = $answers->where('is_correct', 0)->count();
+            $unanswered = $totalQuestions - $correct - $incorrect;
+
+            $score = ($correct * 1) + ($incorrect * -0.25);
+
+            $results[$part] = [
+                'correct' => $correct,
+                'incorrect' => $incorrect,
+                'unanswered' => $unanswered,
+                'total' => $totalQuestions,
+                'score' => round($score, 2),
+            ];
+
+            $maxScores[$part] = $totalQuestions;
+        }
+
+        $totalScore = $results[1]['score'] + $results[2]['score'] + $results[3]['score'];
+        $maxTotalScore = $maxScores[1] + $maxScores[2] + $maxScores[3];
+
+        // ランク判定
+        $baseMax = 95;
+        $scaleFactor = $maxTotalScore / $baseMax;
+        
+        $platinumThreshold = 61 * $scaleFactor;
+        $goldThreshold = 51 * $scaleFactor;
+        $silverThreshold = 36 * $scaleFactor;
+
+        if ($totalScore >= $platinumThreshold) {
+            $rank = 'A';
+            $rankName = 'Platinum';
+        } elseif ($totalScore >= $goldThreshold) {
+            $rank = 'B';
+            $rankName = 'Gold';
+        } elseif ($totalScore >= $silverThreshold) {
+            $rank = 'C';
+            $rankName = 'Silver';
+        } else {
+            $rank = 'D';
+            $rankName = 'Bronze';
+        }
+
+        return Inertia::render('Certificate', [
+            'results' => $results,
+            'totalScore' => round($totalScore, 2),
+            'rank' => $rank,
+            'rankName' => $rankName,
+            'userName' => $user->name,
+            'schoolName' => 'YIC情報ビジネス専門学校',
+            'finishedAt' => $session->finished_at,
+        ]);
+    }
+
+    /**
  * ゲストパート完了処理 - 修正版(全問未回答・時間切れでも進める)
  */
 public function guestCompletePart(Request $request)

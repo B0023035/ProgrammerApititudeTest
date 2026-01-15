@@ -76,7 +76,7 @@ defineProps({
         </template>
 
         <template #content>
-            <DropdownLink :href="route('profile.edit')">Profile</DropdownLink>
+            <DropdownLink :href="route('profile.edit')">プロフィール</DropdownLink>
             <DropdownLink :href="route('my-results')">リザルト</DropdownLink>
 
             <button
@@ -84,7 +84,7 @@ defineProps({
                 class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                 @click="logout"
             >
-                Log Out
+                ログアウト
             </button>
         </template>
     </Dropdown>

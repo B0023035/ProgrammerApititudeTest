@@ -59,7 +59,7 @@ const getPartColor = (part: number) => {
 
 // 賞状を表示
 const openCertificate = () => {
-    router.visit(route("exam.result", { sessionUuid: props.session.session_uuid }));
+    router.visit(route("certificate", { sessionUuid: props.session.session_uuid }));
 };
 </script>
 

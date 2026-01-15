@@ -345,6 +345,7 @@ Route::middleware(['check.session.code'])->group(function () {
         // 過去の試験結果一覧
         Route::get('/my-results', [ExamController::class, 'myResults'])->name('my-results');
         Route::get('/my-results/{sessionId}', [ExamController::class, 'myResultDetail'])->name('my-results.detail');
+        Route::get('/certificate/{sessionUuid}', [ExamController::class, 'showCertificate'])->name('certificate');
     });
 
     // 認証ルート(ログイン・登録など)

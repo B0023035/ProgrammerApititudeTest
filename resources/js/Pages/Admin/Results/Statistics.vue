@@ -104,12 +104,6 @@ const rankPercentages = computed(() => {
     };
 });
 
-// 月別データの最大値を取得(グラフのスケール用)
-const maxMonthlyCount = computed(() => {
-    if (!stats.monthly_data) return 1;
-    return Math.max(...(Object.values(stats.monthly_data) as number[]), 1);
-});
-
 // パート別情報を取得するヘルパー
 const getPartInfo = (part: number): PartAverageInfo => {
     const info = stats.part_averages?.[part];
@@ -480,39 +474,6 @@ const getZeroLinePosition = (part: number) => {
                                         "
                                         :style="`width: ${getPartBarWidth(3, getPartInfo(3).average)}%`"
                                     ></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 月別受験者数 -->
-                    <div class="bg-white rounded-lg shadow-lg p-6">
-                        <h2 class="text-xl font-bold text-gray-900 mb-4">月別受験者数(2025年)</h2>
-                        <div class="space-y-3">
-                            <div
-                                v-for="month in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]"
-                                :key="month"
-                                class="flex items-center"
-                            >
-                                <div class="w-16 text-sm font-medium text-gray-700">
-                                    {{ month }}月
-                                </div>
-                                <div class="flex-1">
-                                    <div class="bg-gray-200 rounded-full h-5">
-                                        <div
-                                            class="bg-indigo-500 h-5 rounded-full flex items-center justify-end pr-2 transition-all"
-                                            :style="`width: ${
-                                                (stats.monthly_data[month] / maxMonthlyCount) * 100
-                                            }%`"
-                                        >
-                                            <span
-                                                v-if="stats.monthly_data[month] > 0"
-                                                class="text-xs text-white font-semibold"
-                                            >
-                                                {{ stats.monthly_data[month] }}人
-                                            </span>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -101,35 +101,7 @@ const logout = () => {
                     <p class="text-gray-600 text-sm">セッションコードの作成・管理</p>
                 </Link>
 
-                <!-- Comlink成績管理システム -->
-                <Link
-                    :href="route('admin.results.comlink')"
-                    class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-105 cursor-pointer group"
-                >
-                    <div class="flex items-center justify-between mb-4">
-                        <h3
-                            class="text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors"
-                        >
-                            📊 成績管理 (Comlink)
-                        </h3>
-                        <svg
-                            class="w-6 h-6 text-gray-400 group-hover:text-purple-600 transition-colors"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M9 5l7 7-7 7"
-                            />
-                        </svg>
-                    </div>
-                    <p class="text-gray-600 text-sm">Web Workerを活用した高速成績分析システム</p>
-                </Link>
-
-                <!-- 成績管理を Comlink に統一 -->
+                <!-- 成績管理 -->
                 <Link
                     :href="route('admin.results.comlink')"
                     class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-105 cursor-pointer group"
@@ -154,7 +126,7 @@ const logout = () => {
                             />
                         </svg>
                     </div>
-                    <p class="text-gray-600 text-sm">受験結果の確認と管理 (Comlink)</p>
+                    <p class="text-gray-600 text-sm">受験結果の確認と管理</p>
                 </Link>
 
                 <!-- 統計・グラフ -->

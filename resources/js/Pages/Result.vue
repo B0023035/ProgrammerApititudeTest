@@ -125,12 +125,8 @@ const handleBackToHome = async () => {
         // ゲストは一番最初の画面（Welcomeページ）に戻る
         window.location.href = "/";
     } else {
-        // ログインユーザーは前のページに戻る（履歴があれば戻る、なければリザルト一覧へ）
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            router.visit("/my-results");
-        }
+        // ログインユーザーはテスト開始画面に戻る
+        router.visit("/test-start");
     }
 };
 
@@ -541,7 +537,7 @@ onBeforeUnmount(() => {
                             d="M10 19l-7-7m0 0l7-7m-7 7h18"
                         ></path>
                     </svg>
-                    {{ isGuest ? "ホーム画面に戻る" : "前のページに戻る" }}
+                    {{ isGuest ? "ホーム画面に戻る" : "ホームに戻る" }}
                 </button>
             </div>
         </div>
