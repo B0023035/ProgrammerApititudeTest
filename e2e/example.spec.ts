@@ -91,9 +91,9 @@ test.describe("認証機能", () => {
         // プロフィールメニューからログアウト
         await auth.logout();
 
-        // ユーザーログアウト後はセッションコード入力画面(/)にリダイレクトされる
-        // URLが / または セッションコード入力ページであることを確認
-        await expect(page.locator("input#session_code")).toBeVisible({ timeout: 5000 });
+        // ユーザーログアウト後はウェルカムページ(/welcome)にリダイレクトされる
+        await expect(page).toHaveURL(/.*welcome/);
+        await expect(page.locator("text=プログラマー適性検査")).toBeVisible({ timeout: 5000 });
     });
 });
 

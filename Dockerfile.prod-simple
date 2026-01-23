@@ -1,0 +1,103 @@
+# ==========================================
+# シンプルな本番環境用 Dockerfile
+# 150人同時接続対応
+# ==========================================
+
+FROM php:8.2-fpm-alpine
+
+# 必要なパッケージをインストール
+RUN apk add --no-cache \
+    nginx \
+    supervisor \
+    mysql-client \
+    libpng \
+    libjpeg-turbo \
+    freetype \
+    libzip \
+    icu-libs \
+    oniguruma \
+    curl \
+    git \
+    bash \
+    nodejs \
+    npm \
+    # ビルド依存関係
+    && apk add --no-cache --virtual .build-deps \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        freetype-dev \
+        libzip-dev \
+        icu-dev \
+        oniguruma-dev \
+        $PHPIZE_DEPS \
+    # PHP拡張機能をインストール
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        gd \
+        zip \
+        pdo \
+        pdo_mysql \
+        bcmath \
+        opcache \
+        intl \
+        pcntl \
+        mbstring \
+    # Redis拡張
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    # ビルド依存関係を削除
+    && apk del .build-deps \
+    && rm -rf /tmp/* /var/cache/apk/*
+
+# Composerをインストール
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# ワーキングディレクトリ
+WORKDIR /var/www/html
+
+# アプリケーションファイルをコピー
+COPY . .
+
+# Composer依存関係インストール
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# NPMビルド
+RUN npm ci && npm run build && rm -rf node_modules
+
+# Nginx設定
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/default.conf /etc/nginx/http.d/default.conf
+
+# PHP設定
+COPY docker/php.ini /usr/local/etc/php/php.ini
+COPY docker/www.conf /usr/local/etc/php-fpm.d/www.conf
+
+# Supervisor設定
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# 起動スクリプト
+COPY docker/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
+# ディレクトリ作成とパーミッション
+RUN mkdir -p \
+        /var/log/nginx \
+        /var/log/supervisor \
+        /var/lib/php/sessions \
+        /run/nginx \
+        storage/app/public \
+        storage/framework/cache \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
+        bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 storage bootstrap/cache
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+EXPOSE 80
+
+CMD ["/usr/local/bin/start.sh"]

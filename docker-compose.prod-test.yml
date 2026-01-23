@@ -1,0 +1,130 @@
+# ==========================================
+# 本番環境テスト用 Docker Compose
+# ポート8888で起動（テスト環境と共存可能）
+# ==========================================
+version: "3.8"
+
+services:
+    # ==========================================
+    # アプリケーション（本番イメージテスト）
+    # ==========================================
+    prod-app:
+        build:
+            context: .
+            dockerfile: Dockerfile.prod-simple
+        container_name: prog-test-prod-app
+        restart: unless-stopped
+        ports:
+            - "80:80"
+        environment:
+            - APP_ENV=production
+            - APP_DEBUG=false
+            - APP_KEY=${APP_KEY}
+            - APP_URL=http://10.146.223.35
+            - DB_CONNECTION=mysql
+            - DB_HOST=prod-db
+            - DB_PORT=3306
+            - DB_DATABASE=laravel_prod
+            - DB_USERNAME=sail
+            - DB_PASSWORD=password
+            - CACHE_DRIVER=redis
+            - QUEUE_CONNECTION=redis
+            - SESSION_DRIVER=redis
+            - REDIS_HOST=prod-redis
+            - REDIS_PASSWORD=
+            - REDIS_PORT=6379
+        networks:
+            - prod-network
+        depends_on:
+            prod-db:
+                condition: service_healthy
+            prod-redis:
+                condition: service_healthy
+
+    # ==========================================
+    # MySQL データベース（本番テスト用）
+    # ==========================================
+    prod-db:
+        image: mysql:8.0
+        container_name: prog-test-prod-db
+        restart: unless-stopped
+        ports:
+            - "3307:3306"
+        environment:
+            MYSQL_ROOT_PASSWORD: rootpassword
+            MYSQL_DATABASE: laravel_prod
+            MYSQL_USER: sail
+            MYSQL_PASSWORD: password
+            MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+        command:
+            - --max-connections=500
+            - --max_allowed_packet=256M
+            - --innodb_buffer_pool_size=512M
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_unicode_ci
+        volumes:
+            - prod-db-data:/var/lib/mysql
+        networks:
+            - prod-network
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+            interval: 5s
+            timeout: 5s
+            retries: 30
+            start_period: 30s
+
+    # ==========================================
+    # Redis（本番テスト用）
+    # ==========================================
+    prod-redis:
+        image: redis:7-alpine
+        container_name: prog-test-prod-redis
+        restart: unless-stopped
+        ports:
+            - "6380:6379"
+        command: >
+            redis-server
+            --appendonly yes
+            --maxmemory 256mb
+            --maxmemory-policy allkeys-lru
+            --maxclients 1000
+        volumes:
+            - prod-redis-data:/data
+        networks:
+            - prod-network
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
+
+    # ==========================================
+    # phpMyAdmin（管理用）
+    # ==========================================
+    prod-phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: prog-test-prod-phpmyadmin
+        restart: unless-stopped
+        ports:
+            - "8080:80"
+        environment:
+            PMA_HOST: prod-db
+            PMA_PORT: 3306
+            PMA_USER: sail
+            PMA_PASSWORD: password
+            UPLOAD_LIMIT: 100M
+        networks:
+            - prod-network
+        depends_on:
+            prod-db:
+                condition: service_healthy
+
+networks:
+    prod-network:
+        driver: bridge
+
+volumes:
+    prod-db-data:
+        driver: local
+    prod-redis-data:
+        driver: local

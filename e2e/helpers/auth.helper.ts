@@ -67,12 +67,12 @@ export class AuthHelper {
 
         // ドロップダウンが開くのを待つ - DropdownLink内のボタン（px-4クラスを持つもの）
         // レスポンシブナビゲーション（sm:hidden）内のボタンではなく、Dropdown内のボタンを選択
-        const logoutButton = this.page.locator('button.px-4:has-text("Log Out")').first();
+        const logoutButton = this.page.locator('button.px-4:has-text("ログアウト")').first();
         await logoutButton.waitFor({ state: "visible", timeout: 5000 });
 
         // ログアウトリンクをクリック
         await logoutButton.click();
-        // ユーザーのログアウトは / にリダイレクトされる（セッションコード入力画面）
-        await this.page.waitForURL("**/", { timeout: 10000 });
+        // ユーザーのログアウト後はウェルカムページ(/welcome)にリダイレクトされる
+        await this.page.waitForURL("**/welcome", { timeout: 10000 });
     }
 }

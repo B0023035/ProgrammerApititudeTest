@@ -39,6 +39,7 @@ services:
             MYSQL_USER: "${DB_USERNAME}"
             MYSQL_PASSWORD: "${DB_PASSWORD}"
             MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        command: --max-connections=200 --max_allowed_packet=256M
         volumes:
             - "sail-mysql:/var/lib/mysql"
             - "./vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh"
@@ -57,6 +58,7 @@ services:
         image: "redis:alpine"
         ports:
             - "${FORWARD_REDIS_PORT:-6379}:6379"
+        command: redis-server --maxmemory 100mb --maxmemory-policy allkeys-lru
         volumes:
             - "sail-redis:/data"
         networks:

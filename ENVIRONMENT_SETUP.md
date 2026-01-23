@@ -21,47 +21,49 @@ VS Codeでプロジェクトを開くと、推奨拡張機能のインストー�
 
 ## 作成された環境再現用ファイル
 
-| ファイル | 説明 |
-|---------|------|
-| `.vscode/extensions.json` | VS Code推奨拡張機能リスト（自動インストール促進） |
-| `.vscode/settings.json` | プロジェクト固有のVS Code設定 |
-| `scripts/install-extensions.sh` | 拡張機能一括インストールスクリプト |
-| `scripts/setup-environment.sh` | 環境自動セットアップスクリプト |
+| ファイル                        | 説明                                              |
+| ------------------------------- | ------------------------------------------------- |
+| `.vscode/extensions.json`       | VS Code推奨拡張機能リスト（自動インストール促進） |
+| `.vscode/settings.json`         | プロジェクト固有のVS Code設定                     |
+| `scripts/install-extensions.sh` | 拡張機能一括インストールスクリプト                |
+| `scripts/setup-environment.sh`  | 環境自動セットアップスクリプト                    |
 
 ### インストールされるVS Code拡張機能
 
-| 拡張機能ID | 説明 |
-|-----------|------|
-| `github.copilot` | GitHub Copilot |
-| `github.copilot-chat` | GitHub Copilot Chat |
-| `vue.volar` | Vue.js サポート |
-| `esbenp.prettier-vscode` | コードフォーマッター |
-| `ms-ceintl.vscode-language-pack-ja` | 日本語言語パック |
-| `aaron-bond.better-comments` | コメント装飾 |
-| `celianriboulet.webvalidator` | Web検証ツール |
-| `ecmel.vscode-html-css` | HTML/CSSサポート |
-| `formulahendry.auto-rename-tag` | タグ自動リネーム |
-| `mosapride.zenkaku` | 全角文字チェック |
-| `streetsidesoftware.code-spell-checker` | スペルチェッカー |
-| `tabnine.tabnine-vscode` | AI補完 |
+| 拡張機能ID                              | 説明                 |
+| --------------------------------------- | -------------------- |
+| `github.copilot`                        | GitHub Copilot       |
+| `github.copilot-chat`                   | GitHub Copilot Chat  |
+| `vue.volar`                             | Vue.js サポート      |
+| `esbenp.prettier-vscode`                | コードフォーマッター |
+| `ms-ceintl.vscode-language-pack-ja`     | 日本語言語パック     |
+| `aaron-bond.better-comments`            | コメント装飾         |
+| `celianriboulet.webvalidator`           | Web検証ツール        |
+| `ecmel.vscode-html-css`                 | HTML/CSSサポート     |
+| `formulahendry.auto-rename-tag`         | タグ自動リネーム     |
+| `mosapride.zenkaku`                     | 全角文字チェック     |
+| `streetsidesoftware.code-spell-checker` | スペルチェッカー     |
+| `tabnine.tabnine-vscode`                | AI補完               |
 
 ---
 
 ## 必要な環境
 
 ### バージョン情報
+
 | ソフトウェア | バージョン |
-|-------------|-----------|
-| Node.js | v22.21.0 |
-| npm | 11.6.2 |
-| PHP | 8.3.6 |
-| Composer | 2.8.12 |
+| ------------ | ---------- |
+| Node.js      | v22.21.0   |
+| npm          | 11.6.2     |
+| PHP          | 8.3.6      |
+| Composer     | 2.8.12     |
 
 ## セットアップ手順
 
 ### 1. 前提ソフトウェアのインストール
 
 #### Windows (WSL2推奨)
+
 ```bash
 # WSL2をインストール（PowerShell管理者権限）
 wsl --install -d Ubuntu
@@ -70,6 +72,7 @@ wsl --install -d Ubuntu
 ```
 
 #### Node.js (nvm推奨)
+
 ```bash
 # nvmをインストール
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
@@ -81,6 +84,7 @@ nvm use 22.21.0
 ```
 
 #### PHP 8.3
+
 ```bash
 # Ubuntu/Debian
 sudo add-apt-repository ppa:ondrej/php
@@ -89,6 +93,7 @@ sudo apt install php8.3 php8.3-cli php8.3-common php8.3-curl php8.3-mbstring php
 ```
 
 #### Composer
+
 ```bash
 curl -sS https://getcomposer.org/installer | php
 sudo mv composer.phar /usr/local/bin/composer
@@ -124,6 +129,7 @@ php artisan key:generate
 ### 5. データベースのセットアップ
 
 #### Dockerを使用する場合（推奨）
+
 ```bash
 # Docker Composeで起動
 docker-compose up -d
@@ -133,7 +139,9 @@ php artisan migrate
 ```
 
 #### ローカルMySQLを使用する場合
+
 `.env`ファイルのデータベース設定を変更：
+
 ```
 DB_HOST=127.0.0.1
 DB_DATABASE=your_database
@@ -213,12 +221,15 @@ npx playwright test
 ## トラブルシューティング
 
 ### WSL2ネットワーク問題
+
 - [WSL2_NETWORK_GUIDE.md](WSL2_NETWORK_GUIDE.md) を参照
 
 ### CSRF関連エラー
+
 - [CSRF_FIX_MINIMAL.md](CSRF_FIX_MINIMAL.md) を参照
 
 ### Docker関連
+
 - [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) を参照
 
 ## ファイル構成
