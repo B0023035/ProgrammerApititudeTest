@@ -45,7 +45,7 @@ const submit = () => {
                 <!-- タイトル -->
                 <div class="text-center">
                     <h1
-                        class="text-4xl font-bold text-gray-900 mb-2"
+                        class="text-5xl font-bold text-gray-900 mb-4"
                         style="
                             font-family:
                                 &quot;Yu Mincho Demibold&quot;, &quot;游明朝 Demibold&quot;,
@@ -54,7 +54,7 @@ const submit = () => {
                     >
                         プログラマー適性検査
                     </h1>
-                    <p class="text-gray-600 mt-4">セッションコードを入力してください</p>
+                    <p class="text-xl text-gray-600 mt-6">セッションコードを入力してください</p>
                 </div>
 
                 <!-- セッションコード入力フォーム -->
@@ -93,10 +93,10 @@ const submit = () => {
                 </div>
 
                 <!-- 管理者ログインリンク -->
-                <div class="text-center">
+                <div class="text-center mt-8">
                     <Link
                         :href="route('admin.login')"
-                        class="text-sm text-gray-600 hover:text-gray-900 underline"
+                        class="text-lg text-gray-600 hover:text-gray-900 underline font-medium"
                     >
                         管理者としてログイン
                     </Link>

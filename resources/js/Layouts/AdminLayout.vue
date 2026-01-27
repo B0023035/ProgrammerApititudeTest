@@ -151,6 +151,17 @@ const logout = () => {
                     >
                         👥 ユーザー管理
                     </Link>
+                    <Link
+                        :href="route('admin.admins.index')"
+                        class="px-3 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
+                        :class="
+                            isActive('admin.admins.index')
+                                ? 'border-purple-500 text-purple-600'
+                                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                        "
+                    >
+                        🔐 管理者アカウント
+                    </Link>
                 </div>
             </div>
         </nav>

@@ -12,6 +12,8 @@ services:
         build:
             context: .
             dockerfile: Dockerfile.prod-simple
+            args:
+                APP_URL: https://aws-sample-minmi.click
         container_name: prog-test-prod-app
         restart: unless-stopped
         ports:
@@ -20,7 +22,7 @@ services:
             - APP_ENV=production
             - APP_DEBUG=false
             - APP_KEY=${APP_KEY}
-            - APP_URL=http://10.146.223.35
+            - APP_URL=https://aws-sample-minmi.click
             - DB_CONNECTION=mysql
             - DB_HOST=prod-db
             - DB_PORT=3306

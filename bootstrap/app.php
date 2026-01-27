@@ -11,6 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Cloudflare対応: プロキシを信頼
+        $middleware->trustProxies(at: '*');
+        
         // ★★★ Cookie暗号化を完全に無効化 ★★★
         $middleware->encryptCookies(except: [
             '*',  // すべてのCookieの暗号化を無効化

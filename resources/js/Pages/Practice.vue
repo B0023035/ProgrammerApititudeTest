@@ -399,14 +399,20 @@
                             <!-- 右下:ナビゲーションボタン -->
                             <div class="w-1/2 flex gap-4 justify-center items-center">
                                 <button
-                                    class="px-12 py-4 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-xl font-bold"
+                                    class="px-12 py-4 rounded-lg transition-colors text-xl font-bold"
+                                    :class="currentIndex === 0 
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                        : 'bg-gray-400 text-white hover:bg-gray-500'"
                                     :disabled="currentIndex === 0"
                                     @click="prevQuestion"
                                 >
                                     前の問題
                                 </button>
                                 <button
-                                    class="px-12 py-4 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-xl font-bold"
+                                    class="px-12 py-4 rounded-lg transition-colors text-xl font-bold"
+                                    :class="currentIndex === questions.length - 1 
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                        : 'bg-gray-400 text-white hover:bg-gray-500'"
                                     :disabled="currentIndex === questions.length - 1"
                                     @click="nextQuestion"
                                 >
@@ -566,14 +572,20 @@
                             <!-- 右側:ナビゲーションボタン(横並び・左寄せ) -->
                             <div class="flex gap-4 items-center justify-start flex-1 pl-8">
                                 <button
-                                    class="px-12 py-4 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-xl font-bold"
+                                    class="px-12 py-4 rounded-lg transition-colors text-xl font-bold"
+                                    :class="currentIndex === 0 
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                        : 'bg-gray-400 text-white hover:bg-gray-500'"
                                     :disabled="currentIndex === 0"
                                     @click="prevQuestion"
                                 >
                                     前の問題
                                 </button>
                                 <button
-                                    class="px-12 py-4 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-xl font-bold"
+                                    class="px-12 py-4 rounded-lg transition-colors text-xl font-bold"
+                                    :class="currentIndex === questions.length - 1 
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                        : 'bg-gray-400 text-white hover:bg-gray-500'"
                                     :disabled="currentIndex === questions.length - 1"
                                     @click="nextQuestion"
                                 >

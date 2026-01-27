@@ -1,8 +1,12 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AdminManagementController;
 use App\Http\Controllers\Admin\EventManagementController;
+use App\Http\Controllers\ExamAnswerController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\ExamResultController;
+use App\Http\Controllers\GuestExamController;
 use App\Http\Controllers\PracticeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionManagementController;
@@ -201,6 +205,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // ユーザー管理
         Route::resource('users', UserManagementController::class);
 
+        // 管理者アカウント管理
+        Route::prefix('admins')->name('admins.')->group(function () {
+            Route::get('/', [AdminManagementController::class, 'index'])->name('index');
+            Route::get('/create', [AdminManagementController::class, 'create'])->name('create');
+            Route::post('/', [AdminManagementController::class, 'store'])->name('store');
+            Route::delete('/{admin}', [AdminManagementController::class, 'destroy'])->name('destroy');
+        });
+
         // プロフィール管理
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -252,7 +264,7 @@ Route::middleware(['check.session.code'])->group(function () {
         Route::get('/info', function () {
             return Inertia::render('GuestInfo');
         })->name('info');
-        Route::post('/info', [ExamController::class, 'storeGuestInfo'])->name('info.store');
+        Route::post('/info', [GuestExamController::class, 'storeGuestInfo'])->name('info.store');
 
         // ゲスト用練習問題
         Route::prefix('practice')->name('practice.')->group(function () {
@@ -276,24 +288,24 @@ Route::middleware(['check.session.code'])->group(function () {
         // ゲスト用本番試験
         Route::prefix('exam')->name('exam.')->group(function () {
             // 本番試験説明ページ(練習問題完了後に表示)
-            Route::get('/explanation/{part}', [ExamController::class, 'guestExplanation'])
+            Route::get('/explanation/{part}', [GuestExamController::class, 'explanation'])
                 ->where('part', '[1-3]')
                 ->name('explanation');
             
-            Route::post('/start', [ExamController::class, 'guestStart'])->name('start');
-            Route::get('/part/{part}', [ExamController::class, 'guestPart'])
+            Route::post('/start', [GuestExamController::class, 'start'])->name('start');
+            Route::get('/part/{part}', [GuestExamController::class, 'part'])
                 ->where('part', '[1-3]')
                 ->name('part');
-            Route::post('/complete-part', [ExamController::class, 'guestCompletePart'])->name('complete-part');
-            Route::post('/report-violation', [ExamController::class, 'guestReportViolation'])->name('report-violation');
-            Route::get('/disqualified', [ExamController::class, 'guestDisqualified'])->name('disqualified');
+            Route::post('/complete-part', [GuestExamController::class, 'completePart'])->name('complete-part');
+            Route::post('/report-violation', [GuestExamController::class, 'reportViolation'])->name('report-violation');
+            Route::get('/disqualified', [GuestExamController::class, 'disqualified'])->name('disqualified');
         });
 
         // ゲスト用結果表示
-        Route::get('/result', [ExamController::class, 'guestShowResult'])->name('result');
+        Route::get('/result', [GuestExamController::class, 'showResult'])->name('result');
 
         // ゲスト用クリーンアップ
-        Route::post('/cleanup', [ExamController::class, 'guestCleanup'])->name('cleanup');
+        Route::post('/cleanup', [GuestExamController::class, 'cleanup'])->name('cleanup');
     });
 
     // 認証ユーザー専用ルート
@@ -326,15 +338,15 @@ Route::middleware(['check.session.code'])->group(function () {
                 ->where('part', '[1-3]')
                 ->name('part');
             Route::post('/complete-part', [ExamController::class, 'completePart'])->name('complete-part');
-            Route::post('/save-answer', [ExamController::class, 'saveAnswer'])->name('save-answer');
+            Route::post('/save-answer', [ExamAnswerController::class, 'saveAnswer'])->name('save-answer');
             
             // バッチ処理用エンドポイント
-            Route::post('/save-answers-batch', [ExamController::class, 'saveAnswersBatch'])->name('save-answers-batch');
+            Route::post('/save-answers-batch', [ExamAnswerController::class, 'saveAnswersBatch'])->name('save-answers-batch');
             Route::get('/questions-batch/{part}/{offset?}', [ExamController::class, 'getQuestionsBatch'])->name('get-questions-batch');
             
             Route::post('/report-violation', [ExamController::class, 'reportViolation'])->name('report-violation');
             Route::get('/disqualified', [ExamController::class, 'disqualified'])->name('disqualified');
-            Route::get('/result/{sessionUuid}', [ExamController::class, 'showResult'])->name('result');
+            Route::get('/result/{sessionUuid}', [ExamResultController::class, 'showResult'])->name('result');
         });
 
         // プロフィール管理
@@ -343,9 +355,9 @@ Route::middleware(['check.session.code'])->group(function () {
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
         // 過去の試験結果一覧
-        Route::get('/my-results', [ExamController::class, 'myResults'])->name('my-results');
-        Route::get('/my-results/{sessionId}', [ExamController::class, 'myResultDetail'])->name('my-results.detail');
-        Route::get('/certificate/{sessionUuid}', [ExamController::class, 'showCertificate'])->name('certificate');
+        Route::get('/my-results', [ExamResultController::class, 'myResults'])->name('my-results');
+        Route::get('/my-results/{sessionId}', [ExamResultController::class, 'myResultDetail'])->name('my-results.detail');
+        Route::get('/certificate/{sessionUuid}', [ExamResultController::class, 'showCertificate'])->name('certificate');
     });
 
     // 認証ルート(ログイン・登録など)

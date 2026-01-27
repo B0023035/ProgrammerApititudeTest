@@ -176,14 +176,20 @@
             <!-- 右：前後ボタン -->
             <div class="flex gap-2">
                 <button
-                    class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
+                    class="px-4 py-2 rounded transition-colors"
+                    :class="currentIndex <= 0 
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                        : 'bg-gray-400 text-white hover:bg-gray-500'"
                     :disabled="currentIndex <= 0"
                     @click="$emit('prevQuestion')"
                 >
                     前の問題
                 </button>
                 <button
-                    class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
+                    class="px-4 py-2 rounded transition-colors"
+                    :class="currentIndex >= totalQuestions - 1 
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                        : 'bg-gray-400 text-white hover:bg-gray-500'"
                     :disabled="currentIndex >= totalQuestions - 1"
                     @click="$emit('nextQuestion')"
                 >
@@ -196,14 +202,20 @@
         <div v-else class="mt-4 flex flex-col gap-2">
             <div class="flex gap-2">
                 <button
-                    class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
+                    class="px-4 py-2 rounded transition-colors"
+                    :class="currentIndex === 0 
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                        : 'bg-gray-400 text-white hover:bg-gray-500'"
                     :disabled="currentIndex === 0"
                     @click="$emit('prevQuestion')"
                 >
                     前の問題
                 </button>
                 <button
-                    class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
+                    class="px-4 py-2 rounded transition-colors"
+                    :class="currentIndex === totalQuestions - 1 
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                        : 'bg-gray-400 text-white hover:bg-gray-500'"
                     :disabled="currentIndex === totalQuestions - 1"
                     @click="$emit('nextQuestion')"
                 >

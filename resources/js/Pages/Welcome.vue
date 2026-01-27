@@ -106,48 +106,56 @@ onMounted(async () => {
 
 <template>
     <Head title="Welcome" />
-    <div class="min-h-screen main_contents bg-gray-100">
-        <!-- ロゴ表示 -->
-        <div class="bg-gray-100 logo-container">
-            <img src="/images/YIC_logo.png" class="YIC_logo" />
-        </div>
+    <div class="page-wrapper">
+        <div class="main_contents bg-gray-100">
+            <!-- ロゴ表示 -->
+            <div class="bg-gray-100 logo-container">
+                <img src="/images/YIC_logo.png" class="YIC_logo" />
+            </div>
 
-        <!-- タイトル -->
-        <div>
-            <h1 class="custom-title bg-gray-100">プログラマー適性検査</h1>
-        </div>
+            <!-- タイトル -->
+            <div>
+                <h1 class="custom-title bg-gray-100">プログラマー適性検査</h1>
+            </div>
 
-        <!-- 未ログイン用リンク -->
-        <div
-            class="bg-gray-100 flex flex-col sm:justify-center items-center pt-20 sm:pt-20 space-y-4"
-        >
-            <Link href="/login" class="btn-link"> Log in </Link>
-            <Link href="/register" class="btn-link"> Register </Link>
-            <Link href="/guest/info" class="btn-link"> Guest </Link>
-        </div>
-
-        <!-- 戻るボタン -->
-        <div class="back-button-container">
-            <button
-                @click="goBack"
-                :disabled="!isReady || isProcessing"
-                class="back-button"
-                :class="{ 'opacity-50 cursor-not-allowed': !isReady || isProcessing }"
+            <!-- 未ログイン用リンク -->
+            <div
+                class="bg-gray-100 flex flex-col sm:justify-center items-center pt-20 sm:pt-20 space-y-4"
             >
-                <span v-if="!isReady">準備中...</span>
-                <span v-else-if="isProcessing">処理中...</span>
-                <span v-else>← 戻る</span>
-            </button>
-        </div>
-    </div>
+                <Link href="/login" class="btn-link"> ログイン </Link>
+                <Link href="/register" class="btn-link"> 新規登録 </Link>
+                <Link href="/guest/info" class="btn-link"> ゲスト </Link>
+            </div>
 
-    <!-- フッター -->
-    <footer class="bg-gray-800 text-white text-center py-4">
-        © 2025 YIC Group. All rights reserved.
-    </footer>
+            <!-- 戻るボタン -->
+            <div class="back-button-container">
+                <button
+                    @click="goBack"
+                    :disabled="!isReady || isProcessing"
+                    class="back-button"
+                    :class="{ 'opacity-50 cursor-not-allowed': !isReady || isProcessing }"
+                >
+                    <span v-if="!isReady">準備中...</span>
+                    <span v-else-if="isProcessing">処理中...</span>
+                    <span v-else>← 戻る</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- フッター -->
+        <footer class="bg-gray-800 text-white text-center py-4">
+            © 2025 YIC Group. All rights reserved.
+        </footer>
+    </div>
 </template>
 
 <style scoped>
+.page-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
 .logo-container {
     padding-top: 10px;
     padding-left: 15px;
@@ -166,7 +174,7 @@ onMounted(async () => {
 }
 
 .main_contents {
-    min-height: calc(100vh - 64px);
+    flex: 1;
     display: flex;
     flex-direction: column;
 }

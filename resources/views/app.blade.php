@@ -7,6 +7,10 @@
         {{-- ★★★ CSRFトークンを追加（app.tsが必要とする） ★★★ --}}
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
+        {{-- Favicon（キャッシュバスティング付き） --}}
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v={{ filemtime(public_path('favicon.ico')) }}">
+        <link rel="shortcut icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v={{ filemtime(public_path('favicon.ico')) }}">
+        
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Fonts -->

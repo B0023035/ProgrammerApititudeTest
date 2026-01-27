@@ -411,13 +411,13 @@
 
 複数ファイルに分割して、以下のシステム構成図を作成しました：
 
-| ファイル | 内容 |
-|---------|------|
-| `SYSTEM_DIAGRAM_01_MODULES.md` | モジュール階層構成 |
-| `SYSTEM_DIAGRAM_02_INFRASTRUCTURE.md` | インフラストラクチャ・デプロイ構成 |
-| `SYSTEM_DIAGRAM_03_DATAFLOW.md` | ユースケースのデータフロー |
-| `SYSTEM_DIAGRAM_04_SCORING_SECURITY.md` | 成績計算・7層セキュリティ |
-| `SYSTEM_DIAGRAM_05_DB_API.md` | DB スキーマ・API仕様 |
-| `SYSTEM_DIAGRAM_06_ADMIN_DEPLOYMENT.md` | 管理者API・デプロイメント戦略 |
+| ファイル                                | 内容                               |
+| --------------------------------------- | ---------------------------------- |
+| `SYSTEM_DIAGRAM_01_MODULES.md`          | モジュール階層構成                 |
+| `SYSTEM_DIAGRAM_02_INFRASTRUCTURE.md`   | インフラストラクチャ・デプロイ構成 |
+| `SYSTEM_DIAGRAM_03_DATAFLOW.md`         | ユースケースのデータフロー         |
+| `SYSTEM_DIAGRAM_04_SCORING_SECURITY.md` | 成績計算・7層セキュリティ          |
+| `SYSTEM_DIAGRAM_05_DB_API.md`           | DB スキーマ・API仕様               |
+| `SYSTEM_DIAGRAM_06_ADMIN_DEPLOYMENT.md` | 管理者API・デプロイメント戦略      |
 
 すべての構成図は **VS Code** で見やすいテキスト形式、または **draw.io** などで図形化可能です！

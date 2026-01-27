@@ -21,11 +21,10 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Forgot Password" />
+        <Head title="パスワードをお忘れの方" />
 
         <div class="mb-4 text-sm text-gray-600">
-            Forgot your password? No problem. Just let us know your email address and we will email
-            you a password reset link that will allow you to choose a new one.
+            パスワードをお忘れですか？ご安心ください。メールアドレスをお知らせいただければ、新しいパスワードを設定できるリセットリンクをメールでお送りします。
         </div>
 
         <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
@@ -34,7 +33,7 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" value="メールアドレス" />
 
                 <TextInput
                     id="email"
@@ -54,7 +53,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Email Password Reset Link
+                    パスワードリセットリンクを送信
                 </PrimaryButton>
             </div>
         </form>

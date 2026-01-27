@@ -156,22 +156,24 @@
 
 ## 📊 主要リレーション一覧
 
-| From        | To               | 関係 | 説明                          |
-|-------------|------------------|------|-------------------------------|
-| users       | exam_sessions    | 1:N  | ユーザー → セッション         |
-| events      | exam_sessions    | 1:N  | イベント → セッション         |
-| exam_sessions | answers        | 1:N  | セッション → 解答            |
-| exam_sessions | exam_violations| 1:N  | セッション → 不正検知        |
-| questions   | choices          | 1:N  | 問題 → 選択肢                |
-| questions   | answers          | 1:N  | 問題 → 解答                  |
-| practice_questions | practice_choices | 1:N | 練習問題 → 選択肢 |
+| From               | To               | 関係 | 説明                  |
+| ------------------ | ---------------- | ---- | --------------------- |
+| users              | exam_sessions    | 1:N  | ユーザー → セッション |
+| events             | exam_sessions    | 1:N  | イベント → セッション |
+| exam_sessions      | answers          | 1:N  | セッション → 解答     |
+| exam_sessions      | exam_violations  | 1:N  | セッション → 不正検知 |
+| questions          | choices          | 1:N  | 問題 → 選択肢         |
+| questions          | answers          | 1:N  | 問題 → 解答           |
+| practice_questions | practice_choices | 1:N  | 練習問題 → 選択肢     |
 
 ## 🔑 主要キー設定
 
 ### Primary Keys
+
 - すべてのテーブルで `id` を自動増分主キーとして使用
 
 ### Foreign Keys
+
 - `users.id` ← `exam_sessions.user_id`
 - `events.id` ← `exam_sessions.event_id`
 - `exam_sessions.id` ← `answers.exam_session_id`
@@ -180,5 +182,6 @@
 - `practice_questions.id` ← `practice_choices.practice_question_id`
 
 ### Unique Constraints
+
 - `users(email)`
 - `admins(email)`

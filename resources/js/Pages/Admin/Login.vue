@@ -53,10 +53,8 @@ const submit = () => {
     <Head title="管理者ログイン" />
 
     <div
-        class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900"
+        class="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-100 to-gray-200"
     >
-        <div class="absolute inset-0 bg-[url('/images/grid.svg')] bg-center opacity-20"></div>
-
         <div class="relative w-full max-w-md">
             <!-- ロゴエリア -->
             <div class="text-center mb-8">
@@ -64,10 +62,10 @@ const submit = () => {
                     <img
                         src="/images/YIC_logo.png"
                         alt="YIC Logo"
-                        class="h-16 mx-auto mb-4 drop-shadow-2xl"
+                        class="h-16 mx-auto mb-4"
                     />
-                    <h1 class="text-3xl font-bold text-white mb-2">管理者ログイン</h1>
-                    <p class="text-gray-300 text-sm">Admin Portal</p>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">管理者ログイン</h1>
+                    <p class="text-gray-500 text-sm">Admin Portal</p>
                 </div>
             </div>
 

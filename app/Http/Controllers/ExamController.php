@@ -6,6 +6,7 @@ use App\Models\Answer;
 use App\Models\ExamSession;
 use App\Models\ExamViolation;
 use App\Models\Question;
+use App\Services\ExamService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -17,7 +18,13 @@ use Inertia\Inertia;
 
 class ExamController extends Controller
 {
-    
+    protected ExamService $examService;
+
+    public function __construct(ExamService $examService)
+    {
+        $this->examService = $examService;
+    }
+
     /**
  * 本番テスト開始処理(セッションコード必須版)
  */

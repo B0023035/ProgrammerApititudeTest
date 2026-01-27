@@ -55,13 +55,19 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # ワーキングディレクトリ
 WORKDIR /var/www/html
 
+# ビルド引数（URLを外部から指定可能）
+ARG APP_URL=http://localhost
+
 # アプリケーションファイルをコピー
 COPY . .
+
+# .envを本番用に設定（APP_URLをビルド引数から設定）
+RUN sed -i "s|APP_URL=.*|APP_URL=${APP_URL}|" .env
 
 # Composer依存関係インストール
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# NPMビルド
+# NPMビルド（APP_URLが.envに設定された状態で実行）
 RUN npm ci && npm run build && rm -rf node_modules
 
 # Nginx設定
