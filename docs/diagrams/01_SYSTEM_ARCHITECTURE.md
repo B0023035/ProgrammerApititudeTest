@@ -79,46 +79,49 @@
 
 ## 2. ネットワーク構成
 
-| コンテナ名 | IPアドレス | ポートマッピング | 用途 |
-|-----------|-----------|----------------|------|
-| prog-test-prod-app | Docker内部 | 80:80 | Webアプリケーション |
-| prog-test-prod-db | Docker内部 | 3307:3306 | MySQLデータベース |
-| prog-test-prod-redis | Docker内部 | 6380:6379 | セッション/キャッシュ |
-| prog-test-prod-phpmyadmin | Docker内部 | 8080:80 | DB管理ツール |
+| コンテナ名                | IPアドレス | ポートマッピング | 用途                  |
+| ------------------------- | ---------- | ---------------- | --------------------- |
+| prog-test-prod-app        | Docker内部 | 80:80            | Webアプリケーション   |
+| prog-test-prod-db         | Docker内部 | 3307:3306        | MySQLデータベース     |
+| prog-test-prod-redis      | Docker内部 | 6380:6379        | セッション/キャッシュ |
+| prog-test-prod-phpmyadmin | Docker内部 | 8080:80          | DB管理ツール          |
 
 ## 3. 外部アクセス情報
 
-| 項目 | 値 | 備考 |
-|------|-----|-----|
-| 外部IPアドレス | 10.146.223.35 | ホストマシンのIP |
-| HTTPポート | 80 | 標準ポート |
-| アクセスURL | http://10.146.223.35/ | ※URLは後で変更予定 |
+| 項目           | 値                    | 備考               |
+| -------------- | --------------------- | ------------------ |
+| 外部IPアドレス | 10.146.223.35         | ホストマシンのIP   |
+| HTTPポート     | 80                    | 標準ポート         |
+| アクセスURL    | http://10.146.223.35/ | ※URLは後で変更予定 |
 
 ## 4. URL変更時の編集箇所
 
 URLを変更する際は、以下のファイルを編集してください：
 
 1. **`.env`** - 8行目
-   ```
-   APP_URL=http://新しいURL
-   ```
+
+    ```
+    APP_URL=http://新しいURL
+    ```
 
 2. **`docker-compose.prod-test.yml`** - 16行目（ビルド引数）
-   ```yaml
-   args:
-       APP_URL: http://新しいURL
-   ```
+
+    ```yaml
+    args:
+        APP_URL: http://新しいURL
+    ```
 
 3. **`docker-compose.prod-test.yml`** - 25行目（環境変数）
-   ```yaml
-   - APP_URL=http://新しいURL
-   ```
+
+    ```yaml
+    - APP_URL=http://新しいURL
+    ```
 
 4. 変更後は以下のコマンドでコンテナを再構築：
-   ```bash
-   docker compose -f docker-compose.prod-test.yml build --no-cache prod-app
-   docker compose -f docker-compose.prod-test.yml up -d prod-app
-   ```
+    ```bash
+    docker compose -f docker-compose.prod-test.yml build --no-cache prod-app
+    docker compose -f docker-compose.prod-test.yml up -d prod-app
+    ```
 
 ## 5. 同時接続対応
 

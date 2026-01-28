@@ -195,6 +195,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/comlink', [ResultsComlinkController::class, 'index'])->name('comlink');
             Route::get('/statistics', [ResultsManagementController::class, 'statistics'])->name('statistics');
             Route::get('/grade-list', [ResultsManagementController::class, 'gradeList'])->name('grade-list');
+            Route::get('/event/{eventId}', [ResultsComlinkController::class, 'eventResults'])->name('event');
             Route::get('/session/{sessionId}', [ResultsManagementController::class, 'sessionDetail'])->name('session-detail');
             Route::get('/user/{userId}', [ResultsManagementController::class, 'userDetail'])->name('user-detail');
         });
@@ -297,8 +298,6 @@ Route::middleware(['check.session.code'])->group(function () {
                 ->where('part', '[1-3]')
                 ->name('part');
             Route::post('/complete-part', [GuestExamController::class, 'completePart'])->name('complete-part');
-            Route::post('/report-violation', [GuestExamController::class, 'reportViolation'])->name('report-violation');
-            Route::get('/disqualified', [GuestExamController::class, 'disqualified'])->name('disqualified');
         });
 
         // ゲスト用結果表示
@@ -344,8 +343,6 @@ Route::middleware(['check.session.code'])->group(function () {
             Route::post('/save-answers-batch', [ExamAnswerController::class, 'saveAnswersBatch'])->name('save-answers-batch');
             Route::get('/questions-batch/{part}/{offset?}', [ExamController::class, 'getQuestionsBatch'])->name('get-questions-batch');
             
-            Route::post('/report-violation', [ExamController::class, 'reportViolation'])->name('report-violation');
-            Route::get('/disqualified', [ExamController::class, 'disqualified'])->name('disqualified');
             Route::get('/result/{sessionUuid}', [ExamResultController::class, 'showResult'])->name('result');
         });
 

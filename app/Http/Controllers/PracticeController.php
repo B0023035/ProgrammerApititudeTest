@@ -454,6 +454,38 @@ public function complete(Request $request)
     }
 
     /**
+     * 認証ユーザー用解説ページ表示
+     */
+    public function showExplanation(Request $request, $part = 1)
+    {
+        if (!in_array($part, [1, 2, 3])) {
+            $part = 1;
+        }
+
+        return Inertia::render('Explanation', [
+            'nextPart' => (int) $part,
+            'isExam' => false,
+            'isGuest' => false,
+        ]);
+    }
+
+    /**
+     * ゲスト用解説ページ表示
+     */
+    public function showGuestExplanation(Request $request, $part = 1)
+    {
+        if (!in_array($part, [1, 2, 3])) {
+            $part = 1;
+        }
+
+        return Inertia::render('Explanation', [
+            'nextPart' => (int) $part,
+            'isExam' => false,
+            'isGuest' => true,
+        ]);
+    }
+
+    /**
      * 回答データのサニタイズ
      */
     private function sanitizeAnswers(array $answers): array

@@ -212,6 +212,34 @@ const logout = () => {
                     </div>
                     <p class="text-gray-600 text-sm">ユーザーアカウントの管理</p>
                 </Link>
+
+                <!-- 管理者アカウント管理 -->
+                <Link
+                    :href="route('admin.admins.index')"
+                    class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all cursor-pointer group"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <h3
+                            class="text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors"
+                        >
+                            🔐 管理者アカウント
+                        </h3>
+                        <svg
+                            class="w-6 h-6 text-gray-400 group-hover:text-indigo-600 transition-colors"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M9 5l7 7-7 7"
+                            />
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 text-sm">管理者アカウントの管理</p>
+                </Link>
             </div>
 
             <!-- 最近のセッション表示を削除しました -->

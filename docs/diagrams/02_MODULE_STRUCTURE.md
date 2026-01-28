@@ -201,33 +201,37 @@ ProgrammerAptitudeTest/
 ## 4. 主要機能モジュール
 
 ### 4.1 認証モジュール
-| ファイル | 機能 |
-|---------|------|
-| SessionCodeController | セッションコード認証（ゲスト用） |
-| AdminAuthController | 管理者認証 |
-| RegisteredUserController | ユーザー登録 |
-| AuthenticatedSessionController | ログイン/ログアウト |
+
+| ファイル                       | 機能                             |
+| ------------------------------ | -------------------------------- |
+| SessionCodeController          | セッションコード認証（ゲスト用） |
+| AdminAuthController            | 管理者認証                       |
+| RegisteredUserController       | ユーザー登録                     |
+| AuthenticatedSessionController | ログイン/ログアウト              |
 
 ### 4.2 試験モジュール
-| ファイル | 機能 |
-|---------|------|
-| ExamController | 試験の開始・進行・終了管理 |
-| PracticeController | 練習モード管理 |
-| Part.vue | 試験問題表示（第1〜3部） |
-| Practice.vue | 練習問題表示 |
+
+| ファイル           | 機能                       |
+| ------------------ | -------------------------- |
+| ExamController     | 試験の開始・進行・終了管理 |
+| PracticeController | 練習モード管理             |
+| Part.vue           | 試験問題表示（第1〜3部）   |
+| Practice.vue       | 練習問題表示               |
 
 ### 4.3 管理モジュール
-| ファイル | 機能 |
-|---------|------|
-| EventManagementController | イベント（試験会）管理 |
-| QuestionManagementController | 問題管理 |
-| UserManagementController | ユーザー管理 |
-| ResultsManagementController | 結果集計・統計 |
+
+| ファイル                     | 機能                   |
+| ---------------------------- | ---------------------- |
+| EventManagementController    | イベント（試験会）管理 |
+| QuestionManagementController | 問題管理               |
+| UserManagementController     | ユーザー管理           |
+| ResultsManagementController  | 結果集計・統計         |
 
 ### 4.4 結果・統計モジュール
-| ファイル | 機能 |
-|---------|------|
-| Result.vue | 受験者向け結果表示 |
-| Statistics.vue | 管理者向け統計 |
-| Certificate.vue | 証明書表示 |
-| ResultsComlinkController | COMLINK連携 |
+
+| ファイル                 | 機能               |
+| ------------------------ | ------------------ |
+| Result.vue               | 受験者向け結果表示 |
+| Statistics.vue           | 管理者向け統計     |
+| Certificate.vue          | 証明書表示         |
+| ResultsComlinkController | COMLINK連携        |

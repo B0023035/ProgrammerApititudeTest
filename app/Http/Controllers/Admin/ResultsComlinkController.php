@@ -145,4 +145,79 @@ class ResultsComlinkController extends Controller
             'events' => $events,
         ]);
     }
+
+    /**
+     * イベント別成績一覧
+     */
+    public function eventResults($eventId)
+    {
+        $event = Event::findOrFail($eventId);
+
+        // ステータス判定
+        $now = \Carbon\Carbon::now();
+        if ($now->lt($event->begin)) {
+            $status = '開始前';
+            $statusColor = 'blue';
+        } elseif ($now->between($event->begin, $event->end)) {
+            $status = '実施中';
+            $statusColor = 'green';
+        } else {
+            $status = '終了';
+            $statusColor = 'gray';
+        }
+
+        // 指定イベントのセッションを取得
+        $sessions = ExamSession::with(['user'])
+            ->where('event_id', $eventId)
+            ->whereNotNull('finished_at')
+            ->whereNull('disqualified_at')
+            ->latest('finished_at')
+            ->get()
+            ->map(function ($session) {
+                // 採点
+                $answers = Answer::where('exam_session_id', $session->id)->get();
+
+                $score = 0;
+                foreach ($answers as $answer) {
+                    if ($answer->choice === null) {
+                        continue;
+                    } elseif ($answer->is_correct) {
+                        $score += 1;
+                    } else {
+                        $score -= 0.25;
+                    }
+                }
+
+                $totalQuestions = $this->getSessionQuestionCount($session);
+                $rank = $this->calculateRank($score, $totalQuestions);
+
+                return [
+                    'id' => $session->id,
+                    'user_id' => $session->user_id,
+                    'session_uuid' => $session->session_uuid,
+                    'total_score' => round($score, 2),
+                    'total_questions' => $totalQuestions,
+                    'rank' => $rank,
+                    'finished_at' => $session->finished_at->toIso8601String(),
+                    'user' => [
+                        'id' => $session->user->id,
+                        'name' => $session->user->name,
+                        'email' => $session->user->email,
+                    ],
+                ];
+            });
+
+        return Inertia::render('Admin/Results/EventResults', [
+            'event' => [
+                'id' => $event->id,
+                'name' => $event->name,
+                'passphrase' => $event->passphrase,
+                'begin' => $event->begin->toIso8601String(),
+                'end' => $event->end->toIso8601String(),
+                'status' => $status,
+                'status_color' => $statusColor,
+            ],
+            'sessions' => $sessions,
+        ]);
+    }
 }

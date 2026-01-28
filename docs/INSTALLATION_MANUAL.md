@@ -3,11 +3,13 @@
 ## 前提条件
 
 ### 必要なソフトウェア
+
 - Docker 20.10以上
 - Docker Compose 2.0以上
 - Git
 
 ### 推奨スペック
+
 - CPU: 2コア以上
 - メモリ: 4GB以上
 - ストレージ: 20GB以上
@@ -17,18 +19,22 @@
 ## 1. クイックスタート（Docker）
 
 ### 1.1 リポジトリのクローン
+
 ```bash
 git clone https://github.com/your-repo/ProgrammerAptitudeTest.git
 cd ProgrammerAptitudeTest
 ```
 
 ### 1.2 環境変数ファイルの作成
+
 ```bash
 cp .env.example .env
 ```
 
 ### 1.3 環境変数の設定
+
 `.env`ファイルを編集:
+
 ```env
 APP_NAME="Programmer Aptitude Test"
 APP_ENV=production
@@ -52,6 +58,7 @@ CACHE_DRIVER=redis
 ```
 
 ### 1.4 Dockerコンテナの起動
+
 ```bash
 # 本番環境
 docker compose -f docker-compose.prod.yml up -d --build
@@ -61,16 +68,19 @@ docker compose up -d --build
 ```
 
 ### 1.5 アプリケーションキーの生成
+
 ```bash
 docker compose exec app php artisan key:generate
 ```
 
 ### 1.6 データベースマイグレーション
+
 ```bash
 docker compose exec app php artisan migrate --seed
 ```
 
 ### 1.7 フロントエンドビルド
+
 ```bash
 docker compose exec app npm install
 docker compose exec app npm run build
@@ -81,6 +91,7 @@ docker compose exec app npm run build
 ## 2. 手動インストール（非Docker）
 
 ### 2.1 必要なソフトウェアのインストール
+
 ```bash
 # PHP 8.2とエクステンション
 sudo apt update
@@ -105,6 +116,7 @@ sudo apt install nginx
 ```
 
 ### 2.2 プロジェクトセットアップ
+
 ```bash
 cd /var/www
 git clone https://github.com/your-repo/ProgrammerAptitudeTest.git
@@ -123,7 +135,9 @@ sudo chmod -R 775 storage bootstrap/cache
 ```
 
 ### 2.3 Nginx設定
+
 `/etc/nginx/sites-available/programmer-test`:
+
 ```nginx
 server {
     listen 80;
@@ -159,6 +173,7 @@ sudo systemctl reload nginx
 ## 3. データベース初期設定
 
 ### 3.1 データベース作成
+
 ```bash
 mysql -u root -p
 ```
@@ -172,6 +187,7 @@ EXIT;
 ```
 
 ### 3.2 マイグレーションとシード
+
 ```bash
 php artisan migrate --seed
 ```
@@ -182,10 +198,10 @@ php artisan migrate --seed
 
 シード実行後、以下のアカウントが作成されます:
 
-| 種別 | メールアドレス | パスワード |
-|------|--------------|-----------|
-| 管理者 | admin@example.com | password |
-| テストユーザー | test@example.com | password |
+| 種別           | メールアドレス    | パスワード |
+| -------------- | ----------------- | ---------- |
+| 管理者         | admin@example.com | password   |
+| テストユーザー | test@example.com  | password   |
 
 **⚠️ 本番環境では必ずパスワードを変更してください**
 
@@ -206,6 +222,7 @@ sudo certbot --nginx -d your-domain.com
 2. DNSレコードを設定（A/AAAAレコード）
 3. SSL/TLS設定を「Full (strict)」に設定
 4. `.env`に以下を追加:
+
 ```env
 TRUSTED_PROXIES=*
 ```
@@ -232,6 +249,7 @@ php artisan optimize:clear
 ## トラブルシューティング
 
 ### 500エラーが発生する
+
 ```bash
 # ログを確認
 tail -f storage/logs/laravel.log
@@ -241,6 +259,7 @@ sudo chown -R www-data:www-data storage bootstrap/cache
 ```
 
 ### データベース接続エラー
+
 ```bash
 # 接続テスト
 php artisan db:monitor
@@ -249,6 +268,7 @@ php artisan db:monitor
 ```
 
 ### Redisに接続できない
+
 ```bash
 # Redisの状態確認
 sudo systemctl status redis

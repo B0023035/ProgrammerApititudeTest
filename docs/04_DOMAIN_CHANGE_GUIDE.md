@@ -28,18 +28,20 @@ APP_URL=https://新しいドメイン
 ### 2. `docker-compose.prod-test.yml`
 
 #### 2.1 ビルド引数（16行目付近）
+
 ```yaml
 build:
     context: .
     dockerfile: Dockerfile.prod-simple
     args:
-        APP_URL: https://aws-sample-minmi.click  # ← ここを変更
+        APP_URL: https://aws-sample-minmi.click # ← ここを変更
 ```
 
 #### 2.2 環境変数（25行目付近）
+
 ```yaml
 environment:
-    - APP_URL=https://aws-sample-minmi.click  # ← ここを変更
+    - APP_URL=https://aws-sample-minmi.click # ← ここを変更
 ```
 
 **場所**: `/home/b0023035/ProgrammerAptitudeTest/docker-compose.prod-test.yml`
@@ -51,11 +53,11 @@ environment:
 Cloudflareダッシュボードで以下を更新：
 
 1. **DNS設定**
-   - Aレコード: 新しいドメイン → サーバーIP
-   - CNAMEレコード: www → 新しいドメイン
+    - Aレコード: 新しいドメイン → サーバーIP
+    - CNAMEレコード: www → 新しいドメイン
 
 2. **SSL/TLS設定**
-   - フル（厳密）モードを推奨
+    - フル（厳密）モードを推奨
 
 ---
 
@@ -128,10 +130,10 @@ SESSION_SAME_SITE=lax
 
 ## 関連ファイル一覧
 
-| ファイル | 変更箇所 | 説明 |
-|---------|---------|------|
-| `.env` | APP_URL | アプリケーションURL |
-| `docker-compose.prod-test.yml` | args.APP_URL | ビルド時URL |
-| `docker-compose.prod-test.yml` | environment.APP_URL | 実行時URL |
-| `config/app.php` | url | APP_URLを参照（通常変更不要） |
-| `app/Http/Middleware/TrustProxies.php` | proxies | プロキシ信頼設定 |
+| ファイル                               | 変更箇所            | 説明                          |
+| -------------------------------------- | ------------------- | ----------------------------- |
+| `.env`                                 | APP_URL             | アプリケーションURL           |
+| `docker-compose.prod-test.yml`         | args.APP_URL        | ビルド時URL                   |
+| `docker-compose.prod-test.yml`         | environment.APP_URL | 実行時URL                     |
+| `config/app.php`                       | url                 | APP_URLを参照（通常変更不要） |
+| `app/Http/Middleware/TrustProxies.php` | proxies             | プロキシ信頼設定              |

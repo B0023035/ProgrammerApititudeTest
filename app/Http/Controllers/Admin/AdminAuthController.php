@@ -28,6 +28,8 @@ class AdminAuthController extends Controller
      */
     public function login(Request $request): RedirectResponse  // ← store から login に変更
     {
+        \Log::error('Admin login attempt', ['email' => $request->email]);
+        
         // バリデーション
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -37,9 +39,17 @@ class AdminAuthController extends Controller
         // adminガードで認証を試みる
         if (Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+            
+            \Log::error('Admin login successful', [
+                'email' => $request->email,
+                'redirect_to' => route('admin.dashboard'),
+                'intended' => redirect()->intended(route('admin.dashboard'))->getTargetUrl(),
+            ]);
 
             return redirect()->intended(route('admin.dashboard'));
         }
+        
+        \Log::error('Admin login failed', ['email' => $request->email]);
 
         return back()->withErrors([
             'email' => 'メールアドレスまたはパスワードが正しくありません。',

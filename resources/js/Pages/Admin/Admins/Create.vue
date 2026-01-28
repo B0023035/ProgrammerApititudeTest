@@ -90,7 +90,10 @@ const submit = () => {
                                     v-model="form.password_confirmation"
                                     required
                                 />
-                                <InputError class="mt-2" :message="form.errors.password_confirmation" />
+                                <InputError
+                                    class="mt-2"
+                                    :message="form.errors.password_confirmation"
+                                />
                             </div>
 
                             <div class="flex items-center justify-end">

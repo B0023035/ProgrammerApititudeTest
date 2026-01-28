@@ -15,14 +15,32 @@ class AdminManagementController extends Controller
     /**
      * Display a listing of admins.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        // ソートパラメータの取得
+        $sortField = $request->input('sort', 'created_at');
+        $sortDirection = $request->input('direction', 'desc');
+
+        // 許可されたソートフィールドのバリデーション
+        $allowedSortFields = ['id', 'name', 'email', 'created_at'];
+        if (!in_array($sortField, $allowedSortFields)) {
+            $sortField = 'created_at';
+        }
+
+        // ソート方向のバリデーション
+        if (!in_array($sortDirection, ['asc', 'desc'])) {
+            $sortDirection = 'desc';
+        }
+
         $admins = Admin::select('id', 'name', 'email', 'created_at')
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy($sortField, $sortDirection)
+            ->paginate(20)
+            ->withQueryString();
 
         return Inertia::render('Admin/Admins/Index', [
             'admins' => $admins,
+            'sort' => $sortField,
+            'direction' => $sortDirection,
         ]);
     }
 

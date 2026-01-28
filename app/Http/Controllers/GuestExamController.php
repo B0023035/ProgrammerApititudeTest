@@ -52,7 +52,6 @@ class GuestExamController extends Controller
             'current_part' => 1,
             'current_question' => 1,
             'remaining_time' => 0,
-            'violation_count' => 0,
             'security_log' => [],
         ];
 
@@ -132,15 +131,10 @@ class GuestExamController extends Controller
                 'current_part' => $part,
                 'current_question' => 1,
                 'remaining_time' => 0,
-                'violation_count' => 0,
                 'security_log' => [],
             ];
 
             Cache::put($existingSessionKey, $session, 2 * 60 * 60);
-        }
-
-        if (($session['violation_count'] ?? 0) >= 3) {
-            return redirect()->route('guest.exam.disqualified');
         }
 
         $partTimeLimit = $this->examService->getPartTimeLimitByEvent($part, $examType, $event);
@@ -201,7 +195,6 @@ class GuestExamController extends Controller
             'remainingTime' => $remainingTime,
             'currentQuestion' => $session['current_question'] ?? 1,
             'totalParts' => 3,
-            'violationCount' => $session['violation_count'] ?? 0,
             'examType' => $examType,
             'isGuest' => true,
         ]);
@@ -355,80 +348,6 @@ class GuestExamController extends Controller
         Cache::forget("guest_exam_session_{$guestId}");
 
         return response()->json(['success' => true]);
-    }
-
-    /**
-     * ゲスト失格画面
-     */
-    public function disqualified()
-    {
-        $guestId = session()->getId();
-        $session = Cache::get("guest_exam_session_{$guestId}");
-
-        if (!$session || ($session['violation_count'] ?? 0) < 3) {
-            return redirect()->route('guest.test.start');
-        }
-
-        return Inertia::render('Exam/Disqualified', [
-            'examSession' => $session,
-            'violations' => $session['security_log'] ?? [],
-            'disqualificationReason' => 'Multiple security violations',
-            'isGuest' => true,
-        ]);
-    }
-
-    /**
-     * ゲスト違反報告
-     */
-    public function reportViolation(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'examSessionId' => 'required|string|size:36',
-            'violationType' => 'required|string',
-            'timestamp' => 'required|string',
-            'violationCount' => 'required|integer',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['success' => false], 422);
-        }
-
-        $guestId = session()->getId();
-        $sessionId = $request->input('examSessionId');
-
-        $cacheKey = "guest_exam_part_session_{$guestId}_{$sessionId}";
-        if (!Cache::get($cacheKey)) {
-            return response()->json(['success' => false], 403);
-        }
-
-        $existingSessionKey = "guest_exam_session_{$guestId}";
-        $examSession = Cache::get($existingSessionKey);
-        if (!$examSession) {
-            return response()->json(['success' => false], 403);
-        }
-
-        $securityLog = $examSession['security_log'] ?? [];
-        $securityLog[] = [
-            'timestamp' => $request->timestamp,
-            'violation_type' => $request->violationType,
-            'user_agent' => $request->userAgent(),
-            'ip_address' => $request->ip(),
-        ];
-
-        $examSession['security_log'] = $securityLog;
-        $examSession['violation_count'] = ($examSession['violation_count'] ?? 0) + 1;
-
-        if ($examSession['violation_count'] >= 3) {
-            $examSession['disqualified_at'] = now();
-        }
-
-        Cache::put($existingSessionKey, $examSession, 2 * 60 * 60);
-
-        return response()->json([
-            'success' => true,
-            'violation_count' => $examSession['violation_count'],
-            'disqualified' => $examSession['violation_count'] >= 3,
-        ]);
     }
 
     /**

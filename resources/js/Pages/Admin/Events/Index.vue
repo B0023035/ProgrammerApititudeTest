@@ -291,6 +291,16 @@ const getSortIcon = (key: SortKey) => {
                                     >
                                         <Link
                                             :href="
+                                                route('admin.results.event', {
+                                                    eventId: event.id,
+                                                })
+                                            "
+                                            class="text-purple-600 hover:text-purple-900"
+                                        >
+                                            成績確認
+                                        </Link>
+                                        <Link
+                                            :href="
                                                 route('admin.events.edit', {
                                                     event: event.id,
                                                 })

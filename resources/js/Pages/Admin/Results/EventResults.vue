@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { Head, router } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 
 interface Session {
@@ -11,10 +11,6 @@ interface Session {
     total_questions: number;
     rank: string;
     finished_at: string;
-    event?: {
-        id: number;
-        name: string;
-    };
     user: {
         id: number;
         name: string;
@@ -22,19 +18,26 @@ interface Session {
     };
 }
 
+interface Event {
+    id: number;
+    name: string;
+    passphrase: string;
+    begin: string;
+    end: string;
+    status: string;
+    status_color: string;
+}
+
 const props = defineProps<{
-    sessions?: Session[];
-    events?: string[];
+    event: Event;
+    sessions: Session[];
 }>();
 
 // 検索
 const searchQuery = ref("");
 
-// イベント絞り込み
-const selectedEvent = ref("");
-
 // ソート
-type SortKey = "user" | "event" | "score" | "rank" | "date";
+type SortKey = "user" | "score" | "rank" | "date";
 type SortOrder = "asc" | "desc";
 const sortKey = ref<SortKey>("date");
 const sortOrder = ref<SortOrder>("desc");
@@ -47,21 +50,9 @@ const sessionsList = computed(() => {
     return props.sessions ?? [];
 });
 
-// イベントリスト
-const eventsList = computed(() => {
-    return props.events ?? [];
-});
-
 // フィルタリング
 const filteredSessions = computed(() => {
     let result = sessionsList.value;
-
-    // イベントフィルター
-    if (selectedEvent.value) {
-        result = result.filter(
-            (s: Session) => s.event?.name === selectedEvent.value
-        );
-    }
 
     if (searchQuery.value) {
         const q = searchQuery.value.toLowerCase();
@@ -69,8 +60,7 @@ const filteredSessions = computed(() => {
             (s: Session) =>
                 s.user.name.toLowerCase().includes(q) ||
                 s.user.email.toLowerCase().includes(q) ||
-                (s.rank && s.rank.toLowerCase().includes(q)) ||
-                (s.event?.name && s.event.name.toLowerCase().includes(q))
+                (s.rank && s.rank.toLowerCase().includes(q))
         );
     }
 
@@ -87,11 +77,6 @@ const sortedSessions = computed(() => {
         switch (sortKey.value) {
             case "user":
                 comparison = a.user.name.localeCompare(b.user.name, "ja");
-                break;
-            case "event":
-                const eventA = a.event?.name || "";
-                const eventB = b.event?.name || "";
-                comparison = eventA.localeCompare(eventB, "ja");
                 break;
             case "score":
                 comparison = a.total_score - b.total_score;
@@ -208,65 +193,106 @@ const pageNumbers = computed(() => {
 
     return pages;
 });
+
+// ランク別の集計
+const rankStats = computed(() => {
+    const stats = { Platinum: 0, Gold: 0, Silver: 0, Bronze: 0 };
+    sessionsList.value.forEach(s => {
+        if (s.rank in stats) {
+            stats[s.rank as keyof typeof stats]++;
+        }
+    });
+    return stats;
+});
+
+// 平均スコア
+const averageScore = computed(() => {
+    if (sessionsList.value.length === 0) return 0;
+    const total = sessionsList.value.reduce((sum, s) => sum + s.total_score, 0);
+    return (total / sessionsList.value.length).toFixed(2);
+});
+
+// ステータスの色を取得
+const getStatusColor = (statusColor: string) => {
+    switch (statusColor) {
+        case 'blue':
+            return 'bg-blue-100 text-blue-800';
+        case 'green':
+            return 'bg-green-100 text-green-800';
+        case 'gray':
+            return 'bg-gray-100 text-gray-800';
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+};
 </script>
 
 <template>
     <AdminLayout>
-        <Head title="成績管理" />
+        <Head :title="`${event.name} - 成績一覧`" />
 
         <div class="py-8">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <!-- ヘッダー -->
                 <div class="mb-6">
-                    <h1 class="text-3xl font-bold text-gray-900">📊 成績管理</h1>
-                    <p class="mt-2 text-gray-600">受験結果の確認と管理</p>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center gap-3 mb-2">
+                                <Link
+                                    :href="route('admin.events.index')"
+                                    class="text-gray-500 hover:text-gray-700"
+                                >
+                                    ← イベント管理に戻る
+                                </Link>
+                            </div>
+                            <h1 class="text-3xl font-bold text-gray-900">📊 {{ event.name }} - 成績一覧</h1>
+                            <div class="mt-2 flex items-center gap-4 text-gray-600">
+                                <span
+                                    :class="getStatusColor(event.status_color)"
+                                    class="px-3 py-1 rounded-full text-sm font-semibold"
+                                >
+                                    {{ event.status }}
+                                </span>
+                                <span>
+                                    期間: {{ new Date(event.begin).toLocaleString("ja-JP") }} 〜
+                                    {{ new Date(event.end).toLocaleString("ja-JP") }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 統計カード -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-                        <p class="text-sm text-gray-600">総セッション数</p>
-                        <p class="text-3xl font-bold text-gray-900">
-                            {{ sessionsList.length }}
-                        </p>
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+                        <p class="text-xs text-gray-600">受験者数</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ sessionsList.length }}</p>
                     </div>
-
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-                        <p class="text-sm text-gray-600">表示中</p>
-                        <p class="text-3xl font-bold text-gray-900">
-                            {{ filteredSessions.length }}
-                        </p>
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+                        <p class="text-xs text-gray-600">平均スコア</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ averageScore }}点</p>
                     </div>
-
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
-                        <p class="text-sm text-gray-600">ページ</p>
-                        <p class="text-3xl font-bold text-gray-900">
-                            {{ currentPage }} / {{ totalPages }}
-                        </p>
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
+                        <p class="text-xs text-gray-600">Platinum</p>
+                        <p class="text-2xl font-bold text-purple-600">{{ rankStats.Platinum }}</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+                        <p class="text-xs text-gray-600">Gold</p>
+                        <p class="text-2xl font-bold text-yellow-600">{{ rankStats.Gold }}</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-gray-400">
+                        <p class="text-xs text-gray-600">Silver</p>
+                        <p class="text-2xl font-bold text-gray-600">{{ rankStats.Silver }}</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
+                        <p class="text-xs text-gray-600">Bronze</p>
+                        <p class="text-2xl font-bold text-orange-600">{{ rankStats.Bronze }}</p>
                     </div>
                 </div>
 
                 <!-- 検索・フィルタ -->
                 <div class="bg-white rounded-lg shadow p-6 mb-6">
                     <div class="flex flex-wrap items-end gap-4">
-                        <div class="min-w-[200px]">
-                            <label
-                                for="eventFilter"
-                                class="block text-sm font-medium text-gray-700 mb-2"
-                            >
-                                イベント
-                            </label>
-                            <select
-                                id="eventFilter"
-                                v-model="selectedEvent"
-                                @change="currentPage = 1"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                                <option value="">すべてのイベント</option>
-                                <option v-for="eventName in eventsList" :key="eventName" :value="eventName">
-                                    {{ eventName }}
-                                </option>
-                            </select>
-                        </div>
                         <div class="flex-1 min-w-[200px]">
                             <label
                                 for="search"
@@ -306,7 +332,6 @@ const pageNumbers = computed(() => {
                             <button
                                 @click="
                                     searchQuery = '';
-                                    selectedEvent = '';
                                     currentPage = 1;
                                 "
                                 class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
@@ -328,12 +353,6 @@ const pageNumbers = computed(() => {
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                                     >
                                         ユーザー {{ getSortIcon("user") }}
-                                    </th>
-                                    <th
-                                        @click="changeSort('event')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                                    >
-                                        イベント {{ getSortIcon("event") }}
                                     </th>
                                     <th
                                         @click="changeSort('score')"
@@ -378,13 +397,11 @@ const pageNumbers = computed(() => {
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">
-                                            {{ session.event?.name || "—" }}
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-lg font-bold text-gray-900">
                                             {{ session.total_score }}点
+                                        </div>
+                                        <div class="text-xs text-gray-500">
+                                            / {{ session.total_questions }}問
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
@@ -420,7 +437,8 @@ const pageNumbers = computed(() => {
                             v-if="paginatedSessions.length === 0"
                             class="text-center py-12 text-gray-500"
                         >
-                            データがありません
+                            <p class="text-lg">データがありません</p>
+                            <p class="text-sm mt-2">このイベントにはまだ受験者がいません</p>
                         </div>
                     </div>
 

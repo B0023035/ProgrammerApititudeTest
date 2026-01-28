@@ -177,9 +177,11 @@
             <div class="flex gap-2">
                 <button
                     class="px-4 py-2 rounded transition-colors"
-                    :class="currentIndex <= 0 
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                        : 'bg-gray-400 text-white hover:bg-gray-500'"
+                    :class="
+                        currentIndex <= 0
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-400 text-white hover:bg-gray-500'
+                    "
                     :disabled="currentIndex <= 0"
                     @click="$emit('prevQuestion')"
                 >
@@ -187,9 +189,11 @@
                 </button>
                 <button
                     class="px-4 py-2 rounded transition-colors"
-                    :class="currentIndex >= totalQuestions - 1 
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                        : 'bg-gray-400 text-white hover:bg-gray-500'"
+                    :class="
+                        currentIndex >= totalQuestions - 1
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-400 text-white hover:bg-gray-500'
+                    "
                     :disabled="currentIndex >= totalQuestions - 1"
                     @click="$emit('nextQuestion')"
                 >
@@ -203,9 +207,11 @@
             <div class="flex gap-2">
                 <button
                     class="px-4 py-2 rounded transition-colors"
-                    :class="currentIndex === 0 
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                        : 'bg-gray-400 text-white hover:bg-gray-500'"
+                    :class="
+                        currentIndex === 0
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-400 text-white hover:bg-gray-500'
+                    "
                     :disabled="currentIndex === 0"
                     @click="$emit('prevQuestion')"
                 >
@@ -213,9 +219,11 @@
                 </button>
                 <button
                     class="px-4 py-2 rounded transition-colors"
-                    :class="currentIndex === totalQuestions - 1 
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                        : 'bg-gray-400 text-white hover:bg-gray-500'"
+                    :class="
+                        currentIndex === totalQuestions - 1
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-400 text-white hover:bg-gray-500'
+                    "
                     :disabled="currentIndex === totalQuestions - 1"
                     @click="$emit('nextQuestion')"
                 >

@@ -147,18 +147,18 @@ resources/js/
 
 ## 4. 技術スタック
 
-| レイヤー | 技術 | バージョン |
-|---------|------|----------|
-| フロントエンド | Vue.js | 3.x |
-| フロントエンド | Tailwind CSS | 3.x |
-| SSRブリッジ | Inertia.js | 1.x |
-| バックエンド | Laravel | 11.x |
-| データベース | MySQL | 8.0 |
-| キャッシュ | Redis | 7.0 |
-| Webサーバー | Nginx | Latest |
-| アプリサーバー | PHP-FPM | 8.2 |
-| コンテナ | Docker | Latest |
-| CDN/Proxy | Cloudflare | - |
+| レイヤー       | 技術         | バージョン |
+| -------------- | ------------ | ---------- |
+| フロントエンド | Vue.js       | 3.x        |
+| フロントエンド | Tailwind CSS | 3.x        |
+| SSRブリッジ    | Inertia.js   | 1.x        |
+| バックエンド   | Laravel      | 11.x       |
+| データベース   | MySQL        | 8.0        |
+| キャッシュ     | Redis        | 7.0        |
+| Webサーバー    | Nginx        | Latest     |
+| アプリサーバー | PHP-FPM      | 8.2        |
+| コンテナ       | Docker       | Latest     |
+| CDN/Proxy      | Cloudflare   | -          |
 
 ## 5. セキュリティ構成
 

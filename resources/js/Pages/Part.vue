@@ -421,9 +421,11 @@
                             <div class="w-1/2 flex gap-4 justify-center items-center">
                                 <button
                                     class="px-12 py-4 rounded-lg transition-colors text-xl font-bold"
-                                    :class="currentIndex === 0 
-                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                                        : 'bg-gray-400 text-white hover:bg-gray-500'"
+                                    :class="
+                                        currentIndex === 0
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-gray-400 text-white hover:bg-gray-500'
+                                    "
                                     :disabled="currentIndex === 0"
                                     @click="prevQuestion"
                                 >
@@ -431,9 +433,11 @@
                                 </button>
                                 <button
                                     class="px-12 py-4 rounded-lg transition-colors text-xl font-bold"
-                                    :class="currentIndex === questions.length - 1 
-                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                                        : 'bg-gray-400 text-white hover:bg-gray-500'"
+                                    :class="
+                                        currentIndex === questions.length - 1
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-gray-400 text-white hover:bg-gray-500'
+                                    "
                                     :disabled="currentIndex === questions.length - 1"
                                     @click="nextQuestion"
                                 >
@@ -602,9 +606,11 @@
                             <div class="flex gap-4 items-center justify-start flex-1 pl-8">
                                 <button
                                     class="px-12 py-4 rounded-lg transition-colors text-xl font-bold"
-                                    :class="currentIndex === 0 
-                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                                        : 'bg-gray-400 text-white hover:bg-gray-500'"
+                                    :class="
+                                        currentIndex === 0
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-gray-400 text-white hover:bg-gray-500'
+                                    "
                                     :disabled="currentIndex === 0"
                                     @click="prevQuestion"
                                 >
@@ -612,9 +618,11 @@
                                 </button>
                                 <button
                                     class="px-12 py-4 rounded-lg transition-colors text-xl font-bold"
-                                    :class="currentIndex === questions.length - 1 
-                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                                        : 'bg-gray-400 text-white hover:bg-gray-500'"
+                                    :class="
+                                        currentIndex === questions.length - 1
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-gray-400 text-white hover:bg-gray-500'
+                                    "
                                     :disabled="currentIndex === questions.length - 1"
                                     @click="nextQuestion"
                                 >
@@ -784,7 +792,7 @@ const isGuest = computed(() => !page.props.auth?.user || page.props.isGuest === 
 
 // フォーム設定
 const form = useForm({
-    _token: (page.props as any).csrf_token || "",  // ★ CSRF トークン
+    _token: (page.props as any).csrf_token || "", // ★ CSRF トークン
     answers: {} as Record<number, string>,
     examSessionId: page.props.examSessionId || page.props.practiceSessionId || "",
     practiceSessionId: page.props.practiceSessionId || "",
@@ -1336,7 +1344,8 @@ const completePractice = () => {
     }
 
     // ★ CSRF トークンを更新
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    const csrfToken =
+        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
     form._token = csrfToken;
 
     const payload = {
@@ -1370,48 +1379,49 @@ const completePractice = () => {
     // ★ 試験終了前にCSRFトークンを強制更新
     const submitForm = () => {
         form.post(route(routeName), {
-        onSuccess: () => {
-            console.log("試験パート完了データ送信完了");
-            if (currentPart.value === 3) {
-                try {
-                    localStorage.removeItem(`exam_session_${sessionId}`);
-                    localStorage.removeItem(`exam_answers_part_1`);
-                    localStorage.removeItem(`exam_answers_part_2`);
-                    localStorage.removeItem(`exam_answers_part_3`);
-                    console.log("ローカルストレージをクリアしました");
-                } catch (e) {
-                    console.log("ローカルストレージのクリアは不要またはエラー");
+            onSuccess: () => {
+                console.log("試験パート完了データ送信完了");
+                if (currentPart.value === 3) {
+                    try {
+                        localStorage.removeItem(`exam_session_${sessionId}`);
+                        localStorage.removeItem(`exam_answers_part_1`);
+                        localStorage.removeItem(`exam_answers_part_2`);
+                        localStorage.removeItem(`exam_answers_part_3`);
+                        console.log("ローカルストレージをクリアしました");
+                    } catch (e) {
+                        console.log("ローカルストレージのクリアは不要またはエラー");
+                    }
                 }
-            }
-        },
-        onError: errors => {
-            showConfirm.value = false;
-            console.error("試験パート完了エラー:", errors);
+            },
+            onError: errors => {
+                showConfirm.value = false;
+                console.error("試験パート完了エラー:", errors);
 
-            if (errors.examSessionId || errors.practiceSessionId) {
-                alert(`セッションエラー: ${errors.examSessionId || errors.practiceSessionId}`);
-            } else if (errors.timeSpent) {
-                alert(`時間エラー: ${errors.timeSpent}`);
-            } else if (errors.part) {
-                alert(`パートエラー: ${errors.part}`);
-            } else if (errors.totalQuestions) {
-                alert(`問題数エラー: ${errors.totalQuestions}`);
-            } else {
-                const errorMessages = Object.keys(errors)
-                    .map(key => `${key}: ${errors[key]}`)
-                    .join("\n");
-                alert(`エラーが発生しました:\n${errorMessages}`);
-            }
-        },
-        onFinish: () => {
-            console.log("リクエスト処理完了");
-        },
+                if (errors.examSessionId || errors.practiceSessionId) {
+                    alert(`セッションエラー: ${errors.examSessionId || errors.practiceSessionId}`);
+                } else if (errors.timeSpent) {
+                    alert(`時間エラー: ${errors.timeSpent}`);
+                } else if (errors.part) {
+                    alert(`パートエラー: ${errors.part}`);
+                } else if (errors.totalQuestions) {
+                    alert(`問題数エラー: ${errors.totalQuestions}`);
+                } else {
+                    const errorMessages = Object.keys(errors)
+                        .map(key => `${key}: ${errors[key]}`)
+                        .join("\n");
+                    alert(`エラーが発生しました:\n${errorMessages}`);
+                }
+            },
+            onFinish: () => {
+                console.log("リクエスト処理完了");
+            },
         });
     };
 
     // CSRFトークンを更新してから送信
-    if (typeof (window as any).forceRefreshCSRF === 'function') {
-        (window as any).forceRefreshCSRF()
+    if (typeof (window as any).forceRefreshCSRF === "function") {
+        (window as any)
+            .forceRefreshCSRF()
             .then(() => {
                 console.log("CSRFトークン更新完了、フォーム送信開始");
                 submitForm();
@@ -1427,11 +1437,11 @@ const completePractice = () => {
 
 function updateFormAnswers() {
     const answers: Record<number, string> = {};
-    
+
     console.log("=== updateFormAnswers (Exam) ===");
     console.log("answerStatus length:", answerStatus.value.length);
     console.log("questions length:", questions.value.length);
-    
+
     answerStatus.value.forEach((ans, index) => {
         if (ans.selected && questions.value[index]) {
             const questionId = questions.value[index].id;

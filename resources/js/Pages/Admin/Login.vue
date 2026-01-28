@@ -59,11 +59,7 @@ const submit = () => {
             <!-- ロゴエリア -->
             <div class="text-center mb-8">
                 <div class="inline-block">
-                    <img
-                        src="/images/YIC_logo.png"
-                        alt="YIC Logo"
-                        class="h-16 mx-auto mb-4"
-                    />
+                    <img src="/images/YIC_logo.png" alt="YIC Logo" class="h-16 mx-auto mb-4" />
                     <h1 class="text-3xl font-bold text-gray-800 mb-2">管理者ログイン</h1>
                     <p class="text-gray-500 text-sm">Admin Portal</p>
                 </div>

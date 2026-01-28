@@ -36,6 +36,9 @@ services:
             - app-storage:/var/www/html/storage
             - app-cache:/var/www/html/bootstrap/cache
             - ./logs:/var/log/app
+            - ./certbot/conf:/etc/letsencrypt:ro
+            - ./certbot/www:/var/www/certbot:ro
+
         networks:
             - app-network
         depends_on:
@@ -155,6 +158,22 @@ services:
                 reservations:
                     cpus: "0.5"
                     memory: 512M
+
+    # ==========================================
+    # Certbot（SSL証明書の自動更新）
+    # ==========================================
+    certbot:
+        image: certbot/certbot
+        container_name: programmer-test-certbot
+        restart: unless-stopped
+        volumes:
+            - ./certbot/conf:/etc/letsencrypt
+            - ./certbot/www:/var/www/certbot
+        entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done;'"
+        depends_on:
+            - app
+        networks:
+            - app-network
 
 networks:
     app-network:
