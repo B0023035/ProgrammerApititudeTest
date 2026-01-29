@@ -3,6 +3,7 @@
 プログラマー適性試験システムの起動・停止方法を説明します。
 
 ## 目次
+
 1. [前提条件](#前提条件)
 2. [起動方法](#起動方法)
 3. [停止方法](#停止方法)
@@ -14,6 +15,7 @@
 ## 前提条件
 
 ### 必要なソフトウェア
+
 - **Docker Desktop** または **Docker Engine** (v20.10以上)
 - **Docker Compose** (v2.0以上)
 - **Cloudflare Tunnel (cloudflared)** (外部公開する場合)
@@ -21,12 +23,13 @@
 - **Node.js** (v18以上、フロントエンドビルド用)
 
 ### ポート要件
-| ポート | 用途 |
-|--------|------|
-| 80 | HTTP（HTTPSにリダイレクト） |
-| 443 | HTTPS（メインアクセス） |
-| 3306 | MySQL（内部通信用） |
-| 6379 | Redis（内部通信用） |
+
+| ポート | 用途                        |
+| ------ | --------------------------- |
+| 80     | HTTP（HTTPSにリダイレクト） |
+| 443    | HTTPS（メインアクセス）     |
+| 3306   | MySQL（内部通信用）         |
+| 6379   | Redis（内部通信用）         |
 
 ---
 
@@ -35,6 +38,7 @@
 ### 1. Dockerサービスの起動
 
 **Linux/WSL2の場合:**
+
 ```bash
 sudo service docker start
 ```
@@ -231,6 +235,7 @@ echo "📍 外部: https://aws-sample-minmi.click/ (Tunnel起動後)"
 ```
 
 **使用方法:**
+
 ```bash
 chmod +x start-production.sh
 ./start-production.sh

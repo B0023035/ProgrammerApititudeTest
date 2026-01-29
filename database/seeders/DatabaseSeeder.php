@@ -2,25 +2,21 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
+     * 初期インストール時に必要なデータを投入
      */
     public function run(): void
     {
-        // 既存のテストユーザー
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-
-        // ★ 管理者Seederを呼び出し
         $this->call([
+            // 管理者アカウント作成
             AdminSeeder::class,
+            // 問題データ投入
+            QuestionDataSeeder::class,
         ]);
     }
 }

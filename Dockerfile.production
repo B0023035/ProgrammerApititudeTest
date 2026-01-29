@@ -6,7 +6,7 @@
 # ========================================
 # Stage 1: Composer 依存関係インストール
 # ========================================
-FROM composer:2 AS composer-deps
+FROM composer:2.7 AS composer-deps
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ RUN composer install \
 # ========================================
 # Stage 2: Node.js ビルド
 # ========================================
-FROM node:20-alpine AS node-builder
+FROM node:20.11-alpine AS node-builder
 
 WORKDIR /app
 
@@ -45,7 +45,7 @@ RUN npm run build
 # ========================================
 # Stage 3: 本番環境イメージ
 # ========================================
-FROM php:8.2-fpm-alpine AS production
+FROM php:8.2.15-fpm-alpine AS production
 
 # 必要なパッケージをインストール
 RUN apk add --no-cache \

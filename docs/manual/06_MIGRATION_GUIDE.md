@@ -6,12 +6,12 @@
 
 ## 変更が必要なファイル一覧
 
-| ファイル | 変更理由 |
-|----------|----------|
-| `.env` | ドメイン、DB認証情報、APP_KEY等 |
-| `~/.cloudflared/config.yml` | トンネルID、認証情報 |
-| `docker/default.conf` | ドメイン名 |
-| `certbot/conf/live/[domain]/` | SSL証明書 |
+| ファイル                      | 変更理由                        |
+| ----------------------------- | ------------------------------- |
+| `.env`                        | ドメイン、DB認証情報、APP_KEY等 |
+| `~/.cloudflared/config.yml`   | トンネルID、認証情報            |
+| `docker/default.conf`         | ドメイン名                      |
+| `certbot/conf/live/[domain]/` | SSL証明書                       |
 
 ---
 
@@ -102,11 +102,11 @@ tunnel: 新しいトンネルID
 credentials-file: /home/新しいユーザー名/.cloudflared/新しいトンネルID.json
 
 ingress:
-  - hostname: 新しいドメイン.com        # ← 変更
-    service: https://localhost:443
-    originRequest:
-      noTLSVerify: true
-  - service: http_status:404
+    - hostname: 新しいドメイン.com # ← 変更
+      service: https://localhost:443
+      originRequest:
+          noTLSVerify: true
+    - service: http_status:404
 ```
 
 ---
@@ -116,7 +116,7 @@ ingress:
 ### Cloudflare Origin CA証明書
 
 1. **Cloudflareダッシュボードにログイン**
-   - https://dash.cloudflare.com/
+    - https://dash.cloudflare.com/
 
 2. **対象ドメインを選択**
 
@@ -125,11 +125,11 @@ ingress:
 4. **「Create Certificate」をクリック**
 
 5. **設定**:
-   - Private key type: RSA (2048)
-   - Hostnames: 
-     - `新しいドメイン.com`
-     - `*.新しいドメイン.com`
-   - Certificate Validity: 15 years
+    - Private key type: RSA (2048)
+    - Hostnames:
+        - `新しいドメイン.com`
+        - `*.新しいドメイン.com`
+    - Certificate Validity: 15 years
 
 6. **「Create」をクリック**
 
@@ -162,12 +162,12 @@ server {
     # ...
 }
 
-# HTTPSサーバーブロック  
+# HTTPSサーバーブロック
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
     server_name 新しいドメイン.com www.新しいドメイン.com;  # ← 変更
-    
+
     # SSL証明書パス（ドメイン名が含まれる）
     ssl_certificate /etc/letsencrypt/live/新しいドメイン.com/fullchain.pem;      # ← 変更
     ssl_certificate_key /etc/letsencrypt/live/新しいドメイン.com/privkey.pem;    # ← 変更
@@ -183,13 +183,14 @@ server {
 
 ```yaml
 services:
-  app:
-    volumes:
-      # 証明書のパスがドメイン名に依存
-      - ./certbot/conf:/etc/letsencrypt:ro
+    app:
+        volumes:
+            # 証明書のパスがドメイン名に依存
+            - ./certbot/conf:/etc/letsencrypt:ro
 ```
 
 証明書フォルダ構造:
+
 ```
 certbot/
 └── conf/
@@ -244,12 +245,12 @@ certbot/
 
 ### 検索・置換用
 
-| 旧値 | 新値 | 対象ファイル |
-|------|------|-------------|
-| `aws-sample-minmi.click` | `新しいドメイン.com` | `.env`, `docker/default.conf` |
-| `60eb9d8c-3154-4ff8-8192-b78045564bc3` | `新しいトンネルID` | `~/.cloudflared/config.yml` |
-| `minmi-tunnel` | `新しいトンネル名` | cloudflaredコマンド |
-| `/home/b0023035/` | `/home/新しいユーザー/` | `~/.cloudflared/config.yml` |
+| 旧値                                   | 新値                    | 対象ファイル                  |
+| -------------------------------------- | ----------------------- | ----------------------------- |
+| `aws-sample-minmi.click`               | `新しいドメイン.com`    | `.env`, `docker/default.conf` |
+| `60eb9d8c-3154-4ff8-8192-b78045564bc3` | `新しいトンネルID`      | `~/.cloudflared/config.yml`   |
+| `minmi-tunnel`                         | `新しいトンネル名`      | cloudflaredコマンド           |
+| `/home/b0023035/`                      | `/home/新しいユーザー/` | `~/.cloudflared/config.yml`   |
 
 ### 一括置換コマンド（参考）
 
@@ -292,13 +293,13 @@ cp -r storage/app/public/* /新しい環境/storage/app/public/
 ### セキュリティ
 
 1. **APP_KEY は必ず新しく生成**
-   - 元の環境のキーを使い回さない
-   - キーが漏洩するとセッションハイジャックのリスク
+    - 元の環境のキーを使い回さない
+    - キーが漏洩するとセッションハイジャックのリスク
 
 2. **パスワードの変更を推奨**
-   - DB_PASSWORD
-   - 管理者パスワード
-   - MAIL_PASSWORD
+    - DB_PASSWORD
+    - 管理者パスワード
+    - MAIL_PASSWORD
 
 ### 互換性
 

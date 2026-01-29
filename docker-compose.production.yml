@@ -1,8 +1,7 @@
 # ==========================================
 # 本番環境用 Docker Compose
-# 150人同時接続対応
+# プログラマー適性試験システム v1.0.0
 # ==========================================
-version: "3.8"
 
 services:
     # ==========================================
@@ -55,20 +54,12 @@ services:
             timeout: 10s
             retries: 3
             start_period: 60s
-        deploy:
-            resources:
-                limits:
-                    cpus: "4"
-                    memory: 4G
-                reservations:
-                    cpus: "2"
-                    memory: 2G
 
     # ==========================================
-    # MySQL データベース（150人同時接続対応）
+    # MySQL データベース（バージョン固定: 8.0.36）
     # ==========================================
     db:
-        image: mysql:8.0
+        image: mysql:8.0.36
         container_name: programmer-test-db
         restart: always
         ports:
@@ -115,20 +106,12 @@ services:
             timeout: 5s
             retries: 10
             start_period: 30s
-        deploy:
-            resources:
-                limits:
-                    cpus: "2"
-                    memory: 2G
-                reservations:
-                    cpus: "1"
-                    memory: 1G
 
     # ==========================================
-    # Redis キャッシュ・セッション（150人同時接続対応）
+    # Redis キャッシュ・セッション（バージョン固定: 7.2-alpine）
     # ==========================================
     redis:
-        image: redis:7-alpine
+        image: redis:7.2-alpine
         container_name: programmer-test-redis
         restart: always
         ports:
@@ -151,36 +134,10 @@ services:
             interval: 10s
             timeout: 5s
             retries: 5
-        deploy:
-            resources:
-                limits:
-                    cpus: "1"
-                    memory: 1G
-                reservations:
-                    cpus: "0.5"
-                    memory: 512M
-
-    # ==========================================
-    # Certbot（SSL証明書の自動更新）
-    # ==========================================
-    certbot:
-        image: certbot/certbot
-        container_name: programmer-test-certbot
-        restart: unless-stopped
-        volumes:
-            - ./certbot/conf:/etc/letsencrypt
-            - ./certbot/www:/var/www/certbot
-        entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done;'"
-        depends_on:
-            - app
-        networks:
-            - app-network
 
 networks:
     app-network:
         driver: bridge
-        driver_opts:
-            com.docker.network.driver.mtu: 1500
 
 volumes:
     db-data:

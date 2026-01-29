@@ -6,69 +6,70 @@
 
 ---
 
-## ドキュメント一覧
+## 提出用ドキュメント（必須）
 
-| ファイル                                               | 内容                     | 対象者                 |
-| ------------------------------------------------------ | ------------------------ | ---------------------- |
-| [01_STARTUP_GUIDE.md](01_STARTUP_GUIDE.md)             | 起動・停止方法           | 運用担当者             |
-| [02_MODULE_ARCHITECTURE.md](02_MODULE_ARCHITECTURE.md) | モジュール構成図         | 開発者                 |
-| [03_SYSTEM_ARCHITECTURE.md](03_SYSTEM_ARCHITECTURE.md) | システム構成図           | 開発者・インフラ担当   |
-| [04_OPERATION_MANUAL.md](04_OPERATION_MANUAL.md)       | 操作マニュアル           | 管理者・受験者・ゲスト |
-| [05_ENVIRONMENT_SETUP.md](05_ENVIRONMENT_SETUP.md)     | 環境設定マニュアル       | インフラ担当・開発者   |
-| [06_MIGRATION_GUIDE.md](06_MIGRATION_GUIDE.md)         | 他PC・アカウントへの移行 | インフラ担当           |
+| ファイル                                               | 内容               | 対象者                 |
+| ------------------------------------------------------ | ------------------ | ---------------------- |
+| [02_INSTALL_MANUAL.md](02_INSTALL_MANUAL.md)           | インストールマニュアル | インフラ担当           |
+| [03_ENVIRONMENT_SETUP.md](03_ENVIRONMENT_SETUP.md)     | 環境設定マニュアル     | インフラ担当・開発者   |
+| [04_OPERATION_MANUAL.md](04_OPERATION_MANUAL.md)       | 操作マニュアル         | 管理者・受験者・ゲスト |
 
 ---
 
-## クイックスタート
+## その他のドキュメント（参考）
 
-### 本番環境の起動
+| ファイル                                               | 内容                     | 対象者               |
+| ------------------------------------------------------ | ------------------------ | -------------------- |
+| [01_STARTUP_GUIDE.md](01_STARTUP_GUIDE.md)             | 起動・停止方法           | 運用担当者           |
+| [06_MIGRATION_GUIDE.md](06_MIGRATION_GUIDE.md)         | 他PC・アカウントへの移行 | インフラ担当         |
+| [07_MODULE_ARCHITECTURE.md](07_MODULE_ARCHITECTURE.md) | モジュール構成図         | 開発者               |
+| [08_SYSTEM_ARCHITECTURE.md](08_SYSTEM_ARCHITECTURE.md) | システム構成図           | 開発者・インフラ担当 |
+
+---
+
+## クイックインストール
 
 ```bash
-# 1. Dockerを起動
-sudo service docker start
+# 1. プロジェクトを展開
+unzip ProgrammerAptitudeTest.zip
+cd ProgrammerAptitudeTest
 
-# 2. プロジェクトディレクトリに移動
-cd /home/[ユーザー名]/ProgrammerAptitudeTest
+# 2. 環境設定ファイルをコピー
+cp .env.example .env
 
-# 3. コンテナを起動
-docker compose -f docker-compose.production.yml up -d
-
-# 4. Cloudflare Tunnelを起動（外部公開時）
-cloudflared tunnel run minmi-tunnel
+# 3. インストールスクリプトを実行
+chmod +x install.sh
+./install.sh
 ```
 
-### アクセスURL
+---
 
-| 環境                   | URL                                        |
-| ---------------------- | ------------------------------------------ |
-| ローカル               | https://localhost/                         |
-| 外部（Cloudflare経由） | https://aws-sample-minmi.click/            |
-| 管理画面               | https://aws-sample-minmi.click/admin/login |
+## 初期管理者アカウント
+
+| 項目       | 値                |
+| ---------- | ----------------- |
+| メール     | admin@provisional |
+| パスワード | P@ssw0rd          |
+
+> ⚠️ 初回ログイン後、必ずパスワードとメールアドレスを変更してください。
 
 ---
 
-## 技術スタック
+## 技術スタック（バージョン固定）
 
-| カテゴリ         | 技術                           |
-| ---------------- | ------------------------------ |
-| バックエンド     | Laravel 11 (PHP 8.3)           |
-| フロントエンド   | Vue.js 3 + Inertia.js          |
-| データベース     | MySQL 8.0                      |
-| キャッシュ       | Redis 7                        |
-| Webサーバー      | Nginx                          |
-| コンテナ         | Docker + Docker Compose        |
-| CDN/セキュリティ | Cloudflare + Cloudflare Tunnel |
-
----
-
-## サポート
-
-問題が発生した場合は、各ドキュメントのトラブルシューティングセクションを参照してください。
+| コンポーネント | バージョン     |
+| -------------- | -------------- |
+| PHP            | 8.2.15         |
+| MySQL          | 8.0.36         |
+| Redis          | 7.2-alpine     |
+| Node.js        | 20.11          |
+| Laravel        | 11.x           |
+| Vue.js         | 3.x            |
 
 ---
 
 ## 更新履歴
 
-| 日付       | 内容     |
-| ---------- | -------- |
-| 2026-01-29 | 初版作成 |
+| 日付       | 内容                                   |
+| ---------- | -------------------------------------- |
+| 2026-01-29 | v1.0.0 カプセル化・ポータブル化対応    |

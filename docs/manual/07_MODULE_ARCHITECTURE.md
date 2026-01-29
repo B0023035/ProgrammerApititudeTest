@@ -175,7 +175,7 @@ app/
                        │ question_id    │     │ choice_text    │
                        │ order          │     │ is_correct     │
                        └────────────────┘     └────────────────┘
-                              
+
 ┌────────────────┐     ┌────────────────┐     ┌────────────────┐
 │     User       │────▶│  ExamSession   │────▶│    Answer      │
 ├────────────────┤ 1:N ├────────────────┤ 1:N ├────────────────┤
@@ -204,31 +204,31 @@ app/
 
 ### 管理者ルート (`/admin/*`)
 
-| メソッド | パス | コントローラー | 機能 |
-|---------|------|---------------|------|
-| GET | /admin/dashboard | DashboardController@index | ダッシュボード |
-| GET/POST | /admin/events | EventController@index/store | イベント一覧/作成 |
-| GET/PUT/DELETE | /admin/events/{id} | EventController@show/update/destroy | イベント詳細/更新/削除 |
-| GET/POST | /admin/questions | QuestionController@index/store | 問題一覧/作成 |
-| GET | /admin/results | ResultController@index | 成績一覧 |
-| GET | /admin/results/event/{id} | ResultController@eventResults | イベント別成績 |
-| GET | /admin/statistics | StatisticsController@index | 統計・グラフ |
-| GET/POST | /admin/accounts | AccountController@index/store | アカウント管理 |
+| メソッド       | パス                      | コントローラー                      | 機能                   |
+| -------------- | ------------------------- | ----------------------------------- | ---------------------- |
+| GET            | /admin/dashboard          | DashboardController@index           | ダッシュボード         |
+| GET/POST       | /admin/events             | EventController@index/store         | イベント一覧/作成      |
+| GET/PUT/DELETE | /admin/events/{id}        | EventController@show/update/destroy | イベント詳細/更新/削除 |
+| GET/POST       | /admin/questions          | QuestionController@index/store      | 問題一覧/作成          |
+| GET            | /admin/results            | ResultController@index              | 成績一覧               |
+| GET            | /admin/results/event/{id} | ResultController@eventResults       | イベント別成績         |
+| GET            | /admin/statistics         | StatisticsController@index          | 統計・グラフ           |
+| GET/POST       | /admin/accounts           | AccountController@index/store       | アカウント管理         |
 
 ### ユーザールート (`/user/*`)
 
-| メソッド | パス | コントローラー | 機能 |
-|---------|------|---------------|------|
-| GET | /user/dashboard | DashboardController@index | ダッシュボード |
-| GET | /user/exam/{event} | ExamController@show | 試験開始 |
-| POST | /user/exam/{event}/answer | ExamController@answer | 回答送信 |
-| GET | /user/my-results | ResultController@index | 自分の成績 |
+| メソッド | パス                      | コントローラー            | 機能           |
+| -------- | ------------------------- | ------------------------- | -------------- |
+| GET      | /user/dashboard           | DashboardController@index | ダッシュボード |
+| GET      | /user/exam/{event}        | ExamController@show       | 試験開始       |
+| POST     | /user/exam/{event}/answer | ExamController@answer     | 回答送信       |
+| GET      | /user/my-results          | ResultController@index    | 自分の成績     |
 
 ### ゲストルート (`/*`)
 
-| メソッド | パス | コントローラー | 機能 |
-|---------|------|---------------|------|
-| GET | / | HomeController@index | トップページ |
-| POST | /guest/entry | GuestExamController@entry | ゲスト試験開始 |
-| GET | /practice | PracticeController@index | 練習問題一覧 |
-| GET | /practice/{id} | PracticeController@show | 練習問題実施 |
+| メソッド | パス           | コントローラー            | 機能           |
+| -------- | -------------- | ------------------------- | -------------- |
+| GET      | /              | HomeController@index      | トップページ   |
+| POST     | /guest/entry   | GuestExamController@entry | ゲスト試験開始 |
+| GET      | /practice      | PracticeController@index  | 練習問題一覧   |
+| GET      | /practice/{id} | PracticeController@show   | 練習問題実施   |

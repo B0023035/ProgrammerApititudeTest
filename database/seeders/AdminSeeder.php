@@ -13,26 +13,18 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        // デフォルト管理者アカウント
+        // デフォルト管理者アカウント（初期インストール用）
         Admin::firstOrCreate(
-            ['email' => 'admin@a'],
+            ['email' => 'admin@provisional'],
             [
                 'name' => 'admin',
-                'password' => Hash::make('Passw0rd'),
-            ]
-        );
-
-        // テスト用管理者
-        Admin::firstOrCreate(
-            ['email' => 'a@a'],
-            [
-                'name' => 'a',
-                'password' => Hash::make('Passw0rd'),
+                'password' => Hash::make('P@ssw0rd'),
+                'role' => 'super_admin',
             ]
         );
 
         $this->command->info('管理者アカウントを作成しました。');
-        $this->command->info('Email: admin@a / Password: Passw0rd');
-        $this->command->info('Email: a@a / Password: Passw0rd');
+        $this->command->info('Email: admin@provisional / Password: P@ssw0rd');
+        $this->command->warn('※ 初回ログイン後、パスワードとメールアドレスを変更してください。');
     }
 }
