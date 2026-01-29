@@ -257,15 +257,23 @@ const getStatusColor = (statusColor: string) => {
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
                         <p class="text-sm text-gray-600 mb-1">受験者数</p>
-                        <p class="text-4xl font-bold text-gray-900">{{ sessionsList.length }}<span class="text-lg text-gray-500 ml-1">人</span></p>
+                        <p class="text-4xl font-bold text-gray-900">
+                            {{ sessionsList.length
+                            }}<span class="text-lg text-gray-500 ml-1">人</span>
+                        </p>
                     </div>
                     <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
                         <p class="text-sm text-gray-600 mb-1">平均スコア</p>
-                        <p class="text-4xl font-bold text-gray-900">{{ averageScore }}<span class="text-lg text-gray-500 ml-1">点</span></p>
+                        <p class="text-4xl font-bold text-gray-900">
+                            {{ averageScore }}<span class="text-lg text-gray-500 ml-1">点</span>
+                        </p>
                     </div>
                     <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-indigo-500">
                         <p class="text-sm text-gray-600 mb-1">ページ数</p>
-                        <p class="text-4xl font-bold text-gray-900">{{ currentPage }}<span class="text-lg text-gray-500 ml-1">/ {{ totalPages }}</span></p>
+                        <p class="text-4xl font-bold text-gray-900">
+                            {{ currentPage
+                            }}<span class="text-lg text-gray-500 ml-1">/ {{ totalPages }}</span>
+                        </p>
                     </div>
                 </div>
 
