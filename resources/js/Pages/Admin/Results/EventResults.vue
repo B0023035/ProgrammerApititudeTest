@@ -194,17 +194,6 @@ const pageNumbers = computed(() => {
     return pages;
 });
 
-// ランク別の集計
-const rankStats = computed(() => {
-    const stats = { Platinum: 0, Gold: 0, Silver: 0, Bronze: 0 };
-    sessionsList.value.forEach(s => {
-        if (s.rank in stats) {
-            stats[s.rank as keyof typeof stats]++;
-        }
-    });
-    return stats;
-});
-
 // 平均スコア
 const averageScore = computed(() => {
     if (sessionsList.value.length === 0) return 0;
@@ -215,14 +204,14 @@ const averageScore = computed(() => {
 // ステータスの色を取得
 const getStatusColor = (statusColor: string) => {
     switch (statusColor) {
-        case 'blue':
-            return 'bg-blue-100 text-blue-800';
-        case 'green':
-            return 'bg-green-100 text-green-800';
-        case 'gray':
-            return 'bg-gray-100 text-gray-800';
+        case "blue":
+            return "bg-blue-100 text-blue-800";
+        case "green":
+            return "bg-green-100 text-green-800";
+        case "gray":
+            return "bg-gray-100 text-gray-800";
         default:
-            return 'bg-gray-100 text-gray-800';
+            return "bg-gray-100 text-gray-800";
     }
 };
 </script>
@@ -245,7 +234,9 @@ const getStatusColor = (statusColor: string) => {
                                     ← イベント管理に戻る
                                 </Link>
                             </div>
-                            <h1 class="text-3xl font-bold text-gray-900">📊 {{ event.name }} - 成績一覧</h1>
+                            <h1 class="text-3xl font-bold text-gray-900">
+                                📊 {{ event.name }} - 成績一覧
+                            </h1>
                             <div class="mt-2 flex items-center gap-4 text-gray-600">
                                 <span
                                     :class="getStatusColor(event.status_color)"
@@ -263,30 +254,18 @@ const getStatusColor = (statusColor: string) => {
                 </div>
 
                 <!-- 統計カード -->
-                <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-                        <p class="text-xs text-gray-600">受験者数</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ sessionsList.length }}</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+                        <p class="text-sm text-gray-600 mb-1">受験者数</p>
+                        <p class="text-4xl font-bold text-gray-900">{{ sessionsList.length }}<span class="text-lg text-gray-500 ml-1">人</span></p>
                     </div>
-                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
-                        <p class="text-xs text-gray-600">平均スコア</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ averageScore }}点</p>
+                    <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+                        <p class="text-sm text-gray-600 mb-1">平均スコア</p>
+                        <p class="text-4xl font-bold text-gray-900">{{ averageScore }}<span class="text-lg text-gray-500 ml-1">点</span></p>
                     </div>
-                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
-                        <p class="text-xs text-gray-600">Platinum</p>
-                        <p class="text-2xl font-bold text-purple-600">{{ rankStats.Platinum }}</p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
-                        <p class="text-xs text-gray-600">Gold</p>
-                        <p class="text-2xl font-bold text-yellow-600">{{ rankStats.Gold }}</p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-gray-400">
-                        <p class="text-xs text-gray-600">Silver</p>
-                        <p class="text-2xl font-bold text-gray-600">{{ rankStats.Silver }}</p>
-                    </div>
-                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
-                        <p class="text-xs text-gray-600">Bronze</p>
-                        <p class="text-2xl font-bold text-orange-600">{{ rankStats.Bronze }}</p>
+                    <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-indigo-500">
+                        <p class="text-sm text-gray-600 mb-1">ページ数</p>
+                        <p class="text-4xl font-bold text-gray-900">{{ currentPage }}<span class="text-lg text-gray-500 ml-1">/ {{ totalPages }}</span></p>
                     </div>
                 </div>
 

@@ -58,9 +58,7 @@ const filteredSessions = computed(() => {
 
     // イベントフィルター
     if (selectedEvent.value) {
-        result = result.filter(
-            (s: Session) => s.event?.name === selectedEvent.value
-        );
+        result = result.filter((s: Session) => s.event?.name === selectedEvent.value);
     }
 
     if (searchQuery.value) {
@@ -262,7 +260,11 @@ const pageNumbers = computed(() => {
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="">すべてのイベント</option>
-                                <option v-for="eventName in eventsList" :key="eventName" :value="eventName">
+                                <option
+                                    v-for="eventName in eventsList"
+                                    :key="eventName"
+                                    :value="eventName"
+                                >
                                     {{ eventName }}
                                 </option>
                             </select>

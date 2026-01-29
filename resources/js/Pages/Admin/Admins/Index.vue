@@ -34,8 +34,7 @@ const filteredAdmins = computed(() => {
     const query = searchQuery.value.toLowerCase();
     return props.admins.data.filter(
         admin =>
-            admin.name.toLowerCase().includes(query) ||
-            admin.email.toLowerCase().includes(query)
+            admin.name.toLowerCase().includes(query) || admin.email.toLowerCase().includes(query)
     );
 });
 
@@ -88,9 +87,7 @@ const deleteAdmin = (admin: Admin) => {
 
     <AdminLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                管理者アカウント管理
-            </h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">管理者アカウント管理</h2>
         </template>
 
         <div class="py-6">
