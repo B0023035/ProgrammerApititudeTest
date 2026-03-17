@@ -21,6 +21,13 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
+// ==========================================
+// ヘルスチェックエンドポイント（Docker用）
+// ==========================================
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok'], 200);
+});
+
 // ★★★ Sanctum CSRF Cookie エンドポイント(Inertia必須) ★★★
 Route::get('/sanctum/csrf-cookie', function () {
     // セッションを明示的に開始

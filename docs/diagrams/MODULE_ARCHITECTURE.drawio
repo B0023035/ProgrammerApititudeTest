@@ -1,0 +1,206 @@
+<mxfile host="app.diagrams.net" modified="2026-01-30T00:00:00.000Z" agent="Mozilla/5.0" version="22.1.0" type="device">
+  <diagram name="モジュール構成図" id="module-architecture">
+    <mxGraphModel dx="1434" dy="780" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- タイトル -->
+        <mxCell id="title" value="プログラマー適性試験システム - モジュール構成図" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="300" y="20" width="500" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- プレゼンテーション層 -->
+        <mxCell id="presentation-layer" value="プレゼンテーション層" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="1080" height="180" as="geometry" />
+        </mxCell>
+        
+        <!-- Vue.js コンポーネント -->
+        <mxCell id="vue-components" value="Vue.js Components" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1" vertex="1" parent="presentation-layer">
+          <mxGeometry x="40" y="30" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="guest-pages" value="ゲスト画面&#xa;- SessionCodeEntry&#xa;- GuestInfo&#xa;- Part" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=5" vertex="1" parent="presentation-layer">
+          <mxGeometry x="40" y="90" width="120" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="user-pages" value="ユーザー画面&#xa;- Dashboard&#xa;- MyResults&#xa;- Practice" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=5" vertex="1" parent="presentation-layer">
+          <mxGeometry x="170" y="90" width="120" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="admin-pages" value="管理者画面&#xa;- AdminDashboard&#xa;- UserManagement&#xa;- EventManagement" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=5" vertex="1" parent="presentation-layer">
+          <mxGeometry x="300" y="90" width="140" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="exam-pages" value="試験画面&#xa;- ExamInstructions&#xa;- Part (問題表示)&#xa;- Result" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=5" vertex="1" parent="presentation-layer">
+          <mxGeometry x="450" y="90" width="120" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- Inertia.js -->
+        <mxCell id="inertia" value="Inertia.js&#xa;(SPA Router)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1" vertex="1" parent="presentation-layer">
+          <mxGeometry x="600" y="60" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Tailwind CSS -->
+        <mxCell id="tailwind" value="Tailwind CSS&#xa;(スタイリング)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1" vertex="1" parent="presentation-layer">
+          <mxGeometry x="740" y="60" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Vite -->
+        <mxCell id="vite" value="Vite&#xa;(ビルドツール)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1" vertex="1" parent="presentation-layer">
+          <mxGeometry x="880" y="60" width="120" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ビジネスロジック層 -->
+        <mxCell id="business-layer" value="ビジネスロジック層 (Laravel 11)" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="1080" height="200" as="geometry" />
+        </mxCell>
+        
+        <!-- Controllers -->
+        <mxCell id="controllers" value="Controllers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1" vertex="1" parent="business-layer">
+          <mxGeometry x="40" y="20" width="200" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="auth-ctrl" value="Auth&#xa;- LoginController&#xa;- RegisterController" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="business-layer">
+          <mxGeometry x="40" y="60" width="130" height="55" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="exam-ctrl" value="Exam&#xa;- ExamController&#xa;- ExamAnswerController&#xa;- GuestExamController" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="business-layer">
+          <mxGeometry x="40" y="125" width="130" height="65" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="admin-ctrl" value="Admin&#xa;- AdminController&#xa;- UserManagementCtrl&#xa;- QuestionManagementCtrl" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="business-layer">
+          <mxGeometry x="180" y="60" width="150" height="65" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="result-ctrl" value="Results&#xa;- ExamResultController&#xa;- ResultsManagementCtrl" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="business-layer">
+          <mxGeometry x="180" y="135" width="150" height="55" as="geometry" />
+        </mxCell>
+        
+        <!-- Services -->
+        <mxCell id="services" value="Services" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1" vertex="1" parent="business-layer">
+          <mxGeometry x="360" y="60" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="exam-service" value="ExamService&#xa;- 成績計算&#xa;- 不正検知" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="business-layer">
+          <mxGeometry x="360" y="120" width="140" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Middleware -->
+        <mxCell id="middleware" value="Middleware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1" vertex="1" parent="business-layer">
+          <mxGeometry x="530" y="60" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="middleware-list" value="- CSRF検証&#xa;- 認証 (Auth)&#xa;- セッション管理&#xa;- 権限チェック" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="business-layer">
+          <mxGeometry x="530" y="120" width="140" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- Routes -->
+        <mxCell id="routes" value="Routes (web.php)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1" vertex="1" parent="business-layer">
+          <mxGeometry x="700" y="60" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="routes-list" value="- /guest/*&#xa;- /exam/*&#xa;- /admin/*&#xa;- /practice/*" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="business-layer">
+          <mxGeometry x="700" y="120" width="140" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- Providers -->
+        <mxCell id="providers" value="Providers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1" vertex="1" parent="business-layer">
+          <mxGeometry x="870" y="60" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="providers-list" value="- AppServiceProvider&#xa;- AuthServiceProvider&#xa;- RouteServiceProvider" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="business-layer">
+          <mxGeometry x="870" y="120" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- データ層 -->
+        <mxCell id="data-layer" value="データ層" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="1080" height="180" as="geometry" />
+        </mxCell>
+        
+        <!-- Models (Eloquent) -->
+        <mxCell id="models" value="Models (Eloquent ORM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1" vertex="1" parent="data-layer">
+          <mxGeometry x="40" y="20" width="300" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="user-models" value="ユーザー関連&#xa;- User&#xa;- Admin" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="data-layer">
+          <mxGeometry x="40" y="60" width="100" height="55" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="exam-models" value="試験関連&#xa;- Event&#xa;- ExamSession&#xa;- EventQuestion" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="data-layer">
+          <mxGeometry x="150" y="60" width="100" height="65" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="question-models" value="問題関連&#xa;- Question&#xa;- Choice&#xa;- Answer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="data-layer">
+          <mxGeometry x="260" y="60" width="100" height="65" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="practice-models" value="練習関連&#xa;- PracticeQuestion&#xa;- PracticeChoice" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="data-layer">
+          <mxGeometry x="40" y="120" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Database -->
+        <mxCell id="database" value="MySQL 8.0" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1" vertex="1" parent="data-layer">
+          <mxGeometry x="420" y="40" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="db-tables" value="Tables:&#xa;users, admins, events,&#xa;exam_sessions, questions,&#xa;choices, answers,&#xa;practice_questions..." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="data-layer">
+          <mxGeometry x="420" y="125" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Redis -->
+        <mxCell id="redis" value="Redis 7.2" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1" vertex="1" parent="data-layer">
+          <mxGeometry x="600" y="40" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="redis-usage" value="用途:&#xa;- セッション管理&#xa;- キャッシュ&#xa;- キュー" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;align=left;spacingLeft=5" vertex="1" parent="data-layer">
+          <mxGeometry x="600" y="125" width="100" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- インフラ層 -->
+        <mxCell id="infra-layer" value="インフラ層 (Docker)" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;fontStyle=1;fontColor=#333333" vertex="1" parent="1">
+          <mxGeometry x="40" y="700" width="1080" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="nginx" value="Nginx&#xa;(Webサーバー)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="infra-layer">
+          <mxGeometry x="40" y="30" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="php-fpm" value="PHP-FPM 8.4&#xa;(アプリ実行)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11" vertex="1" parent="infra-layer">
+          <mxGeometry x="200" y="30" width="120" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="docker-compose" value="Docker Compose&#xa;(オーケストレーション)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11" vertex="1" parent="infra-layer">
+          <mxGeometry x="360" y="30" width="150" height="50" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="cloudflare" value="Cloudflare Tunnel&#xa;(外部公開)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11" vertex="1" parent="infra-layer">
+          <mxGeometry x="550" y="30" width="140" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- 接続矢印 -->
+        <mxCell id="arrow1" value="HTTP/HTTPS" style="endArrow=classic;startArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=2;strokeColor=#6c8ebf" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="580" y="260" as="sourcePoint" />
+            <mxPoint x="580" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow2" value="Eloquent ORM" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#82b366" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="580" y="480" as="sourcePoint" />
+            <mxPoint x="580" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <mxCell id="arrow3" value="Docker Network" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#666666" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="580" y="680" as="sourcePoint" />
+            <mxPoint x="580" y="700" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

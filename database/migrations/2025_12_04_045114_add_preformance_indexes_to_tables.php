@@ -67,13 +67,15 @@ return new class extends Migration
             DB::statement('ALTER TABLE events ADD INDEX idx_passphrase_dates (passphrase, begin, end)');
         }
 
-        // ★6. exam_violations テーブルのインデックス追加
-        if (!$this->hasIndex('exam_violations', 'idx_session')) {
-            DB::statement('ALTER TABLE exam_violations ADD INDEX idx_session (exam_session_id)');
-        }
-        
-        if (!$this->hasIndex('exam_violations', 'idx_user_created')) {
-            DB::statement('ALTER TABLE exam_violations ADD INDEX idx_user_created (user_id, created_at)');
+        // ★6. exam_violations テーブルのインデックス追加（テーブルが存在する場合のみ）
+        if (Schema::hasTable('exam_violations')) {
+            if (!$this->hasIndex('exam_violations', 'idx_session')) {
+                DB::statement('ALTER TABLE exam_violations ADD INDEX idx_session (exam_session_id)');
+            }
+            
+            if (!$this->hasIndex('exam_violations', 'idx_user_created')) {
+                DB::statement('ALTER TABLE exam_violations ADD INDEX idx_user_created (user_id, created_at)');
+            }
         }
     }
 
@@ -117,11 +119,13 @@ return new class extends Migration
             DB::statement('ALTER TABLE events DROP INDEX idx_passphrase_dates');
         }
 
-        if ($this->hasIndex('exam_violations', 'idx_session')) {
-            DB::statement('ALTER TABLE exam_violations DROP INDEX idx_session');
-        }
-        if ($this->hasIndex('exam_violations', 'idx_user_created')) {
-            DB::statement('ALTER TABLE exam_violations DROP INDEX idx_user_created');
+        if (Schema::hasTable('exam_violations')) {
+            if ($this->hasIndex('exam_violations', 'idx_session')) {
+                DB::statement('ALTER TABLE exam_violations DROP INDEX idx_session');
+            }
+            if ($this->hasIndex('exam_violations', 'idx_user_created')) {
+                DB::statement('ALTER TABLE exam_violations DROP INDEX idx_user_created');
+            }
         }
     }
 

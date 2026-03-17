@@ -16,31 +16,31 @@
 
 ### 必須ソフトウェア
 
-| ソフトウェア   | バージョン | インストール方法                                                                  |
-| -------------- | ---------- | --------------------------------------------------------------------------------- |
-| Docker         | 20.10以上  | [公式サイト](https://docs.docker.com/get-docker/)                                 |
-| Docker Compose | 2.0以上    | Docker Desktopに含まれる                                                          |
-| Git            | 2.30以上   | `apt install git` または [公式サイト](https://git-scm.com/)                       |
+| ソフトウェア   | バージョン | インストール方法                                            |
+| -------------- | ---------- | ----------------------------------------------------------- |
+| Docker         | 20.10以上  | [公式サイト](https://docs.docker.com/get-docker/)           |
+| Docker Compose | 2.0以上    | Docker Desktopに含まれる                                    |
+| Git            | 2.30以上   | `apt install git` または [公式サイト](https://git-scm.com/) |
 
 ### 推奨スペック
 
-| 項目   | 最小     | 推奨      |
-| ------ | -------- | --------- |
-| CPU    | 2コア    | 4コア以上 |
-| メモリ | 4GB      | 8GB以上   |
-| ストレージ | 10GB   | 20GB以上  |
+| 項目       | 最小  | 推奨      |
+| ---------- | ----- | --------- |
+| CPU        | 2コア | 4コア以上 |
+| メモリ     | 4GB   | 8GB以上   |
+| ストレージ | 10GB  | 20GB以上  |
 
 ### 固定バージョン
 
 このシステムは以下のバージョンで動作確認済みです：
 
-| コンポーネント | バージョン      |
-| -------------- | --------------- |
-| PHP            | 8.2.15          |
-| MySQL          | 8.0.36          |
-| Redis          | 7.2-alpine      |
-| Node.js        | 20.11           |
-| Composer       | 2.7             |
+| コンポーネント | バージョン |
+| -------------- | ---------- |
+| PHP            | 8.2.15     |
+| MySQL          | 8.0.36     |
+| Redis          | 7.2-alpine |
+| Node.js        | 20.11      |
+| Composer       | 2.7        |
 
 ---
 
@@ -56,7 +56,7 @@ unzip ProgrammerAptitudeTest.zip
 cd ProgrammerAptitudeTest
 
 # Gitの場合
-git clone [リポジトリURL] ProgrammerAptitudeTest
+git clone https://github.com/B0023035/ProgrammerApititudeTest.git ProgrammerAptitudeTest
 cd ProgrammerAptitudeTest
 ```
 
@@ -165,10 +165,10 @@ docker exec programmer-test-app php artisan view:cache
 
 ### 初期管理者アカウント
 
-| 項目         | 値                |
-| ------------ | ----------------- |
-| メール       | admin@provisional |
-| パスワード   | P@ssw0rd          |
+| 項目       | 値                |
+| ---------- | ----------------- |
+| メール     | admin@provisional |
+| パスワード | P@ssw0rd          |
 
 > ⚠️ **重要**: 初回ログイン後、必ずパスワードとメールアドレスを変更してください。
 
@@ -191,6 +191,7 @@ docker compose -f docker-compose.production.yml ps
 ```
 
 期待される出力：
+
 ```
 NAME                      STATUS
 programmer-test-app       Up (healthy)
@@ -221,6 +222,7 @@ docker exec programmer-test-db mysql -u sail -ppassword laravel -e "SELECT COUNT
 **原因**: ポート80が使用中
 
 **解決策**:
+
 ```bash
 # 使用中のプロセスを確認
 sudo lsof -i :80
@@ -237,6 +239,7 @@ sudo service apache2 stop
 **原因**: APP_KEYが設定されていない
 
 **解決策**:
+
 ```bash
 docker exec programmer-test-app php artisan key:generate
 docker exec programmer-test-app php artisan config:cache
@@ -247,6 +250,7 @@ docker exec programmer-test-app php artisan config:cache
 **原因**: データベースの起動が完了していない
 
 **解決策**:
+
 ```bash
 # データベースの状態確認
 docker compose -f docker-compose.production.yml logs db
@@ -261,6 +265,7 @@ docker exec programmer-test-app php artisan migrate --force
 **原因**: PHP-FPMの接続設定
 
 **解決策**:
+
 ```bash
 docker exec programmer-test-app sed -i 's|fastcgi_pass unix:/var/run/php-fpm.sock;|fastcgi_pass 127.0.0.1:9000;|g' /etc/nginx/http.d/default.conf
 docker exec programmer-test-app nginx -s reload
@@ -271,6 +276,7 @@ docker exec programmer-test-app nginx -s reload
 **原因**: シーダーが実行されていない
 
 **解決策**:
+
 ```bash
 docker exec programmer-test-app php artisan db:seed --force
 ```
@@ -298,4 +304,72 @@ rm -rf ProgrammerAptitudeTest
 ## 次のステップ
 
 - [操作マニュアル](04_OPERATION_MANUAL.md) - システムの使い方
-- [環境設定マニュアル](05_ENVIRONMENT_SETUP.md) - 詳細な環境設定
+- [環境設定マニュアル](03_ENVIRONMENT_SETUP.md) - 詳細な環境設定
+
+---
+
+## クイックリファレンス：コマンドまとめ
+
+### 起動・停止コマンド
+
+```bash
+# ============================================
+# 通常起動（2回目以降）
+# ============================================
+docker-compose -f docker-compose.production.yml up -d --remove-orphans
+
+# ============================================
+# 停止（データは保持）
+# ============================================
+docker-compose -f docker-compose.production.yml down
+
+# ============================================
+# 完全停止（データも削除）※注意：全データ消失
+# ============================================
+docker-compose -f docker-compose.production.yml down -v
+```
+
+### データベース復元コマンド
+
+```bash
+# ============================================
+# バックアップからの復元（データ削除後に使用）
+# ============================================
+# 1. データベースを初期化
+docker exec -i programmer-test-db mysql -u sail -ppassword -e "DROP DATABASE IF EXISTS laravel; CREATE DATABASE laravel;"
+
+# 2. バックアップファイルから復元
+docker exec -i programmer-test-db mysql -u sail -ppassword laravel < laravel_prod.sql
+```
+
+### 外部公開（Cloudflare Tunnel）
+
+```bash
+# ============================================
+# Cloudflare Tunnel起動
+# ============================================
+cloudflared tunnel run minmi-tunnel
+```
+
+### 状態確認コマンド
+
+```bash
+# コンテナ状態確認
+docker-compose -f docker-compose.production.yml ps
+
+# ログ確認
+docker-compose -f docker-compose.production.yml logs -f
+
+# データベース接続確認
+docker exec programmer-test-db mysql -u sail -ppassword laravel -e "SHOW TABLES;"
+```
+
+### キャッシュクリア
+
+```bash
+# 全キャッシュクリア
+docker exec programmer-test-app php artisan optimize:clear
+docker exec programmer-test-app php artisan config:cache
+docker exec programmer-test-app php artisan route:cache
+docker exec programmer-test-app php artisan view:cache
+```

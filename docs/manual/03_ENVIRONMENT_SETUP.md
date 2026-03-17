@@ -46,7 +46,7 @@
 ### 1. リポジトリのクローン
 
 ```bash
-git clone [リポジトリURL] ProgrammerAptitudeTest
+git clone https://github.com/B0023035/ProgrammerApititudeTest.git ProgrammerAptitudeTest
 cd ProgrammerAptitudeTest
 ```
 
@@ -375,4 +375,84 @@ docker exec programmer-test-app php artisan optimize:clear
 docker exec programmer-test-app php artisan config:cache
 docker exec programmer-test-app php artisan route:cache
 docker exec programmer-test-app php artisan view:cache
+```
+
+---
+
+## クイックリファレンス：運用コマンドまとめ
+
+### 🚀 起動・停止
+
+| 操作 | コマンド |
+|------|----------|
+| **通常起動** | `docker-compose -f docker-compose.production.yml up -d --remove-orphans` |
+| **停止（データ保持）** | `docker-compose -f docker-compose.production.yml down` |
+| **完全停止（データ削除）** | `docker-compose -f docker-compose.production.yml down -v` |
+
+### 💾 データベース操作
+
+| 操作 | コマンド |
+|------|----------|
+| **バックアップ作成** | `docker exec programmer-test-db mysqldump -u sail -ppassword laravel > backup_$(date +%Y%m%d).sql` |
+| **DB初期化** | `docker exec -i programmer-test-db mysql -u sail -ppassword -e "DROP DATABASE IF EXISTS laravel; CREATE DATABASE laravel;"` |
+| **バックアップ復元** | `docker exec -i programmer-test-db mysql -u sail -ppassword laravel < laravel_prod.sql` |
+
+### 🌐 外部公開
+
+| 操作 | コマンド |
+|------|----------|
+| **Cloudflare Tunnel起動** | `cloudflared tunnel run minmi-tunnel` |
+
+### 🔍 状態確認
+
+| 操作 | コマンド |
+|------|----------|
+| **コンテナ状態** | `docker-compose -f docker-compose.production.yml ps` |
+| **ログ確認** | `docker-compose -f docker-compose.production.yml logs -f` |
+| **DB接続確認** | `docker exec programmer-test-db mysql -u sail -ppassword laravel -e "SHOW TABLES;"` |
+
+### 🧹 メンテナンス
+
+| 操作 | コマンド |
+|------|----------|
+| **キャッシュクリア** | `docker exec programmer-test-app php artisan optimize:clear` |
+| **キャッシュ再生成** | `docker exec programmer-test-app php artisan config:cache && docker exec programmer-test-app php artisan route:cache && docker exec programmer-test-app php artisan view:cache` |
+| **Nginx再読み込み** | `docker exec programmer-test-app nginx -s reload` |
+
+### 📋 よく使うシナリオ
+
+#### シナリオ1: 通常の起動と停止
+
+```bash
+# 起動
+docker-compose -f docker-compose.production.yml up -d --remove-orphans
+
+# 作業終了後、停止
+docker-compose -f docker-compose.production.yml down
+```
+
+#### シナリオ2: データ消失後の復旧
+
+```bash
+# 1. コンテナ起動
+docker-compose -f docker-compose.production.yml up -d --remove-orphans
+
+# 2. DBが起動するまで待機
+sleep 30
+
+# 3. データベース初期化
+docker exec -i programmer-test-db mysql -u sail -ppassword -e "DROP DATABASE IF EXISTS laravel; CREATE DATABASE laravel;"
+
+# 4. バックアップから復元
+docker exec -i programmer-test-db mysql -u sail -ppassword laravel < laravel_prod.sql
+```
+
+#### シナリオ3: 外部公開
+
+```bash
+# 1. Dockerコンテナ起動
+docker-compose -f docker-compose.production.yml up -d --remove-orphans
+
+# 2. Cloudflare Tunnel起動（別ターミナルで実行）
+cloudflared tunnel run minmi-tunnel
 ```
