@@ -6,6 +6,24 @@ set -e
 
 echo "🚀 アプリケーション起動中..."
 
+# ==========================================
+# Nginx設定の自動切り替え（SSL証明書の有無で判定）
+# ==========================================
+SSL_CERT_PATH="/etc/letsencrypt/live/aws-sample-minmi.click/fullchain.pem"
+NGINX_CONF_DIR="/etc/nginx/http.d"
+
+if [ -f "$SSL_CERT_PATH" ]; then
+    echo "🔐 SSL証明書を検出しました。HTTPS設定を使用します..."
+    # HTTPS設定はデフォルトで既に配置済み
+else
+    echo "⚠️  SSL証明書がありません。HTTP設定に切り替えます..."
+    # HTTP専用設定に切り替え
+    if [ -f "/var/www/html/docker/default-http.conf" ]; then
+        cp /var/www/html/docker/default-http.conf "$NGINX_CONF_DIR/default.conf"
+        echo "✅ HTTP設定に切り替えました"
+    fi
+fi
+
 # ディレクトリ作成
 mkdir -p /var/lib/php/sessions
 mkdir -p /var/log/nginx
